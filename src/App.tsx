@@ -10,15 +10,18 @@ import {
   Calendar,
   CheckCircle2,
   Gavel,
+  ImagePlus,
   LayoutDashboard,
   LogIn,
   MapPin,
   Plus,
   RotateCcw,
   ShieldCheck,
+  Trash2,
   Trophy,
   UserPlus,
   Users,
+  X,
 } from 'lucide-react';
 import { AnalyticsReportView } from './components/AnalyticsReportView';
 import { CreateTournamentModal } from './components/CreateTournamentModal';
@@ -64,9 +67,19 @@ type ActiveTab =
   | 'members'
   | 'reports';
 
+interface HomeGalleryItem {
+  id: string;
+  title: string;
+  caption: string;
+  imageUrl: string;
+  createdAt: string;
+  createdBy: string;
+}
+
 const STORAGE_KEY = 'pickleball_1986_state_v7';
 const AUTH_SESSION_KEY = 'pickleball_1986_auth_user_v1';
 const ACTIVE_TAB_KEY = 'pickleball_1986_active_tab_v1';
+const GALLERY_STORAGE_KEY = 'pickleball_1986_home_gallery_v1';
 const SYNC_CHANNEL = 'pickleball_1986_realtime_channel';
 
 const VALID_TABS: ActiveTab[] = [
@@ -78,7 +91,6 @@ const VALID_TABS: ActiveTab[] = [
   'reports',
 ];
 
-const AUDIENCE_TABS: ActiveTab[] = ['overview', 'schedule', 'standings'];
 const STAFF_ONLY_TABS: ActiveTab[] = ['referee', 'members', 'reports'];
 
 interface PersistedAppState {
@@ -150,6 +162,43 @@ function loadSavedAuthAccount(accounts: StaffAccount[]): StaffAccount | null {
   }
 }
 
+function loadSavedGallery(): HomeGalleryItem[] {
+  try {
+    const raw = localStorage.getItem(GALLERY_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function compressImageFileToDataUrl(file: File, maxWidth = 1280, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Không thể đọc tệp ảnh'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Định dạng ảnh không hợp lệ'));
+      img.onload = () => {
+        const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(String(reader.result || ''));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = String(reader.result || '');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function App() {
   const [appState, setAppState] = useState<PersistedAppState>(() => loadInitialState());
   const [currentAccount, setCurrentAccount] = useState<StaffAccount | null>(() =>
@@ -171,10 +220,16 @@ export default function App() {
     null,
   );
 
+  // Homepage media items state (Admin posts, audience views)
+  const [galleryItems, setGalleryItems] = useState<HomeGalleryItem[]>(() => loadSavedGallery());
+  const [galleryTitle, setGalleryTitle] = useState('');
+  const [galleryCaption, setGalleryCaption] = useState('');
+  const [galleryImageUrl, setGalleryImageUrl] = useState('');
+  const [lightboxItem, setLightboxItem] = useState<HomeGalleryItem | null>(null);
+
   const isStaff = Boolean(currentAccount && isStaffRole(currentAccount.role));
   const isAdmin = currentAccount?.role === 'admin';
 
-  // Nếu chưa đăng nhập (khán giả) mà đang ở tab dành cho BTC/Trọng tài thì đưa về Trang chủ
   useEffect(() => {
     if (!isStaff && STAFF_ONLY_TABS.includes(activeTab)) {
       setActiveTab('overview');
@@ -189,13 +244,26 @@ export default function App() {
     }
   }, [activeTab]);
 
+  const saveGalleryAndSync = (nextGallery: HomeGalleryItem[]) => {
+    setGalleryItems(nextGallery);
+    try {
+      localStorage.setItem(GALLERY_STORAGE_KEY, JSON.stringify(nextGallery));
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel(SYNC_CHANNEL);
+        bc.postMessage({ type: 'gallery_sync', gallery: nextGallery });
+        bc.close();
+      }
+    } catch (err) {
+      console.warn('Gallery storage warning:', err);
+    }
+  };
+
   const openLoginWithReason = (reason: string, mode: 'login' | 'manage' = 'login') => {
     setAuthReasonMessage(reason);
     setAuthModalMode(mode);
     setShowAuthModal(true);
   };
 
-  // Save state to localStorage and broadcast across browser tabs for instant live scoreboard sync
   const updateStateAndSync = (updater: (prev: PersistedAppState) => PersistedAppState) => {
     setAppState((prev) => {
       const next = updater(prev);
@@ -203,7 +271,7 @@ export default function App() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
         if (typeof BroadcastChannel !== 'undefined') {
           const bc = new BroadcastChannel(SYNC_CHANNEL);
-          bc.postMessage(next);
+          bc.postMessage({ type: 'state_sync', state: next });
           bc.close();
         }
       } catch (e) {
@@ -217,14 +285,19 @@ export default function App() {
     if (typeof BroadcastChannel === 'undefined') return;
     const bc = new BroadcastChannel(SYNC_CHANNEL);
     bc.onmessage = (event) => {
-      if (event.data && Array.isArray(event.data.tournaments)) {
+      if (event.data?.type === 'gallery_sync' && Array.isArray(event.data.gallery)) {
+        setGalleryItems(event.data.gallery);
+        return;
+      }
+      if (event.data?.state && Array.isArray(event.data.state.tournaments)) {
+        setAppState(event.data.state as PersistedAppState);
+      } else if (event.data && Array.isArray(event.data.tournaments)) {
         setAppState(event.data as PersistedAppState);
       }
     };
     return () => bc.close();
   }, []);
 
-  // Lock webpage zoom so zooming is ONLY possible inside the 2D Bracket Diagram
   useEffect(() => {
     const preventMultiTouchPageZoom = (e: TouchEvent) => {
       if (e.touches.length > 1) {
@@ -260,6 +333,66 @@ export default function App() {
     window.setTimeout(() => {
       setToastMessage((curr) => (curr?.title === title ? null : curr));
     }, 4200);
+  };
+
+  const handleGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await compressImageFileToDataUrl(file);
+      setGalleryImageUrl(dataUrl);
+      if (!galleryTitle.trim()) {
+        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ');
+        setGalleryTitle(cleanName);
+      }
+    } catch {
+      showToast('Không thể tải ảnh', 'Vui lòng thử chọn ảnh khác hoặc dán đường dẫn URL ảnh.');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleAddGalleryItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin || !currentAccount) {
+      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để đưa hình ảnh lên trang chủ.');
+      return;
+    }
+    const cleanUrl = galleryImageUrl.trim();
+    if (!cleanUrl) {
+      showToast('Thiếu hình ảnh', 'Vui lòng chọn ảnh từ thiết bị hoặc nhập đường dẫn URL ảnh.');
+      return;
+    }
+
+    const newItem: HomeGalleryItem = {
+      id: `img_${Date.now().toString(36)}`,
+      title: galleryTitle.trim() || 'Hình ảnh giải đấu 1986',
+      caption: galleryCaption.trim(),
+      imageUrl: cleanUrl,
+      createdAt: new Date().toLocaleDateString('vi-VN'),
+      createdBy: currentAccount.displayName,
+    };
+
+    saveGalleryAndSync([newItem, ...galleryItems]);
+    setGalleryTitle('');
+    setGalleryCaption('');
+    setGalleryImageUrl('');
+    showToast('Đã đăng ảnh lên trang chủ', `"${newItem.title}" đã hiển thị cho khán giả.`);
+  };
+
+  const handleDeleteGalleryItem = (id: string) => {
+    if (!isAdmin) {
+      openLoginWithReason('Chỉ tài khoản Admin mới có thể xóa hình ảnh trên trang chủ.');
+      return;
+    }
+    const target = galleryItems.find((item) => item.id === id);
+    saveGalleryAndSync(galleryItems.filter((item) => item.id !== id));
+    if (lightboxItem?.id === id) {
+      setLightboxItem(null);
+    }
+    if (target) {
+      showToast('Đã gỡ ảnh khỏi trang chủ', target.title);
+    }
   };
 
   const handleLoginSuccess = (account: StaffAccount) => {
@@ -958,6 +1091,166 @@ export default function App() {
     [isStaff],
   );
 
+  const renderHomeGallerySection = () => (
+    <section className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
+            THƯ VIỆN HÌNH ẢNH TRANG CHỦ
+          </h2>
+          <p className="text-xs text-slate-500">
+            {isAdmin
+              ? 'Đăng hình ảnh sự kiện, sơ đồ sân hoặc thông báo trực quan cho khán giả xem'
+              : 'Hình ảnh giải đấu và thông tin từ Ban Tổ Chức'}
+          </p>
+        </div>
+        <span className="text-xs font-mono-num text-slate-500">
+          {galleryItems.length} hình ảnh
+        </span>
+      </div>
+
+      {isAdmin && (
+        <form
+          onSubmit={handleAddGalleryItem}
+          className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3"
+        >
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+            <ImagePlus className="w-4 h-4 text-orange-600" />
+            Đăng hình ảnh mới lên trang chủ
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Tiêu đề hình ảnh
+              </label>
+              <input
+                type="text"
+                value={galleryTitle}
+                onChange={(e) => setGalleryTitle(e.target.value)}
+                placeholder="VD: Khai mạc & Sơ đồ cụm sân"
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Chọn ảnh từ máy hoặc dán link URL ảnh *
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={galleryImageUrl}
+                  onChange={(e) => setGalleryImageUrl(e.target.value)}
+                  placeholder="https://... hoặc chọn tệp ảnh"
+                  className="flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                />
+                <label className="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-600 text-white text-xs font-semibold cursor-pointer flex items-center shrink-0 transition-colors">
+                  Chọn ảnh
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleGalleryFileChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Chú thích ngắn (hiển thị cho khán giả)
+              </label>
+              <input
+                type="text"
+                value={galleryCaption}
+                onChange={(e) => setGalleryCaption(e.target.value)}
+                placeholder="Nhập nội dung mô tả ngắn cho hình ảnh..."
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+              />
+            </div>
+          </div>
+
+          {galleryImageUrl.trim() && (
+            <div className="pt-1 flex items-center gap-3">
+              <img
+                src={galleryImageUrl.trim()}
+                alt="Xem trước ảnh"
+                referrerPolicy="no-referrer"
+                className="w-20 h-14 rounded-lg object-cover border border-slate-300 bg-white shrink-0"
+              />
+              <span className="text-xs text-slate-600 truncate">
+                Đã sẵn sàng đưa hình ảnh này lên trang chủ.
+              </span>
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="min-h-[38px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              Đưa lên trang chủ
+            </button>
+          </div>
+        </form>
+      )}
+
+      {galleryItems.length === 0 ? (
+        <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
+          Chưa có hình ảnh nào trên trang chủ.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {galleryItems.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col justify-between"
+            >
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setLightboxItem(item)}
+                  className="block w-full aspect-video bg-slate-100 overflow-hidden text-left"
+                >
+                  <img
+                    src={item.imageUrl}
+                    alt={item.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover hover:scale-[1.02] transition-transform"
+                  />
+                </button>
+                <div className="p-3.5 space-y-1">
+                  <h3 className="text-sm font-bold text-slate-900 line-clamp-1">{item.title}</h3>
+                  {item.caption && (
+                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                      {item.caption}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span className="font-mono-num">{item.createdAt}</span>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteGalleryItem(item.id)}
+                    className="text-rose-600 hover:text-rose-700 font-semibold inline-flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Xóa
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+
   return (
     <div
       className={
@@ -1176,32 +1469,36 @@ export default function App() {
         }
       >
         {!currentTournament ? (
-          <section className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-10 text-center space-y-4">
-            <img
-              src={BRAND_LOGO_URL}
-              alt="1986 Bính Dần Pickleball"
-              referrerPolicy="no-referrer"
-              className="w-20 h-20 rounded-2xl object-cover border-2 border-orange-500 mx-auto"
-            />
-            <div className="space-y-1.5">
-              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900">
-                1986 PICKLEBALL
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
-                Hiện chưa có giải đấu nào được mở.
-              </p>
-            </div>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={handleOpenCreateTournament}
-                className="min-h-[42px] px-5 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Tạo giải đấu mới
-              </button>
-            )}
-          </section>
+          <div className="space-y-5">
+            <section className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-10 text-center space-y-4">
+              <img
+                src={BRAND_LOGO_URL}
+                alt="1986 Bính Dần Pickleball"
+                referrerPolicy="no-referrer"
+                className="w-20 h-20 rounded-2xl object-cover border-2 border-orange-500 mx-auto"
+              />
+              <div className="space-y-1.5">
+                <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900">
+                  1986 PICKLEBALL
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
+                  Hiện chưa có giải đấu nào được mở.
+                </p>
+              </div>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleOpenCreateTournament}
+                  className="min-h-[42px] px-5 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Tạo giải đấu mới
+                </button>
+              )}
+            </section>
+
+            {renderHomeGallerySection()}
+          </div>
         ) : (
           <>
             {activeTab === 'overview' && (
@@ -1243,7 +1540,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Chỉ hiển thị các nút nghiệp vụ cho tài khoản Admin / Trọng tài; khán giả không thấy */}
                     {isStaff && (
                       <div className="grid grid-cols-1 sm:flex flex-wrap items-center gap-2.5 pt-1">
                         <button
@@ -1552,6 +1848,8 @@ export default function App() {
                   </div>
                 </section>
 
+                {renderHomeGallerySection()}
+
                 <section className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -1718,6 +2016,43 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* Lightbox Modal for Audience / Admin Image Preview */}
+      {lightboxItem && (
+        <div
+          onClick={() => setLightboxItem(null)}
+          className="no-print fixed inset-0 z-50 bg-slate-950/85 p-3 sm:p-6 flex items-center justify-center"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl"
+          >
+            <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-sm font-bold truncate">{lightboxItem.title}</div>
+                {lightboxItem.caption && (
+                  <div className="text-xs text-slate-300 truncate">{lightboxItem.caption}</div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setLightboxItem(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="bg-slate-950 flex items-center justify-center max-h-[75vh] overflow-auto p-2">
+              <img
+                src={lightboxItem.imageUrl}
+                alt={lightboxItem.title}
+                referrerPolicy="no-referrer"
+                className="max-h-[70vh] w-auto object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quiet Footer */}
       <footer
