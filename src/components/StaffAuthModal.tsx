@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Gavel,
   KeyRound,
@@ -7,7 +7,6 @@ import {
   Plus,
   ShieldCheck,
   Trash2,
-  UserCheck,
   UserPlus,
   X,
 } from 'lucide-react';
@@ -61,6 +60,10 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isShaking, setIsShaking] = useState(false);
+
+  const passwordInputRef = useRef<HTMLInputElement | null>(null);
+  const shakeTimerRef = useRef<number | null>(null);
 
   // Create new account state (Admin mặc định 1986, Trọng tài mặc định tt1234)
   const [newUsername, setNewUsername] = useState('');
@@ -75,6 +78,20 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
     [accounts],
   );
 
+  const triggerPopupShake = (message: string) => {
+    setErrorMsg(message);
+    setIsShaking(false);
+    if (shakeTimerRef.current) {
+      window.clearTimeout(shakeTimerRef.current);
+    }
+    window.requestAnimationFrame(() => {
+      setIsShaking(true);
+      shakeTimerRef.current = window.setTimeout(() => {
+        setIsShaking(false);
+      }, 450);
+    });
+  };
+
   const handleRoleChange = (role: StaffRole) => {
     setNewRole(role);
     setNewPassword(getDefaultPasswordForRole(role));
@@ -85,19 +102,26 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
     const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
 
+    if (!cleanPass) {
+      triggerPopupShake('Vui lòng nhập mật khẩu để đăng nhập.');
+      passwordInputRef.current?.focus();
+      return;
+    }
+
     const found = staffAccounts.find((a) => a.username.toLowerCase() === cleanUser);
     if (!found) {
-      setErrorMsg('Tên đăng nhập hoặc mật khẩu không đúng.');
+      triggerPopupShake('Tên đăng nhập hoặc mật khẩu không đúng.');
       return;
     }
 
     const expectedPass = getExpectedPassword(found);
     if (cleanPass !== expectedPass) {
-      setErrorMsg('Tên đăng nhập hoặc mật khẩu không đúng.');
+      triggerPopupShake('Tên đăng nhập hoặc mật khẩu không đúng.');
       return;
     }
 
     setErrorMsg(null);
+    setIsShaking(false);
     onLoginSuccess({
       ...found,
       password: expectedPass,
@@ -105,26 +129,24 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
     onClose();
   };
 
-  const handleQuickLogin = (acc: StaffAccount) => {
+  const handleSelectUsernameOnly = (acc: StaffAccount) => {
     if (acc.role !== 'admin' && acc.role !== 'referee') {
-      setErrorMsg('Chỉ tài khoản Admin hoặc Trọng tài mới được phép đăng nhập.');
+      triggerPopupShake('Chỉ tài khoản Admin hoặc Trọng tài mới được phép đăng nhập.');
       return;
     }
-    const resolvedPass = getExpectedPassword(acc);
+    setTab('login');
     setUsername(acc.username);
-    setPassword(resolvedPass);
-    setErrorMsg(null);
-    onLoginSuccess({
-      ...acc,
-      password: resolvedPass,
-    });
-    onClose();
+    setPassword('');
+    setErrorMsg('Đã chọn tài khoản. Vui lòng nhập mật khẩu để đăng nhập.');
+    window.setTimeout(() => {
+      passwordInputRef.current?.focus();
+    }, 30);
   };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (currentAccount?.role !== 'admin') {
-      setErrorMsg('Chỉ tài khoản Ban Tổ Chức (Admin) mới được phép tạo thêm tài khoản.');
+      triggerPopupShake('Chỉ tài khoản Ban Tổ Chức (Admin) mới được phép tạo thêm tài khoản.');
       return;
     }
     const cleanU = newUsername.trim().toLowerCase();
@@ -132,11 +154,11 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
     const resolvedPass = newPassword.trim() || getDefaultPasswordForRole(newRole);
 
     if (!cleanU || !cleanD) {
-      setErrorMsg('Vui lòng nhập đầy đủ Tên đăng nhập và Họ tên.');
+      triggerPopupShake('Vui lòng nhập đầy đủ Tên đăng nhập và Họ tên.');
       return;
     }
     if (staffAccounts.some((a) => a.username.toLowerCase() === cleanU)) {
-      setErrorMsg(`Tên đăng nhập "${cleanU}" đã tồn tại.`);
+      triggerPopupShake(`Tên đăng nhập "${cleanU}" đã tồn tại.`);
       return;
     }
 
@@ -158,7 +180,26 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full overflow-hidden shadow-xl">
+      <style>{`
+        @keyframes authPopupShake {
+          0%, 100% { transform: translateX(0); }
+          15% { transform: translateX(-10px); }
+          30% { transform: translateX(10px); }
+          45% { transform: translateX(-8px); }
+          60% { transform: translateX(8px); }
+          75% { transform: translateX(-4px); }
+          90% { transform: translateX(4px); }
+        }
+        .auth-popup-shake {
+          animation: authPopupShake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+      `}</style>
+
+      <div
+        className={`bg-white border rounded-2xl max-w-lg w-full overflow-hidden shadow-xl transition-colors ${
+          isShaking ? 'auth-popup-shake border-rose-500 ring-2 ring-rose-500/40' : 'border-slate-200'
+        }`}
+      >
         {/* Header */}
         <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -173,7 +214,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 ĐĂNG NHẬP ADMIN & TRỌNG TÀI 1986
               </h3>
               <p className="text-xs text-slate-500">
-                Hệ thống chỉ cấp quyền đăng nhập cho Admin và Trọng tài
+                Nhập tên đăng nhập và mật khẩu để truy cập hệ thống
               </p>
             </div>
           </div>
@@ -289,6 +330,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                     Mật khẩu
                   </label>
                   <input
+                    ref={passwordInputRef}
                     type="password"
                     required
                     value={password}
@@ -307,10 +349,10 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 </button>
               </form>
 
-              {/* Quick One-Tap Login Cards */}
+              {/* Account Directory (Chỉ điền tên đăng nhập, vẫn bắt buộc nhập mật khẩu) */}
               <div className="pt-3 border-t border-slate-200 space-y-2.5">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Tài khoản Admin & Trọng tài
+                  Danh sách tài khoản Admin & Trọng tài
                 </div>
 
                 <div className="grid grid-cols-1 gap-2">
@@ -320,7 +362,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                       <button
                         key={acc.id}
                         type="button"
-                        onClick={() => handleQuickLogin(acc)}
+                        onClick={() => handleSelectUsernameOnly(acc)}
                         className={`w-full text-left p-3 rounded-xl border transition-colors flex items-center justify-between gap-3 ${
                           isCurrent
                             ? 'bg-orange-50 border-orange-500'
@@ -491,11 +533,10 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
-                          onClick={() => handleQuickLogin(acc)}
-                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold flex items-center gap-1"
+                          onClick={() => handleSelectUsernameOnly(acc)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold"
                         >
-                          <UserCheck className="w-3.5 h-3.5 text-orange-600" />
-                          Dùng
+                          Chọn TK
                         </button>
                         {currentAccount?.role === 'admin' && staffAccounts.length > 1 && (
                           <button
