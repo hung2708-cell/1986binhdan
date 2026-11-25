@@ -55,21 +55,27 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
   const [newCourts, setNewCourts] = useState('Sân 1, Sân 2');
   const [createSuccessMsg, setCreateSuccessMsg] = useState<string | null>(null);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+    const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
     const found = accounts.find(
-      (a) => a.username.toLowerCase() === cleanUser && a.password === cleanPass,
+      (a) =>
+        a.username.toLowerCase() === cleanUser &&
+        a.password === cleanPass &&
+        (a.role === 'admin' || a.role === 'referee'),
     );
     if (!found) {
-      setErrorMsg('Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.');
+      setErrorMsg(
+        'Tên đăng nhập hoặc mật khẩu không đúng, hoặc tài khoản không thuộc quyền Admin / Trọng tài.',
+      );
       return;
     }
     setErrorMsg(null);
     onLoginSuccess(found);
     onClose();
   };
+
 
   const handleQuickLogin = (acc: StaffAccount) => {
     setUsername(acc.username);
@@ -314,19 +320,22 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 </div>
               </div>
 
-              {/* Role Permission Matrix Explanation */}
+                            {/* Role Permission Matrix Explanation */}
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 text-slate-600">
-                <div className="font-bold text-slate-900">Phân quyền hệ thống 1986:</div>
+                <div className="font-bold text-slate-900">
+                  Phân quyền đăng nhập hệ thống 1986 (Chỉ Admin & Trọng tài):
+                </div>
                 <div>
-                  • <strong className="text-orange-700">Ban Tổ Chức (Admin)</strong>: Tạo giải mới, thêm VĐV & đội hình đồng đội, chia bảng xếp lịch, duyệt lệ phí VietQR, tạo tài khoản Trọng tài & toàn quyền chấm điểm.
+                  • <strong className="text-orange-700">Ban Tổ Chức (Admin)</strong>: Tạo giải mới, thêm VĐV & đội hình đồng đội, chia bảng xếp lịch, duyệt lệ phí VietQR, tạo/xóa tài khoản Admin hoặc Trọng tài & toàn quyền chấm điểm.
                 </div>
                 <div>
                   • <strong className="text-emerald-700">Trọng tài (Referee)</strong>: Sử dụng App Trọng tài (Sơ đồ sân, Bốc thăm sân/giao bóng, Chọn VĐV ra sân đồng đội, Chấm điểm trực tiếp, Gọi sân) và điểm danh Check-in VĐV.
                 </div>
                 <div>
-                  • <strong className="text-slate-800">Khách / VĐV (Chưa đăng nhập)</strong>: Xem trực tiếp tỉ số Live Score, Lịch đấu, Bảng xếp hạng, Nhánh Knockout và quét mã VietQR đóng phí.
+                  • <strong className="text-slate-800">Chưa đăng nhập</strong>: Chỉ xem công khai tỉ số Live Score, Lịch đấu, Bảng xếp hạng và Nhánh đấu (không có luồng đăng nhập VĐV/khách).
                 </div>
               </div>
+
             </>
           ) : (
             /* TAB 2: CREATE & MANAGE ACCOUNTS */
