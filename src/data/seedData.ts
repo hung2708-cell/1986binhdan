@@ -76,58 +76,7 @@ export const INITIAL_USERS: UserProfile[] = [
   },
 ];
 
-export const INITIAL_TOURNAMENTS: Tournament[] = [
-  {
-    id: 't_1986_binh_dan_open',
-    name: 'Giải Pickleball 1986 Bính Dần Open',
-    location: 'Cụm Sân Pickleball 1986 Arena',
-    startDate: '2026-11-28',
-    endDate: '2026-11-29',
-    format: 'group_knockout',
-    competitionType: 'doubles',
-    status: 'ongoing',
-    courtsCount: 4,
-    pointsToWin: 15,
-    maxPointsCap: 18,
-    scoringMode: 'side_out',
-    winByTwo: true,
-    entryFee: 0,
-    bankBin: '',
-    bankName: '',
-    bankAccountNo: '',
-    bankAccountName: '',
-    divisions: [],
-    description:
-      'Áp dụng Điều lệ thi đấu theo Quyết định số 494/QĐTDTTVN ngày 26/5/2025 của Cục TDTT Việt Nam: Chạm 15 điểm (08đ đổi sân; Vòng loại trực tiếp 14-14 thắng cách biệt 02đ, max 18đ). Tài khoản Admin thêm nội dung Đôi hoặc Đồng đội tùy nhu cầu giải.',
-    visibility: 'public',
-    createdBy: 'u_admin_1986',
-  },
-  {
-    id: 't_1986_masters_cup',
-    name: '1986 Tiger Super Cup',
-    location: 'Cụm Sân Pickleball Bính Dần 1986',
-    startDate: '2026-12-12',
-    endDate: '2026-12-13',
-    format: 'group_knockout',
-    competitionType: 'doubles',
-    status: 'open',
-    courtsCount: 6,
-    pointsToWin: 15,
-    maxPointsCap: 18,
-    scoringMode: 'side_out',
-    winByTwo: true,
-    entryFee: 0,
-    bankBin: '',
-    bankName: '',
-    bankAccountNo: '',
-    bankAccountName: '',
-    divisions: [],
-    description:
-      'Giải đấu mở rộng dành cho các CLB Pickleball 1986 theo Điều lệ Quyết định 494/QĐTDTTVN: Thắng 03đ, Hòa 02đ, Thua 01đ, Bỏ cuộc 0đ.',
-    visibility: 'public',
-    createdBy: 'u_admin_1986',
-  },
-];
+export const INITIAL_TOURNAMENTS: Tournament[] = [];
 
 export const INITIAL_REGISTRATIONS: Registration[] = [];
 
