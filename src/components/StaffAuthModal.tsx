@@ -18,6 +18,9 @@ import {
   type StaffRole,
 } from '../types/tournament';
 
+export const DEFAULT_ADMIN_PASSWORD = '1986';
+export const DEFAULT_REFEREE_PASSWORD = 'tt1234';
+
 interface StaffAuthModalProps {
   accounts: StaffAccount[];
   currentAccount: StaffAccount | null;
@@ -28,6 +31,17 @@ interface StaffAuthModalProps {
   onLogout: () => void;
   onCreateAccount: (payload: Omit<StaffAccount, 'id'>) => void;
   onDeleteAccount: (accountId: string) => void;
+}
+
+function getDefaultPasswordForRole(role: StaffRole): string {
+  return role === 'admin' ? DEFAULT_ADMIN_PASSWORD : DEFAULT_REFEREE_PASSWORD;
+}
+
+function getExpectedPassword(account: StaffAccount): string {
+  if (account.password && account.password.trim().length > 0) {
+    return account.password.trim();
+  }
+  return getDefaultPasswordForRole(account.role);
 }
 
 export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
@@ -48,11 +62,11 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Create new account state (chỉ Admin hoặc Trọng tài)
+  // Create new account state (Admin mặc định 1986, Trọng tài mặc định tt1234)
   const [newUsername, setNewUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('1986');
-  const [newDisplayName, setNewDisplayName] = useState('');
   const [newRole, setNewRole] = useState<StaffRole>('referee');
+  const [newPassword, setNewPassword] = useState<string>(DEFAULT_REFEREE_PASSWORD);
+  const [newDisplayName, setNewDisplayName] = useState('');
   const [newCourts, setNewCourts] = useState('Sân 1, Sân 2');
   const [createSuccessMsg, setCreateSuccessMsg] = useState<string | null>(null);
 
@@ -61,21 +75,33 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
     [accounts],
   );
 
+  const handleRoleChange = (role: StaffRole) => {
+    setNewRole(role);
+    setNewPassword(getDefaultPasswordForRole(role));
+  };
+
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
-    const found = staffAccounts.find(
-      (a) => a.username.toLowerCase() === cleanUser && a.password === cleanPass,
-    );
+
+    const found = staffAccounts.find((a) => a.username.toLowerCase() === cleanUser);
     if (!found) {
-      setErrorMsg(
-        'Tên đăng nhập hoặc mật khẩu không đúng, hoặc tài khoản không thuộc quyền Admin / Trọng tài.',
-      );
+      setErrorMsg('Tên đăng nhập hoặc mật khẩu không đúng.');
       return;
     }
+
+    const expectedPass = getExpectedPassword(found);
+    if (cleanPass !== expectedPass) {
+      setErrorMsg('Tên đăng nhập hoặc mật khẩu không đúng.');
+      return;
+    }
+
     setErrorMsg(null);
-    onLoginSuccess(found);
+    onLoginSuccess({
+      ...found,
+      password: expectedPass,
+    });
     onClose();
   };
 
@@ -84,41 +110,49 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
       setErrorMsg('Chỉ tài khoản Admin hoặc Trọng tài mới được phép đăng nhập.');
       return;
     }
+    const resolvedPass = getExpectedPassword(acc);
     setUsername(acc.username);
-    setPassword(acc.password);
+    setPassword(resolvedPass);
     setErrorMsg(null);
-    onLoginSuccess(acc);
+    onLoginSuccess({
+      ...acc,
+      password: resolvedPass,
+    });
     onClose();
   };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (currentAccount?.role !== 'admin') {
-      setErrorMsg('Chỉ tài khoản Ban Tổ Chức (Admin) mới được phép tạo thêm tài khoản mới.');
+      setErrorMsg('Chỉ tài khoản Ban Tổ Chức (Admin) mới được phép tạo thêm tài khoản.');
       return;
     }
     const cleanU = newUsername.trim().toLowerCase();
-    if (!cleanU || !newPassword.trim() || !newDisplayName.trim()) {
-      setErrorMsg('Vui lòng nhập đầy đủ Tên đăng nhập, Mật khẩu và Họ tên.');
+    const cleanD = newDisplayName.trim();
+    const resolvedPass = newPassword.trim() || getDefaultPasswordForRole(newRole);
+
+    if (!cleanU || !cleanD) {
+      setErrorMsg('Vui lòng nhập đầy đủ Tên đăng nhập và Họ tên.');
       return;
     }
     if (staffAccounts.some((a) => a.username.toLowerCase() === cleanU)) {
-      setErrorMsg(`Tên đăng nhập "${cleanU}" đã tồn tại. Vui lòng chọn tên khác.`);
+      setErrorMsg(`Tên đăng nhập "${cleanU}" đã tồn tại.`);
       return;
     }
 
     onCreateAccount({
       username: cleanU,
-      password: newPassword.trim(),
-      displayName: newDisplayName.trim(),
+      password: resolvedPass,
+      displayName: cleanD,
       role: newRole,
       assignedCourts: newCourts.trim() || 'Tất cả các sân',
     });
 
     setNewUsername('');
     setNewDisplayName('');
+    setNewPassword(getDefaultPasswordForRole(newRole));
     setErrorMsg(null);
-    setCreateSuccessMsg(`Đã tạo tài khoản "${cleanU}" (${ROLE_LABELS[newRole]}) thành công!`);
+    setCreateSuccessMsg(`Đã tạo tài khoản "${cleanU}" (${ROLE_LABELS[newRole]}).`);
     window.setTimeout(() => setCreateSuccessMsg(null), 3500);
   };
 
@@ -139,7 +173,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 ĐĂNG NHẬP ADMIN & TRỌNG TÀI 1986
               </h3>
               <p className="text-xs text-slate-500">
-                Hệ thống chỉ cấp quyền đăng nhập cho Ban Tổ Chức (Admin) và Trọng tài
+                Hệ thống chỉ cấp quyền đăng nhập cho Admin và Trọng tài
               </p>
             </div>
           </div>
@@ -215,7 +249,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 </div>
                 <div className="text-sm font-bold truncate">{currentAccount.displayName}</div>
                 <div className="text-xs text-slate-400">
-                  Tài khoản: <span className="font-mono-num text-white">{currentAccount.username}</span> ·{' '}
+                  TK: <span className="font-mono-num text-white">{currentAccount.username}</span> ·{' '}
                   {currentAccount.assignedCourts}
                 </div>
               </div>
@@ -238,28 +272,28 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
               <form onSubmit={handleLoginSubmit} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Tên đăng nhập (Admin hoặc Trọng tài)
+                    Tên đăng nhập
                   </label>
                   <input
                     type="text"
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="VD: admin, btc1986, tt1, tt2..."
+                    placeholder="Nhập tên đăng nhập"
                     className="w-full min-h-[42px] px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Mật khẩu / Mã PIN
+                    Mật khẩu
                   </label>
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Mật khẩu mặc định: 1986"
+                    placeholder="Nhập mật khẩu"
                     className="w-full min-h-[42px] px-3.5 py-2 text-sm font-mono-num border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
@@ -276,7 +310,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
               {/* Quick One-Tap Login Cards */}
               <div className="pt-3 border-t border-slate-200 space-y-2.5">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Đăng nhập nhanh tài khoản Admin / Trọng tài (Mật khẩu: 1986)
+                  Tài khoản Admin & Trọng tài
                 </div>
 
                 <div className="grid grid-cols-1 gap-2">
@@ -304,8 +338,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                               {acc.displayName}
                             </div>
                             <div className="text-[11px] text-slate-500">
-                              TK: <span className="font-mono-num font-bold text-slate-800">{acc.username}</span> · MK:{' '}
-                              <span className="font-mono-num font-bold text-slate-800">{acc.password}</span> ·{' '}
+                              TK: <span className="font-mono-num font-bold text-slate-800">{acc.username}</span> ·{' '}
                               {acc.assignedCourts}
                             </div>
                           </div>
@@ -318,27 +351,11 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                               : 'bg-emerald-600 text-white'
                           }`}
                         >
-                          {acc.role === 'admin' ? 'Ban Tổ Chức' : 'Trọng tài'}
+                          {acc.role === 'admin' ? 'Admin' : 'Trọng tài'}
                         </span>
                       </button>
                     );
                   })}
-                </div>
-              </div>
-
-              {/* Role Permission Matrix Explanation */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 text-slate-600">
-                <div className="font-bold text-slate-900">
-                  Phân quyền đăng nhập hệ thống 1986 (Chỉ Admin & Trọng tài):
-                </div>
-                <div>
-                  • <strong className="text-orange-700">Ban Tổ Chức (Admin)</strong>: Tạo giải mới, thêm VĐV & đội hình đồng đội, chia bảng xếp lịch, duyệt lệ phí VietQR, tạo/xóa tài khoản Admin hoặc Trọng tài & toàn quyền chấm điểm.
-                </div>
-                <div>
-                  • <strong className="text-emerald-700">Trọng tài (Referee)</strong>: Sử dụng App Trọng tài (Sơ đồ sân, Bốc thăm sân/giao bóng, Chọn VĐV ra sân đồng đội, Chấm điểm trực tiếp, Gọi sân) và điểm danh Check-in VĐV.
-                </div>
-                <div>
-                  • <strong className="text-slate-800">Chưa đăng nhập</strong>: Chỉ xem công khai tỉ số Live Score, Lịch đấu, Bảng xếp hạng và Nhánh đấu (không có luồng đăng nhập cho vai trò khác).
                 </div>
               </div>
             </>
@@ -347,16 +364,16 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
             <div className="space-y-4">
               {currentAccount?.role !== 'admin' ? (
                 <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
-                  <div className="font-bold">Yêu cầu quyền Ban Tổ Chức (Admin)</div>
+                  <div className="font-bold">Yêu cầu quyền Admin</div>
                   <p>
-                    Bạn cần đăng nhập bằng tài khoản <strong>Ban Tổ Chức (admin / 1986)</strong> để tạo thêm hoặc xóa tài khoản Trọng tài và thành viên BTC.
+                    Vui lòng đăng nhập tài khoản <strong>Admin</strong> để tạo hoặc xóa tài khoản.
                   </p>
                   <button
                     type="button"
                     onClick={() => setTab('login')}
                     className="px-3 py-1.5 bg-orange-600 text-white font-bold rounded-lg"
                   >
-                    Chuyển sang tab Đăng nhập Admin
+                    Chuyển sang tab Đăng nhập
                   </button>
                 </div>
               ) : (
@@ -366,21 +383,21 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 >
                   <div className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                     <Plus className="w-4 h-4 text-orange-600" />
-                    Tạo thêm tài khoản Trọng tài hoặc Ban Tổ Chức mới
+                    Tạo tài khoản Admin hoặc Trọng tài
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-slate-700 mb-1">
-                        Phân quyền vai trò *
+                        Vai trò *
                       </label>
                       <select
                         value={newRole}
-                        onChange={(e) => setNewRole(e.target.value as StaffRole)}
+                        onChange={(e) => handleRoleChange(e.target.value as StaffRole)}
                         className="w-full min-h-[40px] px-3 py-1.5 text-xs font-semibold border border-slate-300 rounded-lg bg-white"
                       >
-                        <option value="referee">Trọng tài (Chấm điểm, Bốc thăm, Chọn VĐV)</option>
-                        <option value="admin">Ban Tổ Chức (Toàn quyền quản lý giải)</option>
+                        <option value="referee">Trọng tài</option>
+                        <option value="admin">Admin</option>
                       </select>
                     </div>
 
@@ -392,21 +409,21 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                         type="text"
                         value={newCourts}
                         onChange={(e) => setNewCourts(e.target.value)}
-                        placeholder="VD: Sân 1, Sân 2"
+                        placeholder="Nhập sân phụ trách"
                         className="w-full min-h-[40px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
                       />
                     </div>
 
                     <div className="sm:col-span-2">
                       <label className="block text-xs font-medium text-slate-700 mb-1">
-                        Họ và tên Trọng tài / Thành viên BTC *
+                        Họ và tên *
                       </label>
                       <input
                         type="text"
                         required
                         value={newDisplayName}
                         onChange={(e) => setNewDisplayName(e.target.value)}
-                        placeholder="VD: Nguyễn Văn Minh (Trọng tài Sân 5)"
+                        placeholder="Nhập họ và tên"
                         className="w-full min-h-[40px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
                       />
                     </div>
@@ -420,7 +437,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                         required
                         value={newUsername}
                         onChange={(e) => setNewUsername(e.target.value)}
-                        placeholder="VD: tt4 hoặc btc02"
+                        placeholder="Nhập tên đăng nhập"
                         className="w-full min-h-[40px] px-3 py-1.5 text-xs font-mono-num border border-slate-300 rounded-lg bg-white"
                       />
                     </div>
@@ -430,11 +447,11 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                         Mật khẩu *
                       </label>
                       <input
-                        type="text"
+                        type="password"
                         required
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="VD: 1986"
+                        placeholder="Nhập mật khẩu"
                         className="w-full min-h-[40px] px-3 py-1.5 text-xs font-mono-num border border-slate-300 rounded-lg bg-white"
                       />
                     </div>
@@ -445,7 +462,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                     className="w-full min-h-[42px] py-2 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center justify-center gap-1.5"
                   >
                     <UserPlus className="w-4 h-4" />
-                    Lưu & Cấp Tài Khoản Mới
+                    Lưu tài khoản
                   </button>
                 </form>
               )}
@@ -453,7 +470,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
               {/* Account Directory List */}
               <div className="space-y-2">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Danh sách tài khoản hiện có ({staffAccounts.length})
+                  Danh sách tài khoản ({staffAccounts.length})
                 </div>
                 <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden">
                   {staffAccounts.map((acc) => (
@@ -466,8 +483,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                           {acc.displayName}
                         </div>
                         <div className="text-slate-500">
-                          TK: <strong className="font-mono-num text-slate-800">{acc.username}</strong> · MK:{' '}
-                          <strong className="font-mono-num text-slate-800">{acc.password}</strong> ·{' '}
+                          TK: <strong className="font-mono-num text-slate-800">{acc.username}</strong> ·{' '}
                           {ROLE_LABELS[acc.role]} ({acc.assignedCourts})
                         </div>
                       </div>
