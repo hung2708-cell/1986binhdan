@@ -1,11 +1,9 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  Gavel,
   KeyRound,
   LogIn,
   LogOut,
   Plus,
-  ShieldCheck,
   Trash2,
   UserPlus,
   X,
@@ -99,6 +97,11 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentAccount) {
+      triggerPopupShake('Bạn đang đăng nhập. Vui lòng đăng xuất trước khi đăng nhập tài khoản khác.');
+      return;
+    }
+
     const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
 
@@ -122,6 +125,8 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
 
     setErrorMsg(null);
     setIsShaking(false);
+    setUsername('');
+    setPassword('');
     onLoginSuccess({
       ...found,
       password: expectedPass,
@@ -129,18 +134,13 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
     onClose();
   };
 
-  const handleSelectUsernameOnly = (acc: StaffAccount) => {
-    if (acc.role !== 'admin' && acc.role !== 'referee') {
-      triggerPopupShake('Chỉ tài khoản Admin hoặc Trọng tài mới được phép đăng nhập.');
-      return;
-    }
-    setTab('login');
-    setUsername(acc.username);
+  const handleLogoutClick = () => {
+    setUsername('');
     setPassword('');
-    setErrorMsg('Đã chọn tài khoản. Vui lòng nhập mật khẩu để đăng nhập.');
-    window.setTimeout(() => {
-      passwordInputRef.current?.focus();
-    }, 30);
+    setErrorMsg(null);
+    setTab('login');
+    onLogout();
+    onClose();
   };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
@@ -214,7 +214,9 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 ĐĂNG NHẬP ADMIN & TRỌNG TÀI 1986
               </h3>
               <p className="text-xs text-slate-500">
-                Nhập tên đăng nhập và mật khẩu để truy cập hệ thống
+                {currentAccount
+                  ? 'Phiên làm việc hiện tại — Chỉ có thể đăng xuất'
+                  : 'Nhập tên đăng nhập và mật khẩu để truy cập hệ thống'}
               </p>
             </div>
           </div>
@@ -242,24 +244,26 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
             }`}
           >
             <KeyRound className="w-3.5 h-3.5" />
-            Đăng nhập / Đổi tài khoản
+            {currentAccount ? 'Trạng thái đăng nhập' : 'Đăng nhập'}
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setTab('manage');
-              setErrorMsg(null);
-            }}
-            className={`pb-2.5 border-b-2 transition-colors flex items-center gap-1.5 ${
-              tab === 'manage'
-                ? 'border-orange-600 text-orange-600'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Quản lý tài khoản ({staffAccounts.length})
-          </button>
+          {currentAccount?.role === 'admin' && (
+            <button
+              type="button"
+              onClick={() => {
+                setTab('manage');
+                setErrorMsg(null);
+              }}
+              className={`pb-2.5 border-b-2 transition-colors flex items-center gap-1.5 ${
+                tab === 'manage'
+                  ? 'border-orange-600 text-orange-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              Quản lý tài khoản ({staffAccounts.length})
+            </button>
+          )}
         </div>
 
         <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
@@ -281,144 +285,62 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
             </div>
           )}
 
-          {/* Current Logged-in Status Banner */}
-          {currentAccount && (
-            <div className="p-3.5 rounded-xl bg-slate-900 text-white flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-[11px] text-orange-400 font-bold uppercase">
-                  Đang đăng nhập: {ROLE_LABELS[currentAccount.role]}
-                </div>
-                <div className="text-sm font-bold truncate">{currentAccount.displayName}</div>
-                <div className="text-xs text-slate-400">
-                  TK: <span className="font-mono-num text-white">{currentAccount.username}</span> ·{' '}
-                  {currentAccount.assignedCourts}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  onLogout();
-                  onClose();
-                }}
-                className="min-h-[38px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 shrink-0"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Đăng xuất
-              </button>
-            </div>
-          )}
-
-          {tab === 'login' ? (
-            <>
-              <form onSubmit={handleLoginSubmit} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Tên đăng nhập
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Nhập tên đăng nhập"
-                    className="w-full min-h-[42px] px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
+          {currentAccount ? (
+            tab === 'login' ? (
+              <div className="p-4 rounded-xl bg-slate-900 text-white space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-orange-400 font-bold uppercase">
+                      Đang đăng nhập: {ROLE_LABELS[currentAccount.role]}
+                    </div>
+                    <div className="text-base font-bold truncate mt-0.5">
+                      {currentAccount.displayName}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      TK: <span className="font-mono-num text-white">{currentAccount.username}</span> ·{' '}
+                      {currentAccount.assignedCourts}
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Mật khẩu
-                  </label>
-                  <input
-                    ref={passwordInputRef}
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Nhập mật khẩu"
-                    className="w-full min-h-[42px] px-3.5 py-2 text-sm font-mono-num border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors"
-                >
-                  <LogIn className="w-4 h-4" />
-                  Đăng nhập Hệ thống
-                </button>
-              </form>
-
-              {/* Account Directory (Chỉ điền tên đăng nhập, bắt buộc nhập mật khẩu) */}
-              <div className="pt-3 border-t border-slate-200 space-y-2.5">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Danh sách tài khoản Admin & Trọng tài
-                </div>
-
-                <div className="grid grid-cols-1 gap-2">
-                  {staffAccounts.map((acc) => {
-                    const isCurrent = currentAccount?.id === acc.id;
-                    return (
-                      <button
-                        key={acc.id}
-                        type="button"
-                        onClick={() => handleSelectUsernameOnly(acc)}
-                        className={`w-full text-left p-3 rounded-xl border transition-colors flex items-center justify-between gap-3 ${
-                          isCurrent
-                            ? 'bg-orange-50 border-orange-500'
-                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          {acc.role === 'admin' ? (
-                            <ShieldCheck className="w-5 h-5 text-orange-600 shrink-0" />
-                          ) : (
-                            <Gavel className="w-5 h-5 text-emerald-600 shrink-0" />
-                          )}
-                          <div className="min-w-0">
-                            <div className="text-xs font-bold text-slate-900 truncate">
-                              {acc.displayName}
-                            </div>
-                            <div className="text-[11px] text-slate-500">
-                              TK: <span className="font-mono-num font-bold text-slate-800">{acc.username}</span> ·{' '}
-                              {acc.assignedCourts}
-                            </div>
-                          </div>
-                        </div>
-
-                        <span
-                          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg shrink-0 ${
-                            acc.role === 'admin'
-                              ? 'bg-orange-600 text-white'
-                              : 'bg-emerald-600 text-white'
-                          }`}
-                        >
-                          {acc.role === 'admin' ? 'Admin' : 'Trọng tài'}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          ) : (
-            /* TAB 2: CREATE & MANAGE ACCOUNTS */
-            <div className="space-y-4">
-              {currentAccount?.role !== 'admin' ? (
-                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
-                  <div className="font-bold">Yêu cầu quyền Admin</div>
-                  <p>
-                    Vui lòng đăng nhập tài khoản <strong>Admin</strong> để tạo hoặc xóa tài khoản.
-                  </p>
+                <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
+                  <span className="text-xs text-slate-400">
+                    Để chuyển tài khoản khác, hãy đăng xuất trước.
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setTab('login')}
-                    className="px-3 py-1.5 bg-orange-600 text-white font-bold rounded-lg"
+                    onClick={handleLogoutClick}
+                    className="min-h-[40px] px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 shrink-0"
                   >
-                    Chuyển sang tab Đăng nhập
+                    <LogOut className="w-4 h-4" />
+                    Đăng xuất
                   </button>
                 </div>
-              ) : (
+              </div>
+            ) : (
+              /* TAB 2: CREATE & MANAGE ACCOUNTS (CHỈ KHI ĐÃ ĐĂNG NHẬP ADMIN) */
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-slate-900 text-white flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-orange-400 font-bold uppercase">
+                      Đang đăng nhập: {ROLE_LABELS[currentAccount.role]}
+                    </div>
+                    <div className="text-sm font-bold truncate">{currentAccount.displayName}</div>
+                    <div className="text-xs text-slate-400">
+                      TK: <span className="font-mono-num text-white">{currentAccount.username}</span> ·{' '}
+                      {currentAccount.assignedCourts}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLogoutClick}
+                    className="min-h-[38px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 shrink-0"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Đăng xuất
+                  </button>
+                </div>
+
                 <form
                   onSubmit={handleCreateSubmit}
                   className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3"
@@ -507,58 +429,87 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                     Lưu tài khoản
                   </button>
                 </form>
-              )}
 
-              {/* Account Directory List */}
-              <div className="space-y-2">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Danh sách tài khoản ({staffAccounts.length})
-                </div>
-                <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden">
-                  {staffAccounts.map((acc) => {
-                    const isSelf = currentAccount?.id === acc.id;
-                    return (
-                      <div
-                        key={acc.id}
-                        className="p-3 bg-white flex items-center justify-between gap-2 text-xs"
-                      >
-                        <div className="min-w-0">
-                          <div className="font-bold text-slate-900 truncate">
-                            {acc.displayName}
+                {/* Account Directory List (Không có nút chọn tài khoản; không thể tự xóa chính mình) */}
+                <div className="space-y-2">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Danh sách tài khoản ({staffAccounts.length})
+                  </div>
+                  <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden">
+                    {staffAccounts.map((acc) => {
+                      const isSelf = currentAccount.id === acc.id;
+                      return (
+                        <div
+                          key={acc.id}
+                          className="p-3 bg-white flex items-center justify-between gap-2 text-xs"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 truncate">
+                              {acc.displayName}
+                            </div>
+                            <div className="text-slate-500">
+                              TK: <strong className="font-mono-num text-slate-800">{acc.username}</strong> ·{' '}
+                              {ROLE_LABELS[acc.role]} ({acc.assignedCourts})
+                            </div>
                           </div>
-                          <div className="text-slate-500">
-                            TK: <strong className="font-mono-num text-slate-800">{acc.username}</strong> ·{' '}
-                            {ROLE_LABELS[acc.role]} ({acc.assignedCourts})
-                          </div>
-                        </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleSelectUsernameOnly(acc)}
-                            className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold"
-                          >
-                            Chọn TK
-                          </button>
-                          {currentAccount?.role === 'admin' &&
-                            !isSelf &&
-                            staffAccounts.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => onDeleteAccount(acc.id)}
-                                className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"
-                                title="Xóa tài khoản"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
+                          {!isSelf && staffAccounts.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => onDeleteAccount(acc.id)}
+                              className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 shrink-0"
+                              title="Xóa tài khoản"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+            )
+          ) : (
+            /* CHƯA ĐĂNG NHẬP: CHỈ NHẬP TÊN ĐĂNG NHẬP & MẬT KHẨU */
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Tên đăng nhập
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Nhập tên đăng nhập"
+                  className="w-full min-h-[42px] px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Mật khẩu
+                </label>
+                <input
+                  ref={passwordInputRef}
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu"
+                  className="w-full min-h-[42px] px-3.5 py-2 text-sm font-mono-num border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                Đăng nhập Hệ thống
+              </button>
+            </form>
           )}
         </div>
       </div>
