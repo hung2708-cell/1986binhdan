@@ -349,7 +349,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 </button>
               </form>
 
-              {/* Account Directory (Chỉ điền tên đăng nhập, vẫn bắt buộc nhập mật khẩu) */}
+              {/* Account Directory (Chỉ điền tên đăng nhập, bắt buộc nhập mật khẩu) */}
               <div className="pt-3 border-t border-slate-200 space-y-2.5">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Danh sách tài khoản Admin & Trọng tài
@@ -515,42 +515,47 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                   Danh sách tài khoản ({staffAccounts.length})
                 </div>
                 <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden">
-                  {staffAccounts.map((acc) => (
-                    <div
-                      key={acc.id}
-                      className="p-3 bg-white flex items-center justify-between gap-2 text-xs"
-                    >
-                      <div className="min-w-0">
-                        <div className="font-bold text-slate-900 truncate">
-                          {acc.displayName}
+                  {staffAccounts.map((acc) => {
+                    const isSelf = currentAccount?.id === acc.id;
+                    return (
+                      <div
+                        key={acc.id}
+                        className="p-3 bg-white flex items-center justify-between gap-2 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 truncate">
+                            {acc.displayName}
+                          </div>
+                          <div className="text-slate-500">
+                            TK: <strong className="font-mono-num text-slate-800">{acc.username}</strong> ·{' '}
+                            {ROLE_LABELS[acc.role]} ({acc.assignedCourts})
+                          </div>
                         </div>
-                        <div className="text-slate-500">
-                          TK: <strong className="font-mono-num text-slate-800">{acc.username}</strong> ·{' '}
-                          {ROLE_LABELS[acc.role]} ({acc.assignedCourts})
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectUsernameOnly(acc)}
-                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold"
-                        >
-                          Chọn TK
-                        </button>
-                        {currentAccount?.role === 'admin' && staffAccounts.length > 1 && (
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
-                            onClick={() => onDeleteAccount(acc.id)}
-                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"
-                            title="Xóa tài khoản"
+                            onClick={() => handleSelectUsernameOnly(acc)}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            Chọn TK
                           </button>
-                        )}
+                          {currentAccount?.role === 'admin' &&
+                            !isSelf &&
+                            staffAccounts.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => onDeleteAccount(acc.id)}
+                                className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"
+                                title="Xóa tài khoản"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
