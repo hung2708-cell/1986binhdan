@@ -78,6 +78,24 @@ type ActiveTab =
 
 type HomepageGuideTab = 'places' | 'cuisine' | 'guide';
 
+type LandmarkSceneKind =
+  | 'waterfall'
+  | 'cave'
+  | 'arch_mountain'
+  | 'stream'
+  | 'pass'
+  | 'stone_village'
+  | 'cloud_peak'
+  | 'lake';
+
+type CuisineSceneKind =
+  | 'banh_cuon'
+  | 'pho_chua'
+  | 'vit_quay'
+  | 'hat_de'
+  | 'banh_ap_chao'
+  | 'xoi_tram';
+
 interface LandmarkLink {
   label: string;
   url: string;
@@ -88,6 +106,7 @@ interface CaoBangLandmark {
   name: string;
   area: string;
   tag: string;
+  scene: LandmarkSceneKind;
   summary: string;
   guideDetail?: string;
   links: LandmarkLink[];
@@ -99,6 +118,7 @@ interface CaoBangCuisineItem {
   name: string;
   mealTime: string;
   tag: string;
+  scene: CuisineSceneKind;
   image: string;
   description: string;
   detailedGuide: string;
@@ -115,44 +135,245 @@ interface LightboxPreview {
   fallbackAccent: string;
 }
 
-function createTravelPlaceholderSvg(
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function createLandmarkArtwork(
   title: string,
   tag: string,
-  accentHex: string,
-  subtitle = 'Công viên địa chất toàn cầu UNESCO · Cao Bằng',
+  scene: LandmarkSceneKind = 'waterfall',
+  accentHex = '#0d9488',
 ): string {
-  const safeTitle = title.replace(/[<>&"]/g, '');
-  const safeTag = tag.replace(/[<>&"]/g, '');
-  const safeSub = subtitle.replace(/[<>&"]/g, '');
+  const t = escapeXml(title);
+  const g = escapeXml(tag);
+
+  let sceneLayers = '';
+  switch (scene) {
+    case 'waterfall':
+      sceneLayers = `
+        <path d="M0 240 L190 120 L380 230 L560 110 L800 220 L800 500 L0 500 Z" fill="#134e4a"/>
+        <path d="M0 290 L240 175 L520 275 L800 185 L800 500 L0 500 Z" fill="#115e59"/>
+        <path d="M430 165 Q475 265 445 390 L535 390 Q560 270 515 165 Z" fill="#e0f2fe" opacity="0.92"/>
+        <path d="M452 175 Q482 268 462 390 L482 390 Q502 270 476 175 Z" fill="#ffffff"/>
+        <ellipse cx="485" cy="395" rx="95" ry="20" fill="#bae6fd" opacity="0.85"/>
+        <path d="M0 390 Q400 372 800 395 L800 500 L0 500 Z" fill="#0f766e"/>
+      `;
+      break;
+    case 'cave':
+      sceneLayers = `
+        <rect width="800" height="500" fill="#090d16"/>
+        <path d="M0 0 L800 0 L800 140 Q620 90 400 120 Q180 90 0 140 Z" fill="#1e293b"/>
+        <polygon points="120,105 145,235 170,105" fill="#475569"/>
+        <polygon points="260,112 285,270 310,112" fill="#64748b"/>
+        <polygon points="510,112 538,260 565,112" fill="#64748b"/>
+        <polygon points="650,102 672,215 695,102" fill="#475569"/>
+        <polygon points="180,430 205,315 230,430" fill="#334155"/>
+        <polygon points="560,430 590,295 620,430" fill="#334155"/>
+        <circle cx="400" cy="240" r="110" fill="#38bdf8" opacity="0.14"/>
+        <path d="M0 415 Q400 395 800 418 L800 500 L0 500 Z" fill="#0f172a"/>
+      `;
+      break;
+    case 'arch_mountain':
+      sceneLayers = `
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0284c7"/>
+          <stop offset="60%" stop-color="#7dd3fc"/>
+          <stop offset="100%" stop-color="#dcfce7"/>
+        </linearGradient>
+        <rect width="800" height="500" fill="url(#sky)"/>
+        <path d="M120 355 Q400 70 680 355 Z" fill="#14532d"/>
+        <circle cx="400" cy="265" r="78" fill="#7dd3fc"/>
+        <path d="M0 345 Q220 310 400 345 T800 335 L800 500 L0 500 Z" fill="#16a34a"/>
+        <path d="M0 385 Q280 355 540 385 T800 375 L800 500 L0 500 Z" fill="#15803d"/>
+      `;
+      break;
+    case 'stream':
+      sceneLayers = `
+        <rect width="800" height="500" fill="#064e3b"/>
+        <path d="M0 150 L220 60 L460 155 L690 65 L800 130 L800 260 L0 260 Z" fill="#14532d"/>
+        <path d="M290 220 Q420 290 360 360 Q310 415 520 500 L190 500 Q170 400 250 320 Z" fill="#2dd4bf"/>
+        <path d="M315 235 Q400 292 350 355 Q305 408 460 500 L240 500 Q215 405 275 328 Z" fill="#5eead4" opacity="0.75"/>
+        <ellipse cx="140" cy="360" rx="65" ry="26" fill="#334155"/>
+        <ellipse cx="640" cy="340" rx="75" ry="28" fill="#334155"/>
+      `;
+      break;
+    case 'pass':
+      sceneLayers = `
+        <linearGradient id="pSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0369a1"/>
+          <stop offset="100%" stop-color="#bae6fd"/>
+        </linearGradient>
+        <rect width="800" height="500" fill="url(#pSky)"/>
+        <path d="M0 230 L210 110 L420 230 L640 100 L800 190 L800 500 L0 500 Z" fill="#1e3a8a" opacity="0.35"/>
+        <path d="M0 280 L250 155 L520 275 L800 150 L800 500 L0 500 Z" fill="#166534"/>
+        <path d="M90 480 Q240 340 410 355 T680 215" fill="none" stroke="#f8fafc" stroke-width="14" stroke-linecap="round" opacity="0.92"/>
+        <path d="M90 480 Q240 340 410 355 T680 215" fill="none" stroke="#475569" stroke-width="5" stroke-dasharray="12 10"/>
+      `;
+      break;
+    case 'stone_village':
+      sceneLayers = `
+        <rect width="800" height="500" fill="#1e293b"/>
+        <path d="M0 190 L260 95 L540 195 L800 105 L800 320 L0 320 Z" fill="#14532d"/>
+        <rect x="130" y="235" width="160" height="85" rx="6" fill="#78716c"/>
+        <polygon points="115,235 210,185 305,235" fill="#92400e"/>
+        <rect x="330" y="245" width="175" height="85" rx="6" fill="#57534e"/>
+        <polygon points="315,245 417,192 520,245" fill="#78350f"/>
+        <rect x="545" y="230" width="150" height="85" rx="6" fill="#78716c"/>
+        <polygon points="532,230 620,182 708,230" fill="#92400e"/>
+        <path d="M0 320 L800 320 L800 500 L0 500 Z" fill="#1f2937"/>
+      `;
+      break;
+    case 'cloud_peak':
+      sceneLayers = `
+        <linearGradient id="cSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0f172a"/>
+          <stop offset="55%" stop-color="#334155"/>
+          <stop offset="100%" stop-color="#e2e8f0"/>
+        </linearGradient>
+        <rect width="800" height="500" fill="url(#cSky)"/>
+        <path d="M0 240 L200 130 L420 235 L650 120 L800 200 L800 500 L0 500 Z" fill="#064e3b"/>
+        <circle cx="140" cy="310" r="85" fill="#f8fafc" opacity="0.88"/>
+        <circle cx="240" cy="325" r="95" fill="#ffffff" opacity="0.92"/>
+        <circle cx="360" cy="315" r="90" fill="#f1f5f9" opacity="0.9"/>
+        <circle cx="490" cy="325" r="95" fill="#ffffff" opacity="0.92"/>
+        <circle cx="620" cy="310" r="88" fill="#f8fafc" opacity="0.88"/>
+        <rect x="0" y="330" width="800" height="170" fill="#f8fafc" opacity="0.85"/>
+      `;
+      break;
+    case 'lake':
+    default:
+      sceneLayers = `
+        <linearGradient id="lSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0284c7"/>
+          <stop offset="100%" stop-color="#a7f3d0"/>
+        </linearGradient>
+        <rect width="800" height="500" fill="url(#lSky)"/>
+        <path d="M0 215 L180 120 L380 210 L590 115 L800 205 L800 285 L0 285 Z" fill="#065f46"/>
+        <rect x="0" y="275" width="800" height="225" fill="#0f766e"/>
+        <ellipse cx="400" cy="355" rx="220" ry="38" fill="#5eead4" opacity="0.35"/>
+      `;
+      break;
+  }
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
     <defs>
-      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <linearGradient id="baseGrad" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stop-color="#0f172a"/>
-        <stop offset="55%" stop-color="#1e293b"/>
         <stop offset="100%" stop-color="${accentHex}"/>
       </linearGradient>
     </defs>
-    <rect width="800" height="500" fill="url(#bg)"/>
-    <circle cx="660" cy="120" r="95" fill="${accentHex}" opacity="0.22"/>
-    <path d="M0 370 Q180 290 360 365 T800 340 L800 500 L0 500 Z" fill="#064e3b" opacity="0.55"/>
-    <path d="M0 405 Q240 335 470 400 T800 385 L800 500 L0 500 Z" fill="#022c22" opacity="0.7"/>
-    <rect x="36" y="36" width="270" height="34" rx="17" fill="#ffffff" fill-opacity="0.14"/>
-    <text x="54" y="58" fill="#a7f3d0" font-family="system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="1">${safeTag}</text>
-    <text x="36" y="424" fill="#ffffff" font-family="system-ui, sans-serif" font-size="31" font-weight="800">${safeTitle}</text>
-    <text x="36" y="458" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="16">${safeSub}</text>
+    <rect width="800" height="500" fill="url(#baseGrad)"/>
+    ${sceneLayers}
+    <rect x="0" y="325" width="800" height="175" fill="#020617" opacity="0.68"/>
+    <rect x="32" y="28" width="265" height="32" rx="16" fill="#020617" fill-opacity="0.72"/>
+    <text x="48" y="49" fill="#6ee7b7" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="800" letter-spacing="1">${g}</text>
+    <text x="32" y="416" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="30" font-weight="800">${t}</text>
+    <text x="32" y="452" fill="#e2e8f0" font-family="system-ui, -apple-system, sans-serif" font-size="15">Du lịch Cao Bằng · Công viên địa chất toàn cầu UNESCO</text>
   </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-function resolveMediaSrc(
-  src: string | undefined,
-  fallbackTitle: string,
-  fallbackTag: string,
-  fallbackAccent: string,
+function createCuisineArtwork(
+  title: string,
+  tag: string,
+  scene: CuisineSceneKind,
+  mealTime: string,
 ): string {
-  const trimmed = (src || '').trim();
-  if (trimmed) return trimmed;
-  return createTravelPlaceholderSvg(fallbackTitle, fallbackTag, fallbackAccent);
+  const t = escapeXml(title);
+  const g = escapeXml(tag);
+  const m = escapeXml(mealTime);
+
+  let dishArt = '';
+  switch (scene) {
+    case 'banh_cuon':
+      dishArt = `
+        <ellipse cx="400" cy="245" rx="185" ry="72" fill="#fef3c7"/>
+        <ellipse cx="400" cy="238" rx="165" ry="56" fill="#fde68a"/>
+        <path d="M270 225 Q400 185 530 225 Q400 265 270 225 Z" fill="#fffbeb" stroke="#fcd34d" stroke-width="2"/>
+        <circle cx="350" cy="222" r="9" fill="#92400e"/>
+        <circle cx="420" cy="216" r="10" fill="#78350f"/>
+        <circle cx="465" cy="226" r="8" fill="#15803d"/>
+        <path d="M215 245 Q400 355 585 245 Q555 345 400 355 Q245 345 215 245 Z" fill="#f59e0b"/>
+      `;
+      break;
+    case 'pho_chua':
+      dishArt = `
+        <ellipse cx="400" cy="250" rx="180" ry="75" fill="#fff7ed"/>
+        <ellipse cx="400" cy="242" rx="158" ry="58" fill="#ffedd5"/>
+        <path d="M280 232 Q400 202 520 235" fill="none" stroke="#f8fafc" stroke-width="8" stroke-linecap="round"/>
+        <path d="M295 246 Q400 218 505 248" fill="none" stroke="#fef08a" stroke-width="7" stroke-linecap="round"/>
+        <rect x="330" y="210" width="54" height="22" rx="6" fill="#c2410c"/>
+        <rect x="405" y="214" width="52" height="20" rx="6" fill="#d97706"/>
+        <circle cx="385" cy="242" r="14" fill="#16a34a"/>
+        <path d="M220 250 Q400 355 580 250 Q550 342 400 352 Q250 342 220 250 Z" fill="#ea580c"/>
+      `;
+      break;
+    case 'vit_quay':
+      dishArt = `
+        <ellipse cx="400" cy="240" rx="190" ry="82" fill="#78350f"/>
+        <ellipse cx="395" cy="230" rx="145" ry="62" fill="#d97706"/>
+        <ellipse cx="395" cy="224" rx="115" ry="44" fill="#f59e0b"/>
+        <circle cx="330" cy="224" r="14" fill="#166534"/>
+        <circle cx="365" cy="218" r="12" fill="#15803d"/>
+        <circle cx="445" cy="226" r="14" fill="#991b1b"/>
+        <circle cx="475" cy="220" r="11" fill="#166534"/>
+      `;
+      break;
+    case 'hat_de':
+      dishArt = `
+        <ellipse cx="400" cy="245" rx="185" ry="74" fill="#451a03"/>
+        <ellipse cx="335" cy="235" rx="34" ry="24" transform="rotate(-15 335 235)" fill="#92400e"/>
+        <ellipse cx="405" cy="225" rx="36" ry="25" transform="rotate(10 405 225)" fill="#78350f"/>
+        <ellipse cx="475" cy="238" rx="34" ry="24" transform="rotate(-8 475 238)" fill="#92400e"/>
+        <ellipse cx="370" cy="256" rx="32" ry="22" transform="rotate(14 370 256)" fill="#b45309"/>
+        <ellipse cx="440" cy="255" rx="32" ry="22" transform="rotate(-12 440 255)" fill="#78350f"/>
+      `;
+      break;
+    case 'banh_ap_chao':
+      dishArt = `
+        <ellipse cx="400" cy="248" rx="180" ry="70" fill="#fef3c7"/>
+        <ellipse cx="340" cy="232" rx="46" ry="28" fill="#f59e0b" stroke="#b45309" stroke-width="3"/>
+        <ellipse cx="415" cy="225" rx="48" ry="30" fill="#fbbf24" stroke="#b45309" stroke-width="3"/>
+        <ellipse cx="475" cy="240" rx="44" ry="27" fill="#f59e0b" stroke="#92400e" stroke-width="3"/>
+        <circle cx="415" cy="225" r="11" fill="#7c2d12"/>
+      `;
+      break;
+    case 'xoi_tram':
+    default:
+      dishArt = `
+        <ellipse cx="400" cy="242" rx="185" ry="76" fill="#4c1d95"/>
+        <ellipse cx="400" cy="232" rx="145" ry="56" fill="#a21caf"/>
+        <ellipse cx="400" cy="226" rx="115" ry="42" fill="#c026d3"/>
+        <circle cx="355" cy="224" r="12" fill="#facc15"/>
+        <circle cx="405" cy="220" r="13" fill="#fef08a"/>
+        <circle cx="450" cy="228" r="12" fill="#facc15"/>
+      `;
+      break;
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+    <defs>
+      <linearGradient id="foodBg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#1c1917"/>
+        <stop offset="55%" stop-color="#451a03"/>
+        <stop offset="100%" stop-color="#92400e"/>
+      </linearGradient>
+    </defs>
+    <rect width="800" height="500" fill="url(#foodBg)"/>
+    <circle cx="400" cy="240" r="175" fill="#fbbf24" opacity="0.12"/>
+    ${dishArt}
+    <rect x="0" y="325" width="800" height="175" fill="#09090b" opacity="0.72"/>
+    <rect x="32" y="28" width="250" height="32" rx="16" fill="#09090b" fill-opacity="0.72"/>
+    <text x="48" y="49" fill="#fcd34d" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="800" letter-spacing="1">${g}</text>
+    <text x="32" y="416" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="29" font-weight="800">${t}</text>
+    <text x="32" y="452" fill="#fde68a" font-family="system-ui, -apple-system, sans-serif" font-size="15">Ẩm thực Cao Bằng · ${m}</text>
+  </svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
@@ -161,8 +382,13 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Bánh cuốn canh Cao Bằng',
     mealTime: 'Ăn sáng · Chợ & phố trung tâm',
     tag: 'Đặc sản ăn sáng',
-    image:
-      'https://cdn.tgdd.vn/Files/2021/08/25/1377667/cach-lam-banh-cuon-cao-bang-nong-hoi-thom-ngon-chuan-vi-202108251508096488.jpg',
+    scene: 'banh_cuon',
+    image: createCuisineArtwork(
+      'Bánh cuốn canh Cao Bằng',
+      'ĐẶC SẢN ĂN SÁNG',
+      'banh_cuon',
+      'Ăn sáng · Chợ & phố trung tâm',
+    ),
     description:
       'Bánh được tráng mỏng thủ công từ gạo nếp nương, nhân thịt băm mộc nhĩ, ăn cùng bát nước dùng ninh xương nóng hổi thay vì chấm nước mắm như miền xuôi.',
     detailedGuide:
@@ -174,8 +400,13 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Phở chua Cao Bằng',
     mealTime: 'Ăn sáng / Xế trưa',
     tag: 'Chua ngọt thanh mát',
-    image:
-      'https://cdn.tgdd.vn/Files/2021/09/14/1382522/cach-lam-pho-chua-cao-bang-chuan-vi-ngon-kho-cuong-202109141634133804.jpg',
+    scene: 'pho_chua',
+    image: createCuisineArtwork(
+      'Phở chua Cao Bằng',
+      'CHUA NGỌT THANH MÁT',
+      'pho_chua',
+      'Ăn sáng / Xế trưa',
+    ),
     description:
       'Sợi bánh phở mềm dai trộn đều với thịt vịt quay, ba chỉ rán giòn, khoai tàu thái sợi chiên vàng, lạc rang giã dập và nước sốt chua ngọt sánh mịn.',
     detailedGuide:
@@ -187,8 +418,13 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Vịt quay 7 vị & Lạp sườn mắc mật',
     mealTime: 'Bữa trưa / Bữa tối · Quà biếu',
     tag: 'Hương vị núi rừng',
-    image:
-      'https://cdn.tgdd.vn/Files/2021/09/03/1379886/cach-lam-vit-quay-7-vi-cao-bang-da-gion-thit-mem-ngot-202109031109551593.jpg',
+    scene: 'vit_quay',
+    image: createCuisineArtwork(
+      'Vịt quay 7 vị & Lạp sườn',
+      'HƯƠNG VỊ NÚI RỪNG',
+      'vit_quay',
+      'Bữa trưa / Bữa tối · Quà biếu',
+    ),
     description:
       'Vịt cỏ địa phương tẩm ướp 7 loại gia vị bí truyền cùng lá mắc mật, phết mật ong quay than hồng cho lớp da vàng óng giòn rụm, thịt bên trong mềm ngọt.',
     detailedGuide:
@@ -200,8 +436,13 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Hạt dẻ Trùng Khánh & Rau dạ hiến',
     mealTime: 'Theo mùa · Đặc sản vùng cao',
     tag: 'Thủ phủ Trùng Khánh',
-    image:
-      'https://cdn.tgdd.vn/Files/2021/10/12/1389903/hat-de-trung-khanh-cao-bang-co-gi-dac-biet-cach-che-bien-ngon-202110121545123209.jpg',
+    scene: 'hat_de',
+    image: createCuisineArtwork(
+      'Hạt dẻ Trùng Khánh',
+      'THỦ PHỦ TRÙNG KHÁNH',
+      'hat_de',
+      'Theo mùa · Đặc sản vùng cao',
+    ),
     description:
       'Hạt dẻ Trùng Khánh hạt to, vỏ nâu bóng, khi luộc hoặc rang chín có vị bùi béo và hương thơm đặc trưng hiếm nơi nào sánh bằng.',
     detailedGuide:
@@ -213,8 +454,13 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Bánh áp chao Cao Bằng',
     mealTime: 'Ăn vặt chiều · Mùa thu đông',
     tag: 'Quà chiều ấm nóng',
-    image:
-      'https://cdn.tgdd.vn/Files/2021/10/29/1394009/banh-ap-chao-cao-bang-la-gi-cach-lam-banh-ap-chao-gion-ngon-202110291615274036.jpg',
+    scene: 'banh_ap_chao',
+    image: createCuisineArtwork(
+      'Bánh áp chao Cao Bằng',
+      'QUÀ CHIỀU ẤM NÓNG',
+      'banh_ap_chao',
+      'Ăn vặt chiều · Mùa thu đông',
+    ),
     description:
       'Chiếc bánh làm từ bột gạo nếp pha gạo tẻ bọc nhân thịt vịt tẩm gia vị, thả chảo dầu sôi chiên vàng phồng, bên ngoài giòn tan bên trong mềm dẻo.',
     detailedGuide:
@@ -226,8 +472,13 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Xôi trám đen & Bánh khảo',
     mealTime: 'Lễ Tết · Quà đặc sản',
     tag: 'Tinh hoa ẩm thực Tày',
-    image:
-      'https://cdn.tgdd.vn/Files/2021/09/22/1384512/cach-lam-xoi-tram-den-cao-bang-thom-deo-chuan-vi-202109221420129876.jpg',
+    scene: 'xoi_tram',
+    image: createCuisineArtwork(
+      'Xôi trám đen & Bánh khảo',
+      'TINH HOA ẨM THỰC TÀY',
+      'xoi_tram',
+      'Lễ Tết · Quà đặc sản',
+    ),
     description:
       'Xôi nếp nương đồ cùng thịt quả trám đen tạo sắc tím hồng bắt mắt, vị dẻo thơm bùi ngậy; bánh khảo làm từ gạo nếp rang xay mịn nhân đường phên, lạc vừng.',
     detailedGuide:
@@ -275,6 +526,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     name: 'Thác Bản Giốc',
     area: 'Đàm Thủy · Trùng Khánh · Cao Bằng',
     tag: 'Kỳ quan thác nước',
+    scene: 'waterfall',
     summary:
       'Một trong những thác nước tự nhiên hùng vĩ bậc nhất Đông Nam Á, tầng tầng bọt trắng đổ xuống giữa núi non biên cương xanh mát.',
     guideDetail:
@@ -290,8 +542,8 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
       },
     ],
     images: [
-      'https://vcdn1-dulich.vnecdn.net/2022/04/18/thac-ban-gioc-cao-bang-1-1650270341.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=0G2oF9w2r8cF7t2v6sQ0qQ',
-      createTravelPlaceholderSvg('Thác Bản Giốc', 'KỲ QUAN THÁC NƯỚC', '#0d9488'),
+      createLandmarkArtwork('Thác Bản Giốc', 'KỲ QUAN THÁC NƯỚC', 'waterfall', '#0d9488'),
+      createLandmarkArtwork('Thác Bản Giốc · Toàn cảnh', 'BIÊN CƯƠNG CAO BẰNG', 'lake', '#0284c7'),
     ],
   },
   {
@@ -299,6 +551,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     name: 'Động Ngườm Ngao',
     area: 'Đàm Thủy · Trùng Khánh · Cao Bằng',
     tag: 'Hang động thạch nhũ',
+    scene: 'cave',
     summary:
       'Hang động đá vôi kỳ ảo dài hơn 2 km với hệ thống nhũ đá, măng đá lấp lánh nhiều hình thù độc đáo như đài sen ngược, cột chống trời.',
     guideDetail:
@@ -314,8 +567,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
       },
     ],
     images: [
-      'https://vcdn1-dulich.vnecdn.net/2022/04/18/dong-nguom-ngao-cao-bang-1-1650270512.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=1qW8zR5t4yU6iO9p3lK2jA',
-      createTravelPlaceholderSvg('Động Ngườm Ngao', 'HANG ĐỘNG THẠCH NHŨ', '#0e7490'),
+      createLandmarkArtwork('Động Ngườm Ngao', 'HANG ĐỘNG THẠCH NHŨ', 'cave', '#0284c7'),
     ],
   },
   {
@@ -323,6 +575,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     name: 'Núi Mắt Thần (Núi Thủng)',
     area: 'Quốc Toản · Quảng Hòa · Cao Bằng',
     tag: 'Thảo nguyên & cắm trại',
+    scene: 'arch_mountain',
     summary:
       'Khối núi đá vôi có vòm thủng tròn khổng lồ xuyên qua lòng núi giữa thung lũng thảo nguyên xanh mướt, điểm dã ngoại và chụp ảnh nổi tiếng.',
     guideDetail:
@@ -338,8 +591,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
       },
     ],
     images: [
-      'https://vcdn1-dulich.vnecdn.net/2022/04/18/nui-mat-than-cao-bang-1-1650270650.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=9xC7vB5n3mZ1aS8dF4gH6j',
-      createTravelPlaceholderSvg('Núi Mắt Thần', 'THẢO NGUYÊN & CHECK-IN', '#059669'),
+      createLandmarkArtwork('Núi Mắt Thần', 'THẢO NGUYÊN & CHECK-IN', 'arch_mountain', '#059669'),
     ],
   },
   {
@@ -347,6 +599,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     name: 'Khu di tích Quốc gia đặc biệt Pác Bó',
     area: 'Trường Hà · Hà Quảng · Cao Bằng',
     tag: 'Cội nguồn lịch sử',
+    scene: 'stream',
     summary:
       'Quần thể di tích gắn liền với dòng suối Lê-nin xanh ngọc bích, núi Các Mác hùng vĩ và hang Cốc Bó mang đậm dấu ấn lịch sử cách mạng.',
     guideDetail:
@@ -358,8 +611,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
       },
     ],
     images: [
-      'https://vcdn1-dulich.vnecdn.net/2022/04/18/suoi-le-nin-pac-bo-cao-bang-1-1650270780.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=4pL2kJ9hG7fD5sA3zX1cV8b',
-      createTravelPlaceholderSvg('Khu di tích Pác Bó', 'CỘI NGUỒN LỊCH SỬ', '#15803d'),
+      createLandmarkArtwork('Khu di tích Pác Bó', 'CỘI NGUỒN LỊCH SỬ', 'stream', '#15803d'),
     ],
   },
   {
@@ -367,6 +619,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     name: 'Đèo Mã Phục',
     area: 'Quốc lộ 3 · Quảng Hòa · Cao Bằng',
     tag: 'Cung đèo ngoạn mục',
+    scene: 'pass',
     summary:
       'Con đèo nổi tiếng bậc nhất Cao Bằng với 7 tầng dốc uốn lượn mềm mại qua hai vách núi đá vôi dựng đứng như hai con ngựa phủ phục.',
     guideDetail:
@@ -378,8 +631,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
       },
     ],
     images: [
-      'https://vcdn1-dulich.vnecdn.net/2022/04/18/deo-ma-phuc-cao-bang-1-1650270900.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=7mN5bV3cX1zA9sD8fG6hJ4k',
-      createTravelPlaceholderSvg('Đèo Mã Phục', 'CUNG ĐÈO NGOẠN MỤC', '#0284c7'),
+      createLandmarkArtwork('Đèo Mã Phục', 'CUNG ĐÈO NGOẠN MỤC', 'pass', '#0284c7'),
     ],
   },
   {
@@ -387,6 +639,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     name: 'Làng đá cổ Khuổi Ky',
     area: 'Đàm Thủy · Trùng Khánh · Cao Bằng',
     tag: 'Bản sắc văn hóa Tày',
+    scene: 'stone_village',
     summary:
       'Ngôi làng cổ hơn 400 năm tuổi với những ngôi nhà sàn xây hoàn toàn bằng đá hộc của đồng bào Tày, lưu giữ nét kiến trúc và đời sống bản địa.',
     guideDetail:
@@ -398,8 +651,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
       },
     ],
     images: [
-      'https://vcdn1-dulich.vnecdn.net/2022/04/18/lang-da-khuoi-ky-cao-bang-1-1650271020.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=2wQ4eR6tY8uI0oP9lK7jH5g',
-      createTravelPlaceholderSvg('Làng đá Khuổi Ky', 'BẢN SẮC VĂN HÓA TÀY', '#b45309'),
+      createLandmarkArtwork('Làng đá Khuổi Ky', 'BẢN SẮC VĂN HÓA TÀY', 'stone_village', '#b45309'),
     ],
   },
   {
@@ -407,6 +659,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     name: 'Vườn quốc gia Phia Oắc – Phia Đén',
     area: 'Thành Công · Nguyên Bình · Cao Bằng',
     tag: 'Rừng rêu & săn mây',
+    scene: 'cloud_peak',
     summary:
       'Được ví như "nóc nhà phía Tây" của Cao Bằng với độ cao gần 2.000 m, khí hậu mát mẻ quanh năm, rừng rêu cổ thụ và biển mây bồng bềnh.',
     guideDetail:
@@ -418,8 +671,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
       },
     ],
     images: [
-      'https://vcdn1-dulich.vnecdn.net/2022/04/18/phia-oac-cao-bang-1-1650271150.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=6tY8uI0oP9lK7jH5gF3dS1a',
-      createTravelPlaceholderSvg('Phia Oắc – Phia Đén', 'RỪNG RÊU & SĂN MÂY', '#047857'),
+      createLandmarkArtwork('Phia Oắc – Phia Đén', 'RỪNG RÊU & SĂN MÂY', 'cloud_peak', '#047857'),
     ],
   },
   {
@@ -427,6 +679,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     name: 'Hồ Thang Hen',
     area: 'Quốc Toản · Quảng Hòa · Cao Bằng',
     tag: 'Thắng cảnh cao nguyên',
+    scene: 'lake',
     summary:
       'Quần thể 36 hồ nước ngọt tự nhiên thông nhau qua các hang ngầm dưới lòng núi, mặt nước xanh biếc soi bóng rừng thông và vách đá.',
     guideDetail:
@@ -438,8 +691,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
       },
     ],
     images: [
-      'https://vcdn1-dulich.vnecdn.net/2022/04/18/ho-thang-hen-cao-bang-1-1650271280.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=8uI0oP9lK7jH5gF3dS1aZ2x',
-      createTravelPlaceholderSvg('Hồ Thang Hen', 'THẮNG CẢNH CAO NGUYÊN', '#0d9488'),
+      createLandmarkArtwork('Hồ Thang Hen', 'THẮNG CẢNH CAO NGUYÊN', 'lake', '#0d9488'),
     ],
   },
 ];
@@ -447,7 +699,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
 const STORAGE_KEY = 'pickleball_1986_state_v7';
 const AUTH_SESSION_KEY = 'pickleball_1986_auth_user_v1';
 const ACTIVE_TAB_KEY = 'pickleball_1986_active_tab_v1';
-const CAO_BANG_STORAGE_KEY = 'pickleball_1986_caobang_travel_v4';
+const CAO_BANG_STORAGE_KEY = 'pickleball_1986_caobang_travel_v5';
 const SYNC_CHANNEL = 'pickleball_1986_realtime_channel';
 
 const VALID_TABS: ActiveTab[] = [
@@ -547,6 +799,7 @@ function loadSavedCaoBangLandmarks(): CaoBangLandmark[] {
         return parsed.map((item, idx) => {
           const name = String(item.name || 'Địa danh Cao Bằng');
           const tag = String(item.tag || 'Điểm đến nổi bật');
+          const scene = (item.scene as LandmarkSceneKind) || 'waterfall';
           const imgs = Array.isArray(item.images)
             ? item.images.filter(Boolean)
             : item.imageUrl
@@ -573,13 +826,14 @@ function loadSavedCaoBangLandmarks(): CaoBangLandmark[] {
             name,
             area: String(item.area || 'Cao Bằng'),
             tag,
+            scene,
             summary: String(item.summary || ''),
             guideDetail: item.guideDetail ? String(item.guideDetail) : undefined,
             links: normalizedLinks,
             images:
               imgs.length > 0
                 ? imgs
-                : [createTravelPlaceholderSvg(name, tag.toUpperCase(), '#059669')],
+                : [createLandmarkArtwork(name, tag.toUpperCase(), scene, '#059669')],
           };
         });
       }
@@ -913,7 +1167,7 @@ export default function App() {
     const finalImages =
       combinedImages.length > 0
         ? combinedImages
-        : [createTravelPlaceholderSvg(cleanName, cleanTag.toUpperCase(), '#059669')];
+        : [createLandmarkArtwork(cleanName, cleanTag.toUpperCase(), 'waterfall', '#059669')];
 
     if (editingLandmarkId) {
       const updated = landmarks.map((item) =>
@@ -938,6 +1192,7 @@ export default function App() {
         name: cleanName,
         area: cleanArea,
         tag: cleanTag,
+        scene: 'waterfall',
         summary: cleanSummary,
         guideDetail: cleanGuide || undefined,
         links: finalLinks,
@@ -1971,18 +2226,14 @@ export default function App() {
                     className="relative w-24 h-16 rounded-lg overflow-hidden border border-slate-300 bg-white"
                   >
                     <img
-                      src={resolveMediaSrc(
-                        src,
-                        spotName || 'Cao Bằng',
-                        spotTag.toUpperCase(),
-                        '#059669',
-                      )}
+                      src={src}
                       alt={`Ảnh địa danh ${idx + 1}`}
                       referrerPolicy="no-referrer"
                       onError={(e) => {
-                        e.currentTarget.src = createTravelPlaceholderSvg(
+                        e.currentTarget.src = createLandmarkArtwork(
                           spotName || 'Cao Bằng',
                           spotTag.toUpperCase(),
+                          'waterfall',
                           '#059669',
                         );
                       }}
@@ -2030,12 +2281,13 @@ export default function App() {
           <div className="p-4 sm:p-6 space-y-5 bg-slate-50/40">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
               {visibleLandmarks.map((spot) => {
-                const coverImage = resolveMediaSrc(
-                  spot.images[0],
+                const fallbackArt = createLandmarkArtwork(
                   spot.name,
                   spot.tag.toUpperCase(),
-                  '#059669',
+                  spot.scene || 'waterfall',
+                  '#0d9488',
                 );
+                const coverImage = spot.images[0] || fallbackArt;
                 const isCardExpanded = Boolean(expandedCardIds[spot.id]);
                 const hasMoreContent =
                   Boolean(spot.guideDetail) || spot.summary.length > 115;
@@ -2057,7 +2309,7 @@ export default function App() {
                               imageIndex: 0,
                               fallbackTitle: spot.name,
                               fallbackTag: spot.tag.toUpperCase(),
-                              fallbackAccent: '#059669',
+                              fallbackAccent: '#0d9488',
                             })
                           }
                           className="block w-full h-full text-left"
@@ -2067,11 +2319,7 @@ export default function App() {
                             alt={spot.name}
                             referrerPolicy="no-referrer"
                             onError={(e) => {
-                              e.currentTarget.src = createTravelPlaceholderSvg(
-                                spot.name,
-                                spot.tag.toUpperCase(),
-                                '#059669',
-                              );
+                              e.currentTarget.src = fallbackArt;
                             }}
                             className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300"
                           />
@@ -2090,7 +2338,7 @@ export default function App() {
                                 imageIndex: 0,
                                 fallbackTitle: spot.name,
                                 fallbackTag: spot.tag.toUpperCase(),
-                                fallbackAccent: '#059669',
+                                fallbackAccent: '#0d9488',
                               })
                             }
                             className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-950/80 text-white font-mono-num"
@@ -2170,7 +2418,7 @@ export default function App() {
                                 imageIndex: 0,
                                 fallbackTitle: spot.name,
                                 fallbackTag: spot.tag.toUpperCase(),
-                                fallbackAccent: '#059669',
+                                fallbackAccent: '#0d9488',
                               })
                             }
                             className="text-xs font-semibold text-slate-600 hover:text-slate-900"
@@ -2237,12 +2485,9 @@ export default function App() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
             {visibleCuisine.map((item) => {
               const isExpanded = Boolean(expandedCardIds[item.id]);
-              const foodSrc = resolveMediaSrc(
-                item.image,
-                item.name,
-                item.tag.toUpperCase(),
-                '#d97706',
-              );
+              const foodSrc =
+                item.image ||
+                createCuisineArtwork(item.name, item.tag.toUpperCase(), item.scene, item.mealTime);
 
               return (
                 <article
@@ -2271,10 +2516,10 @@ export default function App() {
                           alt={item.name}
                           referrerPolicy="no-referrer"
                           onError={(e) => {
-                            e.currentTarget.src = createTravelPlaceholderSvg(
+                            e.currentTarget.src = createCuisineArtwork(
                               item.name,
                               item.tag.toUpperCase(),
-                              '#d97706',
+                              item.scene,
                               item.mealTime,
                             );
                           }}
@@ -3089,18 +3334,14 @@ export default function App() {
             </div>
             <div className="bg-slate-950 flex flex-col items-center justify-center max-h-[75vh] overflow-auto p-3 gap-3">
               <img
-                src={resolveMediaSrc(
-                  lightboxState.images[lightboxState.imageIndex],
-                  lightboxState.fallbackTitle,
-                  lightboxState.fallbackTag,
-                  lightboxState.fallbackAccent,
-                )}
+                src={lightboxState.images[lightboxState.imageIndex]}
                 alt={lightboxState.title}
                 referrerPolicy="no-referrer"
                 onError={(e) => {
-                  e.currentTarget.src = createTravelPlaceholderSvg(
+                  e.currentTarget.src = createLandmarkArtwork(
                     lightboxState.fallbackTitle,
                     lightboxState.fallbackTag,
+                    'waterfall',
                     lightboxState.fallbackAccent,
                   );
                 }}
@@ -3122,18 +3363,14 @@ export default function App() {
                       }`}
                     >
                       <img
-                        src={resolveMediaSrc(
-                          thumb,
-                          lightboxState.fallbackTitle,
-                          lightboxState.fallbackTag,
-                          lightboxState.fallbackAccent,
-                        )}
+                        src={thumb}
                         alt={`Ảnh ${idx + 1}`}
                         referrerPolicy="no-referrer"
                         onError={(e) => {
-                          e.currentTarget.src = createTravelPlaceholderSvg(
+                          e.currentTarget.src = createLandmarkArtwork(
                             lightboxState.fallbackTitle,
                             lightboxState.fallbackTag,
+                            'waterfall',
                             lightboxState.fallbackAccent,
                           );
                         }}
