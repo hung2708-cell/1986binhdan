@@ -303,7 +303,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                   className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors"
                 >
                   <LogIn className="w-4 h-4" />
-                  Đăng nhập Hệ thống 1986
+                  Đăng nhập Hệ thống
                 </button>
               </form>
 
