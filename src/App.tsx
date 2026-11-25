@@ -14,10 +14,10 @@ import {
   LogIn,
   MapPin,
   Plus,
-  QrCode,
   RotateCcw,
   ShieldCheck,
   Trophy,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import { AnalyticsReportView } from './components/AnalyticsReportView';
@@ -26,7 +26,6 @@ import { MembersAndPaymentsView } from './components/MembersAndPaymentsView';
 import { RefereeConsoleView } from './components/RefereeConsoleView';
 import { ScheduleAndStandingsView } from './components/ScheduleAndStandingsView';
 import { StaffAuthModal } from './components/StaffAuthModal';
-import { VietQRModal } from './components/VietQRModal';
 import {
   INITIAL_MATCHES,
   INITIAL_NOTIFICATIONS,
@@ -139,7 +138,6 @@ export default function App() {
   );
   const [selectedRefereeMatchId, setSelectedRefereeMatchId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [activeVietQRReg, setActiveVietQRReg] = useState<Registration | null>(null);
   const [showNotifDrawer, setShowNotifDrawer] = useState(false);
   const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string } | null>(
@@ -184,7 +182,6 @@ export default function App() {
   }, []);
 
   // Lock webpage zoom so zooming is ONLY possible inside the 2D Bracket Diagram
-  // (1-finger scrolling and normal mouse wheel scrolling remain 100% native and untouched)
   useEffect(() => {
     const preventMultiTouchPageZoom = (e: TouchEvent) => {
       if (e.touches.length > 1) {
@@ -401,7 +398,7 @@ export default function App() {
     setSelectedTournamentId(newId);
     showToast(
       `Đã tạo giải: ${created.name}`,
-      `Quy mô ${created.courtsCount} sân · Lệ phí VietQR ${formatVND(created.entryFee)}`,
+      `Quy mô ${created.courtsCount} sân · Đã sẵn sàng nhập VĐV và xếp bảng`,
     );
   };
 
@@ -444,11 +441,12 @@ export default function App() {
     player2Name: string;
     club: string;
     combinedRating: number;
+    groupName?: string;
     squadRoster?: string[];
   }) => {
     if (!isAdmin || !currentAccount) {
       openLoginWithReason(
-        'Phải đăng nhập tài khoản Admin (admin / 1986) mới có thể thêm đội và lựa chọn nội dung Đồng đội hoặc Đôi.',
+        'Phải đăng nhập tài khoản Admin (admin / 1986) mới có thể thêm VĐV/đội và sắp xếp bảng.',
       );
       return;
     }
@@ -456,6 +454,7 @@ export default function App() {
     const teamName = payload.player2Name
       ? `${payload.player1Name} / ${payload.player2Name}`
       : payload.player1Name;
+    const assignedGroup = (payload.groupName || 'Bảng A').trim() || 'Bảng A';
     const paymentCode = generatePaymentCode('1986');
     const newReg: Registration = {
       id: `reg_${Date.now().toString(36)}`,
@@ -469,12 +468,12 @@ export default function App() {
         payload.squadRoster || [payload.player1Name, payload.player2Name].filter(Boolean),
       club: payload.club,
       combinedRating: payload.combinedRating,
-      groupName: 'Bảng A',
+      groupName: assignedGroup,
       seed: tournamentRegistrations.length + 1,
       checkedIn: true,
-      feeAmount: currentTournament.entryFee,
+      feeAmount: 0,
       paymentCode,
-      paymentStatus: 'unpaid',
+      paymentStatus: 'paid',
       transferRef: '',
       visibility: 'public',
     };
@@ -483,11 +482,27 @@ export default function App() {
       ...prev,
       registrations: [newReg, ...prev.registrations],
     }));
-    setActiveVietQRReg(newReg);
     showToast(
       `Đã thêm VĐV/Đội: ${teamName}`,
-      `Người thêm: ${currentAccount.displayName} · Mã VietQR: ${paymentCode}`,
+      `Xếp vào ${assignedGroup} · Nội dung: ${payload.division}`,
     );
+  };
+
+  const handleAssignRegistrationGroup = (registrationId: string, groupName: string) => {
+    if (!isAdmin || !currentAccount) {
+      openLoginWithReason(
+        'Chỉ tài khoản Ban Tổ Chức (Admin) mới có quyền sắp xếp hoặc đổi bảng cho VĐV/đội.',
+      );
+      return;
+    }
+    const cleanGroup = groupName.trim() || 'Bảng A';
+    updateStateAndSync((prev) => ({
+      ...prev,
+      registrations: prev.registrations.map((r) =>
+        r.id === registrationId ? { ...r, groupName: cleanGroup } : r,
+      ),
+    }));
+    showToast('Đã cập nhật bảng thi đấu', `Đã chuyển đội sang ${cleanGroup}.`);
   };
 
   const handleAddRosterAthlete = (registrationId: string, athleteLabel: string) => {
@@ -511,54 +526,6 @@ export default function App() {
     showToast('Đã thêm VĐV vào đội hình', `Bổ sung ${athleteLabel} vào danh sách ra sân.`);
   };
 
-  const handleConfirmTransfer = (registrationId: string, transferRef: string) => {
-    const target = appState.registrations.find((r) => r.id === registrationId);
-    updateStateAndSync((prev) => ({
-      ...prev,
-      registrations: prev.registrations.map((r) =>
-        r.id === registrationId
-          ? { ...r, paymentStatus: 'pending_review', transferRef }
-          : r,
-      ),
-    }));
-    if (target) {
-      pushNotification(
-        'payment_approved',
-        `Chờ duyệt VietQR — ${target.paymentCode}`,
-        `Đội ${target.teamName} đã báo chuyển khoản lệ phí (${transferRef}).`,
-      );
-    }
-  };
-
-  const handleApprovePayment = (registrationId: string) => {
-    if (!isAdmin) {
-      openLoginWithReason(
-        'Chỉ tài khoản Ban Tổ Chức (admin / 1986) mới có quyền duyệt xác nhận thu phí VietQR.',
-      );
-      return;
-    }
-    const target = appState.registrations.find((r) => r.id === registrationId);
-    updateStateAndSync((prev) => ({
-      ...prev,
-      registrations: prev.registrations.map((r) =>
-        r.id === registrationId
-          ? {
-              ...r,
-              paymentStatus: 'paid',
-              transferRef: r.transferRef || `VIETQR.${r.paymentCode}`,
-            }
-          : r,
-      ),
-    }));
-    if (target) {
-      pushNotification(
-        'payment_approved',
-        `Xác nhận lệ phí thành công — Mã ${target.paymentCode}`,
-        `BTC (${currentAccount?.displayName}) đã duyệt lệ phí ${formatVND(target.feeAmount)} của đội ${target.teamName}.`,
-      );
-    }
-  };
-
   const handleToggleCheckIn = (registrationId: string) => {
     if (!currentAccount || !isStaffRole(currentAccount.role)) {
       openLoginWithReason(
@@ -577,7 +544,7 @@ export default function App() {
   const handleGenerateSchedule = (division: string) => {
     if (!isAdmin) {
       openLoginWithReason(
-        'Chỉ tài khoản Ban Tổ Chức (admin / 1986) mới có quyền chia bảng và xếp lịch thi đấu.',
+        'Chỉ tài khoản Ban Tổ Chức (admin / 1986) mới có quyền xếp lịch thi đấu từ các bảng đã chia.',
       );
       return;
     }
@@ -586,7 +553,7 @@ export default function App() {
     if (divTeams.length < 2) {
       showToast(
         'Chưa đủ đội để xếp lịch',
-        `Nội dung ${division} cần tối thiểu 2 đội đăng ký để chia bảng.`,
+        `Nội dung ${division} cần tối thiểu 2 đội đã nhập và xếp bảng.`,
       );
       return;
     }
@@ -647,7 +614,7 @@ export default function App() {
       registrations: prev.registrations.map((reg) => {
         const assign = groupAssignments.find((a) => a.registrationId === reg.id);
         return assign
-          ? { ...reg, groupName: assign.groupName, seed: assign.seed }
+          ? { ...reg, groupName: reg.groupName || assign.groupName, seed: assign.seed }
           : reg;
       }),
       matches: [
@@ -660,7 +627,7 @@ export default function App() {
 
     pushNotification(
       'schedule_update',
-      `Đã chia bảng & xếp lịch ${division}`,
+      `Đã xếp lịch thi đấu ${division}`,
       `Hệ thống đã tạo ${fullMatches.length} trận đấu phân bổ trên ${currentTournament.courtsCount} sân.`,
     );
   };
@@ -868,7 +835,7 @@ export default function App() {
     setSelectedTournamentId(fresh.tournaments[0].id);
     showToast(
       'Đã làm mới dữ liệu giải 1986',
-      'Danh sách đội đã được xóa trống. Vui lòng đăng nhập tài khoản Admin để thêm đội và chọn nội dung Đồng đội hoặc Đôi.',
+      'Danh sách VĐV/đội đã được làm mới. Bạn có thể tự nhập VĐV và sắp xếp bảng thi đấu.',
     );
   };
 
@@ -904,8 +871,8 @@ export default function App() {
     },
     {
       id: 'members',
-      label: 'Thành viên & VietQR',
-      shortLabel: 'VĐV/QR',
+      label: 'VĐV & Sắp bảng',
+      shortLabel: 'VĐV/Bảng',
       icon: <Users className="w-4 h-4" />,
     },
     {
@@ -1029,7 +996,7 @@ export default function App() {
             </select>
           </div>
 
-          {/* Right Workspace Controls: Create Tournament + Notification Center + Reset Demo (Login stays exclusively in Top-Right Header) */}
+          {/* Right Workspace Controls: Create Tournament + Notification Center + Reset Demo */}
           <div className="flex items-center justify-end gap-1.5 shrink-0">
             <button
               type="button"
@@ -1093,7 +1060,7 @@ export default function App() {
             </div>
             {tournamentNotifications.length === 0 ? (
               <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
-                Hiện chưa có thông báo nào. Thông báo gọi sân, báo sân trống và duyệt VietQR sẽ hiển thị tại đây.
+                Hiện chưa có thông báo nào. Thông báo gọi sân và báo sân trống sẽ hiển thị tại đây.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto">
@@ -1155,7 +1122,7 @@ export default function App() {
                     </span>
                     <span>·</span>
                     <span className="font-mono-num font-semibold text-slate-900">
-                      {currentTournament.courtsCount} sân · Phí {formatVND(currentTournament.entryFee)}
+                      {currentTournament.courtsCount} sân
                     </span>
                   </div>
                 </div>
@@ -1176,8 +1143,8 @@ export default function App() {
                     onClick={() => setActiveTab('members')}
                     className="min-h-[44px] px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center justify-center gap-2"
                   >
-                    <QrCode className="w-4 h-4 text-orange-600" />
-                    Thêm VĐV, Đội Hình & VietQR
+                    <UserPlus className="w-4 h-4 text-orange-600" />
+                    Nhập VĐV & Sắp Xếp Bảng Thi Đấu
                   </button>
 
                   <button
@@ -1204,7 +1171,7 @@ export default function App() {
                     BÍNH DẦN 1986 PICKLEBALL
                   </div>
                   <p className="text-xs text-slate-300 mt-1">
-                    Phân quyền tài khoản Ban Tổ Chức & Trọng tài · Bốc thăm sân · Chọn VĐV Đồng đội
+                    Nhập VĐV chủ động · Tự sắp xếp bảng thi đấu · Điều hành bàn trọng tài
                   </p>
                 </div>
                 <div className="w-full pt-2.5 border-t border-slate-800 grid grid-cols-3 gap-2 font-mono-num text-xs">
@@ -1254,18 +1221,21 @@ export default function App() {
               </div>
 
               <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4">
-                <div className="text-xs text-slate-500">Đã thu phí VietQR</div>
+                <div className="text-xs text-slate-500">Số bảng đã phân</div>
                 <div className="mt-1 font-mono-num text-xl sm:text-2xl font-bold text-orange-600">
-                  {formatVND(
-                    tournamentRegistrations
-                      .filter((r) => r.paymentStatus === 'paid')
-                      .reduce((s, r) => s + r.feeAmount, 0),
-                  )}
+                  {
+                    Array.from(
+                      new Set(
+                        tournamentRegistrations
+                          .map((r) => r.groupName)
+                          .filter(Boolean),
+                      ),
+                    ).length
+                  }{' '}
+                  bảng
                 </div>
                 <div className="mt-1 text-[11px] text-slate-500">
-                  Chờ duyệt:{' '}
-                  {tournamentRegistrations.filter((r) => r.paymentStatus === 'pending_review').length}{' '}
-                  đội
+                  Sắp xếp thủ công theo từng VĐV/đội
                 </div>
               </div>
 
@@ -1413,21 +1383,21 @@ export default function App() {
                   {Object.keys(standingsPreview).length === 0 ? (
                     <div className="p-6 text-center space-y-2.5">
                       <p className="text-xs text-slate-500">
-                        Chưa có đội nào trong giải đấu. Tài khoản Admin có thể vào mục Thành viên & VietQR để thêm đội (Đôi hoặc Đồng đội).
+                        Chưa có VĐV/đội nào trong giải đấu. Tài khoản Admin có thể vào mục VĐV & Sắp bảng để tự nhập VĐV và sắp xếp bảng thi đấu.
                       </p>
                       <button
                         type="button"
                         onClick={() => setActiveTab('members')}
                         className="px-3 py-1.5 text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
                       >
-                        Mở Thành viên & VietQR →
+                        Mở VĐV & Sắp bảng →
                       </button>
                     </div>
                   ) : (
                     Object.entries(standingsPreview).map(([gName, rows]) => (
                       <div key={gName} className="p-3.5 sm:p-4">
                         <div className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-                          {gName} (Top 2 vào Bán kết)
+                          {gName}
                         </div>
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
@@ -1480,7 +1450,7 @@ export default function App() {
                     DANH SÁCH GIẢI ĐẤU PICKLEBALL 1986 ĐANG & SẮP DIỄN RA
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Chọn giải đấu để xem lịch thi đấu, đăng ký thành viên hoặc điều hành bàn trọng tài
+                    Chọn giải đấu để xem lịch thi đấu, tự nhập VĐV/sắp bảng hoặc điều hành bàn trọng tài
                   </p>
                 </div>
                 <button
@@ -1625,9 +1595,8 @@ export default function App() {
             onRequestLogin={(reason) => openLoginWithReason(reason)}
             onAddDivision={handleAddDivision}
             onAddRegistration={handleAddRegistration}
+            onAssignRegistrationGroup={handleAssignRegistrationGroup}
             onToggleCheckIn={handleToggleCheckIn}
-            onOpenVietQR={(reg) => setActiveVietQRReg(reg)}
-            onApprovePayment={handleApprovePayment}
           />
         )}
 
@@ -1651,12 +1620,12 @@ export default function App() {
             © 2026 <strong className="text-slate-800">1986 — Bính Dần Pickleball</strong> · Quản lý giải đấu, tài khoản Trọng tài & Ban Tổ Chức.
           </div>
           <div>
-            Tối ưu thao tác một tay trên điện thoại · VietQR NAPAS247 & Xuất PDF/CSV
+            Tối ưu thao tác trên điện thoại · Nhập VĐV & Sắp bảng chủ động · Xuất PDF/CSV
           </div>
         </div>
       </footer>
 
-      {/* FIXED BOTTOM THUMB-ZONE TAB BAR FOR MOBILE PHONES (<= 15% aggregate sticky height) */}
+      {/* FIXED BOTTOM THUMB-ZONE TAB BAR FOR MOBILE PHONES */}
       <nav className="no-print lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 grid grid-cols-6 items-center h-11 sm:h-12 px-1 compact-on-mobile-landscape">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -1700,17 +1669,6 @@ export default function App() {
         <CreateTournamentModal
           onClose={() => setShowCreateModal(false)}
           onCreate={handleCreateTournament}
-        />
-      )}
-
-      {activeVietQRReg && (
-        <VietQRModal
-          tournament={currentTournament}
-          registration={activeVietQRReg}
-          isAdmin={isAdmin}
-          onClose={() => setActiveVietQRReg(null)}
-          onConfirmTransfer={handleConfirmTransfer}
-          onApprovePayment={handleApprovePayment}
         />
       )}
     </div>
