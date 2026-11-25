@@ -1622,7 +1622,7 @@ export default function App() {
             >
               <LogIn className="w-4 h-4 shrink-0" />
               <span className="sm:hidden">Đăng nhập</span>
-              <span className="hidden sm:inline">Đăng nhập Admin / Trọng tài</span>
+              <span className="hidden sm:inline">Đăng nhập</span>
             </button>
           )}
         </div>
