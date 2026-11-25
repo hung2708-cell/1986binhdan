@@ -4,6 +4,14 @@ import fs from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  base: '/https://github.com/hung2708-cell/1986binhdan/',
+  plugins: [react()],
+});
+
 export default defineConfig(() => {
   return {
     plugins: [
