@@ -72,14 +72,18 @@ type ActiveTab =
   | 'members'
   | 'reports';
 
+interface LandmarkLink {
+  label: string;
+  url: string;
+}
+
 interface CaoBangLandmark {
   id: string;
   name: string;
   area: string;
   tag: string;
   summary: string;
-  linkUrl?: string;
-  linkLabel?: string;
+  links: LandmarkLink[];
   images: string[];
 }
 
@@ -97,7 +101,7 @@ function createTravelPlaceholderSvg(title: string, tag: string, accentHex: strin
     <rect width="800" height="500" fill="url(#bg)"/>
     <path d="M0 370 Q180 290 360 365 T800 340 L800 500 L0 500 Z" fill="#064e3b" opacity="0.55"/>
     <path d="M0 405 Q240 335 470 400 T800 385 L800 500 L0 500 Z" fill="#022c22" opacity="0.7"/>
-    <rect x="36" y="36" width="220" height="34" rx="17" fill="#ffffff" fill-opacity="0.14"/>
+    <rect x="36" y="36" width="240" height="34" rx="17" fill="#ffffff" fill-opacity="0.14"/>
     <text x="54" y="58" fill="#a7f3d0" font-family="system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="1">${safeTag}</text>
     <text x="36" y="428" fill="#ffffff" font-family="system-ui, sans-serif" font-size="32" font-weight="800">${safeTitle}</text>
     <text x="36" y="460" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="16">Công viên địa chất toàn cầu UNESCO · Cao Bằng</text>
@@ -113,31 +117,115 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     tag: 'Kỳ quan thác nước',
     summary:
       'Một trong những thác nước tự nhiên hùng vĩ bậc nhất Đông Nam Á, tầng tầng bọt trắng đổ xuống giữa núi non biên cương xanh mát.',
-    linkUrl: 'https://www.google.com/maps/search/?api=1&query=Thac+Ban+Gioc+Cao+Bang',
-    linkLabel: 'Xem vị trí bản đồ',
+    links: [
+      {
+        label: 'Bản đồ',
+        url: 'https://www.google.com/maps/search/?api=1&query=Thac+Ban+Gioc+Cao+Bang',
+      },
+      {
+        label: 'Cẩm nang',
+        url: 'https://ecotour.com.vn/dia-diem-du-lich-cao-bang-2',
+      },
+    ],
     images: [createTravelPlaceholderSvg('Thác Bản Giốc', 'KỲ QUAN THÁC NƯỚC', '#0d9488')],
   },
   {
-    id: 'quay_son',
-    name: 'Sông Quây Sơn',
-    area: 'Trùng Khánh · Cao Bằng',
-    tag: 'Dòng sông ngọc bích',
+    id: 'nguom_ngao',
+    name: 'Động Ngườm Ngao',
+    area: 'Đàm Thủy · Cao Bằng',
+    tag: 'Hang động thạch nhũ',
     summary:
-      'Dòng sông trong xanh uốn lượn qua những cánh đồng và thung lũng đá vôi, tạo nên khung cảnh yên bình đặc trưng vùng biên.',
-    linkUrl: 'https://www.google.com/maps/search/?api=1&query=Song+Quay+Son+Cao+Bang',
-    linkLabel: 'Xem vị trí bản đồ',
-    images: [createTravelPlaceholderSvg('Sông Quây Sơn', 'DÒNG SÔNG NGỌC BÍCH', '#0284c7')],
+      'Hang động đá vôi kỳ ảo dài khoảng 2 km với hệ thống nhũ đá, măng đá lấp lánh nhiều hình thù độc đáo.',
+    links: [
+      {
+        label: 'Bản đồ',
+        url: 'https://www.google.com/maps/search/?api=1&query=Dong+Nguom+Ngao+Cao+Bang',
+      },
+      {
+        label: 'Khám phá',
+        url: 'https://www.dulichvtv.com/check-in-cao-bang/',
+      },
+    ],
+    images: [createTravelPlaceholderSvg('Động Ngườm Ngao', 'HANG ĐỘNG THẠCH NHŨ', '#0e7490')],
+  },
+  {
+    id: 'nui_mat_than',
+    name: 'Núi Mắt Thần (Núi Thủng)',
+    area: 'Quảng Hòa · Cao Bằng',
+    tag: 'Thảo nguyên & check-in',
+    summary:
+      'Khối núi đá vôi có vòm thủng khổng lồ xuyên qua lòng núi giữa thung lũng xanh mát, điểm dã ngoại và chụp ảnh nổi tiếng.',
+    links: [
+      {
+        label: 'Bản đồ',
+        url: 'https://www.google.com/maps/search/?api=1&query=Nui+Mat+Than+Cao+Bang',
+      },
+      {
+        label: 'Check-in',
+        url: 'https://www.dulichvtv.com/check-in-cao-bang/',
+      },
+    ],
+    images: [createTravelPlaceholderSvg('Núi Mắt Thần', 'THẢO NGUYÊN & CHECK-IN', '#059669')],
+  },
+  {
+    id: 'deo_ma_phuc',
+    name: 'Đèo Mã Phục',
+    area: 'Quốc lộ 3 · Cao Bằng',
+    tag: 'Cung đèo ngoạn mục',
+    summary:
+      'Cung đèo uốn lượn qua nhiều tầng dốc giữa hai dãy núi đá vôi sừng sững, mở ra tầm nhìn đẹp bao quát vùng núi Cao Bằng.',
+    links: [
+      {
+        label: 'Bản đồ',
+        url: 'https://www.google.com/maps/search/?api=1&query=Deo+Ma+Phuc+Cao+Bang',
+      },
+    ],
+    images: [createTravelPlaceholderSvg('Đèo Mã Phục', 'CUNG ĐÈO NGOẠN MỤC', '#0284c7')],
+  },
+  {
+    id: 'khuoi_ky',
+    name: 'Làng đá cổ Khuổi Ky',
+    area: 'Đàm Thủy · Cao Bằng',
+    tag: 'Bản sắc văn hóa Tày',
+    summary:
+      'Ngôi làng cổ trăm năm với những ngôi nhà sàn đá đặc trưng của người Tày, lưu giữ nét kiến trúc và đời sống bản địa.',
+    links: [
+      {
+        label: 'Bản đồ',
+        url: 'https://www.google.com/maps/search/?api=1&query=Lang+da+Khuoi+Ky+Cao+Bang',
+      },
+    ],
+    images: [createTravelPlaceholderSvg('Làng đá Khuổi Ky', 'BẢN SẮC VĂN HÓA TÀY', '#b45309')],
+  },
+  {
+    id: 'phia_oac',
+    name: 'Phia Oắc – Phia Đén',
+    area: 'Nguyên Bình · Cao Bằng',
+    tag: 'Rừng rêu & săn mây',
+    summary:
+      'Vùng núi cao mát mẻ quanh năm với rừng nguyên sinh, thảm rêu xanh và khung cảnh săn mây ấn tượng phía Tây Cao Bằng.',
+    links: [
+      {
+        label: 'Bản đồ',
+        url: 'https://www.google.com/maps/search/?api=1&query=Phia+Oac+Cao+Bang',
+      },
+    ],
+    images: [createTravelPlaceholderSvg('Phia Oắc – Phia Đén', 'RỪNG RÊU & SĂN MÂY', '#047857')],
   },
   {
     id: 'thang_hen',
     name: 'Hồ Thang Hen',
-    area: 'Trà Lĩnh · Cao Bằng',
+    area: 'Trà Lĩnh / Quảng Hòa · Cao Bằng',
     tag: 'Thắng cảnh cao nguyên',
     summary:
-      'Quần thể hồ nước tự nhiên nằm giữa rừng núi xanh thẳm, mặt nước phẳng lặng đổi sắc theo mùa quanh năm.',
-    linkUrl: 'https://www.google.com/maps/search/?api=1&query=Ho+Thang+Hen+Cao+Bang',
-    linkLabel: 'Xem vị trí bản đồ',
-    images: [createTravelPlaceholderSvg('Hồ Thang Hen', 'THẮNG CẢNH CAO NGUYÊN', '#059669')],
+      'Quần thể hồ nước tự nhiên giữa rừng núi xanh thẳm, mặt nước phẳng lặng thơ mộng quanh năm.',
+    links: [
+      {
+        label: 'Bản đồ',
+        url: 'https://www.google.com/maps/search/?api=1&query=Ho+Thang+Hen+Cao+Bang',
+      },
+    ],
+    images: [createTravelPlaceholderSvg('Hồ Thang Hen', 'THẮNG CẢNH CAO NGUYÊN', '#0d9488')],
   },
   {
     id: 'pac_bo',
@@ -145,9 +233,13 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     area: 'Trường Hà · Cao Bằng',
     tag: 'Cội nguồn lịch sử',
     summary:
-      'Nơi gắn liền với suối Lê-nin trong vắt và núi Các Mác sừng sững, lưu giữ dấu ấn lịch sử hào hùng của dân tộc.',
-    linkUrl: 'https://www.google.com/maps/search/?api=1&query=Khu+di+tich+Pac+Bo+Cao+Bang',
-    linkLabel: 'Xem vị trí bản đồ',
+      'Quần thể di tích gắn liền với suối Lê-nin trong xanh và núi Các Mác, mang đậm dấu ấn lịch sử cách mạng.',
+    links: [
+      {
+        label: 'Bản đồ',
+        url: 'https://www.google.com/maps/search/?api=1&query=Khu+di+tich+Pac+Bo+Cao+Bang',
+      },
+    ],
     images: [createTravelPlaceholderSvg('Khu di tích Pác Bó', 'CỘI NGUỒN LỊCH SỬ', '#15803d')],
   },
 ];
@@ -155,7 +247,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
 const STORAGE_KEY = 'pickleball_1986_state_v7';
 const AUTH_SESSION_KEY = 'pickleball_1986_auth_user_v1';
 const ACTIVE_TAB_KEY = 'pickleball_1986_active_tab_v1';
-const CAO_BANG_STORAGE_KEY = 'pickleball_1986_caobang_travel_v1';
+const CAO_BANG_STORAGE_KEY = 'pickleball_1986_caobang_travel_v2';
 const SYNC_CHANNEL = 'pickleball_1986_realtime_channel';
 
 const VALID_TABS: ActiveTab[] = [
@@ -181,6 +273,13 @@ interface PersistedAppState {
 
 function isStaffRole(role: unknown): role is 'admin' | 'referee' {
   return role === 'admin' || role === 'referee';
+}
+
+function normalizeExternalUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
 }
 
 function loadSavedActiveTab(): ActiveTab {
@@ -244,7 +343,7 @@ function loadSavedCaoBangLandmarks(): CaoBangLandmark[] {
     const raw = localStorage.getItem(CAO_BANG_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map((item, idx) => {
           const name = String(item.name || 'Địa danh Cao Bằng');
           const tag = String(item.tag || 'Điểm đến nổi bật');
@@ -253,14 +352,29 @@ function loadSavedCaoBangLandmarks(): CaoBangLandmark[] {
             : item.imageUrl
             ? [String(item.imageUrl)]
             : [];
+          const normalizedLinks: LandmarkLink[] = Array.isArray(item.links)
+            ? item.links
+                .map((l: { label?: string; url?: string }) => ({
+                  label: String(l?.label || 'Xem liên kết').trim() || 'Xem liên kết',
+                  url: normalizeExternalUrl(String(l?.url || '')),
+                }))
+                .filter((l: LandmarkLink) => Boolean(l.url))
+            : item.linkUrl
+            ? [
+                {
+                  label: String(item.linkLabel || 'Xem chi tiết').trim() || 'Xem chi tiết',
+                  url: normalizeExternalUrl(String(item.linkUrl)),
+                },
+              ].filter((l) => Boolean(l.url))
+            : [];
+
           return {
             id: String(item.id || `spot_${idx}`),
             name,
             area: String(item.area || 'Cao Bằng'),
             tag,
             summary: String(item.summary || ''),
-            linkUrl: item.linkUrl ? String(item.linkUrl) : '',
-            linkLabel: item.linkLabel ? String(item.linkLabel) : 'Khám phá thêm',
+            links: normalizedLinks,
             images:
               imgs.length > 0
                 ? imgs
@@ -301,13 +415,6 @@ function compressImageFileToDataUrl(file: File, maxWidth = 1280, quality = 0.8):
   });
 }
 
-function normalizeExternalUrl(rawUrl: string): string {
-  const trimmed = rawUrl.trim();
-  if (!trimmed) return '';
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
-}
-
 export default function App() {
   const [appState, setAppState] = useState<PersistedAppState>(() => loadInitialState());
   const [currentAccount, setCurrentAccount] = useState<StaffAccount | null>(() =>
@@ -339,8 +446,9 @@ export default function App() {
   const [spotArea, setSpotArea] = useState('');
   const [spotTag, setSpotTag] = useState('Điểm đến nổi bật');
   const [spotSummary, setSpotSummary] = useState('');
-  const [spotLinkUrl, setSpotLinkUrl] = useState('');
-  const [spotLinkLabel, setSpotLinkLabel] = useState('Xem chi tiết & bản đồ');
+  const [spotLinks, setSpotLinks] = useState<LandmarkLink[]>([]);
+  const [newLinkLabel, setNewLinkLabel] = useState('');
+  const [newLinkUrl, setNewLinkUrl] = useState('');
   const [spotUrlInput, setSpotUrlInput] = useState('');
   const [spotDraftImages, setSpotDraftImages] = useState<string[]>([]);
 
@@ -463,8 +571,9 @@ export default function App() {
     setSpotArea('');
     setSpotTag('Điểm đến nổi bật');
     setSpotSummary('');
-    setSpotLinkUrl('');
-    setSpotLinkLabel('Xem chi tiết & bản đồ');
+    setSpotLinks([]);
+    setNewLinkLabel('');
+    setNewLinkUrl('');
     setSpotUrlInput('');
     setSpotDraftImages([]);
     setShowLandmarkForm(false);
@@ -480,8 +589,9 @@ export default function App() {
     setSpotArea('Cao Bằng');
     setSpotTag('Điểm đến nổi bật');
     setSpotSummary('');
-    setSpotLinkUrl('');
-    setSpotLinkLabel('Xem chi tiết & bản đồ');
+    setSpotLinks([]);
+    setNewLinkLabel('Bản đồ');
+    setNewLinkUrl('');
     setSpotUrlInput('');
     setSpotDraftImages([]);
     setShowLandmarkForm(true);
@@ -497,11 +607,25 @@ export default function App() {
     setSpotArea(spot.area);
     setSpotTag(spot.tag);
     setSpotSummary(spot.summary);
-    setSpotLinkUrl(spot.linkUrl || '');
-    setSpotLinkLabel(spot.linkLabel || 'Xem chi tiết & bản đồ');
+    setSpotLinks(spot.links || []);
+    setNewLinkLabel('');
+    setNewLinkUrl('');
     setSpotUrlInput('');
     setSpotDraftImages(spot.images || []);
     setShowLandmarkForm(true);
+  };
+
+  const handleAddLinkToForm = () => {
+    const cleanUrl = normalizeExternalUrl(newLinkUrl);
+    if (!cleanUrl) return;
+    const cleanLabel = newLinkLabel.trim() || `Liên kết ${spotLinks.length + 1}`;
+    setSpotLinks((prev) => [...prev, { label: cleanLabel, url: cleanUrl }]);
+    setNewLinkLabel('');
+    setNewLinkUrl('');
+  };
+
+  const handleRemoveLinkFromForm = (idx: number) => {
+    setSpotLinks((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleSpotFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -545,13 +669,27 @@ export default function App() {
     const cleanArea = spotArea.trim() || 'Cao Bằng';
     const cleanTag = spotTag.trim() || 'Điểm đến nổi bật';
     const cleanSummary = spotSummary.trim();
-    const normalizedLink = normalizeExternalUrl(spotLinkUrl);
-    const cleanLinkLabel = spotLinkLabel.trim() || 'Xem chi tiết & bản đồ';
 
     if (!cleanName) {
       showToast('Thiếu tên địa danh', 'Vui lòng nhập tên địa danh hoặc nội dung quảng bá.');
       return;
     }
+
+    const pendingLink = newLinkUrl.trim()
+      ? [
+          {
+            label: newLinkLabel.trim() || `Liên kết ${spotLinks.length + 1}`,
+            url: normalizeExternalUrl(newLinkUrl),
+          },
+        ]
+      : [];
+
+    const finalLinks = [...spotLinks, ...pendingLink]
+      .map((l) => ({
+        label: l.label.trim() || 'Xem liên kết',
+        url: normalizeExternalUrl(l.url),
+      }))
+      .filter((l) => Boolean(l.url));
 
     const pendingUrl = spotUrlInput.trim();
     const combinedImages = pendingUrl ? [...spotDraftImages, pendingUrl] : [...spotDraftImages];
@@ -569,8 +707,7 @@ export default function App() {
               area: cleanArea,
               tag: cleanTag,
               summary: cleanSummary,
-              linkUrl: normalizedLink,
-              linkLabel: cleanLinkLabel,
+              links: finalLinks,
               images: finalImages,
             }
           : item,
@@ -584,8 +721,7 @@ export default function App() {
         area: cleanArea,
         tag: cleanTag,
         summary: cleanSummary,
-        linkUrl: normalizedLink,
-        linkLabel: cleanLinkLabel,
+        links: finalLinks,
         images: finalImages,
       };
       saveLandmarksAndSync([newSpot, ...landmarks]);
@@ -1434,32 +1570,61 @@ export default function App() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Đường dẫn link (Bản đồ, bài viết, video...)
-              </label>
+          {/* Multi-link manager */}
+          <div className="space-y-2 p-3.5 rounded-xl bg-white border border-slate-200">
+            <label className="block text-xs font-semibold text-slate-700">
+              Liên kết trên thẻ (Bản đồ, bài viết, video...)
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
               <input
                 type="text"
-                value={spotLinkUrl}
-                onChange={(e) => setSpotLinkUrl(e.target.value)}
-                placeholder="VD: https://maps.google.com/?q=..."
-                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                value={newLinkLabel}
+                onChange={(e) => setNewLinkLabel(e.target.value)}
+                placeholder="Nhãn nút (VD: Bản đồ, Cẩm nang)"
+                className="sm:col-span-4 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
               />
+              <input
+                type="text"
+                value={newLinkUrl}
+                onChange={(e) => setNewLinkUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddLinkToForm();
+                  }
+                }}
+                placeholder="Dán đường dẫn URL (VD: https://maps.google.com/...)"
+                className="sm:col-span-6 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddLinkToForm}
+                className="sm:col-span-2 min-h-[38px] px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shrink-0"
+              >
+                + Thêm link
+              </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Tên nút hiển thị link
-              </label>
-              <input
-                type="text"
-                value={spotLinkLabel}
-                onChange={(e) => setSpotLinkLabel(e.target.value)}
-                placeholder="VD: Xem bản đồ, Khám phá ngay..."
-                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-            </div>
+            {spotLinks.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {spotLinks.map((lnk, idx) => (
+                  <span
+                    key={`${idx}_${lnk.url}`}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 text-xs font-semibold"
+                  >
+                    <span>{lnk.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveLinkFromForm(idx)}
+                      className="text-rose-600 hover:text-rose-800 font-bold"
+                      title="Xóa liên kết này"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -1618,26 +1783,31 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
-                  {spot.linkUrl ? (
-                    <a
-                      href={spot.linkUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 truncate"
-                    >
-                      <span className="truncate">{spot.linkLabel || 'Xem chi tiết'}</span>
-                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
-                      className="text-xs font-semibold text-slate-600 hover:text-slate-900"
-                    >
-                      Xem ảnh
-                    </button>
-                  )}
+                <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                    {spot.links && spot.links.length > 0 ? (
+                      spot.links.map((lnk, idx) => (
+                        <a
+                          key={`${spot.id}_lnk_${idx}`}
+                          href={lnk.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold inline-flex items-center gap-1 transition-colors"
+                        >
+                          <span>{lnk.label}</span>
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                        </a>
+                      ))
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
+                        className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                      >
+                        Xem ảnh
+                      </button>
+                    )}
+                  </div>
 
                   {isAdmin && (
                     <div className="flex items-center gap-2 shrink-0">
