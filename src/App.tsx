@@ -10,12 +10,13 @@ import {
   Calendar,
   CheckCircle2,
   Compass,
-  FileText,
+  ExternalLink,
   Gavel,
   Home,
   ImagePlus,
   LogIn,
   MapPin,
+  Pencil,
   Plus,
   Radio,
   RotateCcw,
@@ -71,27 +72,40 @@ type ActiveTab =
   | 'members'
   | 'reports';
 
-type FeedPostKind = 'image' | 'info';
-
-interface HomeGalleryItem {
-  id: string;
-  kind: FeedPostKind;
-  title: string;
-  caption: string;
-  images: string[];
-  createdAt: string;
-  createdBy: string;
-}
-
 interface CaoBangLandmark {
   id: string;
   name: string;
   area: string;
   tag: string;
   summary: string;
+  linkUrl?: string;
+  linkLabel?: string;
+  images: string[];
 }
 
-const CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
+function createTravelPlaceholderSvg(title: string, tag: string, accentHex: string): string {
+  const safeTitle = title.replace(/[<>&"]/g, '');
+  const safeTag = tag.replace(/[<>&"]/g, '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#0f172a"/>
+        <stop offset="55%" stop-color="#1e293b"/>
+        <stop offset="100%" stop-color="${accentHex}"/>
+      </linearGradient>
+    </defs>
+    <rect width="800" height="500" fill="url(#bg)"/>
+    <path d="M0 370 Q180 290 360 365 T800 340 L800 500 L0 500 Z" fill="#064e3b" opacity="0.55"/>
+    <path d="M0 405 Q240 335 470 400 T800 385 L800 500 L0 500 Z" fill="#022c22" opacity="0.7"/>
+    <rect x="36" y="36" width="220" height="34" rx="17" fill="#ffffff" fill-opacity="0.14"/>
+    <text x="54" y="58" fill="#a7f3d0" font-family="system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="1">${safeTag}</text>
+    <text x="36" y="428" fill="#ffffff" font-family="system-ui, sans-serif" font-size="32" font-weight="800">${safeTitle}</text>
+    <text x="36" y="460" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="16">Công viên địa chất toàn cầu UNESCO · Cao Bằng</text>
+  </svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
   {
     id: 'ban_gioc',
     name: 'Thác Bản Giốc',
@@ -99,6 +113,9 @@ const CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     tag: 'Kỳ quan thác nước',
     summary:
       'Một trong những thác nước tự nhiên hùng vĩ bậc nhất Đông Nam Á, tầng tầng bọt trắng đổ xuống giữa núi non biên cương xanh mát.',
+    linkUrl: 'https://www.google.com/maps/search/?api=1&query=Thac+Ban+Gioc+Cao+Bang',
+    linkLabel: 'Xem vị trí bản đồ',
+    images: [createTravelPlaceholderSvg('Thác Bản Giốc', 'KỲ QUAN THÁC NƯỚC', '#0d9488')],
   },
   {
     id: 'quay_son',
@@ -107,6 +124,9 @@ const CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     tag: 'Dòng sông ngọc bích',
     summary:
       'Dòng sông trong xanh uốn lượn qua những cánh đồng và thung lũng đá vôi, tạo nên khung cảnh yên bình đặc trưng vùng biên.',
+    linkUrl: 'https://www.google.com/maps/search/?api=1&query=Song+Quay+Son+Cao+Bang',
+    linkLabel: 'Xem vị trí bản đồ',
+    images: [createTravelPlaceholderSvg('Sông Quây Sơn', 'DÒNG SÔNG NGỌC BÍCH', '#0284c7')],
   },
   {
     id: 'thang_hen',
@@ -115,6 +135,9 @@ const CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     tag: 'Thắng cảnh cao nguyên',
     summary:
       'Quần thể hồ nước tự nhiên nằm giữa rừng núi xanh thẳm, mặt nước phẳng lặng đổi sắc theo mùa quanh năm.',
+    linkUrl: 'https://www.google.com/maps/search/?api=1&query=Ho+Thang+Hen+Cao+Bang',
+    linkLabel: 'Xem vị trí bản đồ',
+    images: [createTravelPlaceholderSvg('Hồ Thang Hen', 'THẮNG CẢNH CAO NGUYÊN', '#059669')],
   },
   {
     id: 'pac_bo',
@@ -123,14 +146,16 @@ const CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     tag: 'Cội nguồn lịch sử',
     summary:
       'Nơi gắn liền với suối Lê-nin trong vắt và núi Các Mác sừng sững, lưu giữ dấu ấn lịch sử hào hùng của dân tộc.',
+    linkUrl: 'https://www.google.com/maps/search/?api=1&query=Khu+di+tich+Pac+Bo+Cao+Bang',
+    linkLabel: 'Xem vị trí bản đồ',
+    images: [createTravelPlaceholderSvg('Khu di tích Pác Bó', 'CỘI NGUỒN LỊCH SỬ', '#15803d')],
   },
 ];
 
 const STORAGE_KEY = 'pickleball_1986_state_v7';
 const AUTH_SESSION_KEY = 'pickleball_1986_auth_user_v1';
 const ACTIVE_TAB_KEY = 'pickleball_1986_active_tab_v1';
-const GALLERY_STORAGE_KEY = 'pickleball_1986_home_gallery_v2';
-const LEGACY_GALLERY_KEY = 'pickleball_1986_home_gallery_v1';
+const CAO_BANG_STORAGE_KEY = 'pickleball_1986_caobang_travel_v1';
 const SYNC_CHANNEL = 'pickleball_1986_realtime_channel';
 
 const VALID_TABS: ActiveTab[] = [
@@ -214,46 +239,39 @@ function loadSavedAuthAccount(accounts: StaffAccount[]): StaffAccount | null {
   }
 }
 
-function loadSavedGallery(): HomeGalleryItem[] {
+function loadSavedCaoBangLandmarks(): CaoBangLandmark[] {
   try {
-    const raw = localStorage.getItem(GALLERY_STORAGE_KEY);
+    const raw = localStorage.getItem(CAO_BANG_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        return parsed.map((item) => ({
-          id: String(item.id || ''),
-          kind: item.kind === 'info' ? 'info' : 'image',
-          title: String(item.title || 'Thông tin từ Ban Tổ Chức'),
-          caption: String(item.caption || ''),
-          images: Array.isArray(item.images)
+        return parsed.map((item, idx) => {
+          const name = String(item.name || 'Địa danh Cao Bằng');
+          const tag = String(item.tag || 'Điểm đến nổi bật');
+          const imgs = Array.isArray(item.images)
             ? item.images.filter(Boolean)
             : item.imageUrl
             ? [String(item.imageUrl)]
-            : [],
-          createdAt: String(item.createdAt || new Date().toLocaleDateString('vi-VN')),
-          createdBy: String(item.createdBy || 'Ban Tổ Chức'),
-        }));
+            : [];
+          return {
+            id: String(item.id || `spot_${idx}`),
+            name,
+            area: String(item.area || 'Cao Bằng'),
+            tag,
+            summary: String(item.summary || ''),
+            linkUrl: item.linkUrl ? String(item.linkUrl) : '',
+            linkLabel: item.linkLabel ? String(item.linkLabel) : 'Khám phá thêm',
+            images:
+              imgs.length > 0
+                ? imgs
+                : [createTravelPlaceholderSvg(name, tag.toUpperCase(), '#059669')],
+          };
+        });
       }
     }
-
-    const legacyRaw = localStorage.getItem(LEGACY_GALLERY_KEY);
-    if (legacyRaw) {
-      const legacyParsed = JSON.parse(legacyRaw);
-      if (Array.isArray(legacyParsed)) {
-        return legacyParsed.map((item) => ({
-          id: String(item.id || ''),
-          kind: 'image' as const,
-          title: String(item.title || 'Hình ảnh từ Ban Tổ Chức'),
-          caption: String(item.caption || ''),
-          images: item.imageUrl ? [String(item.imageUrl)] : [],
-          createdAt: String(item.createdAt || new Date().toLocaleDateString('vi-VN')),
-          createdBy: String(item.createdBy || 'Ban Tổ Chức'),
-        }));
-      }
-    }
-    return [];
+    return DEFAULT_CAO_BANG_LANDMARKS;
   } catch {
-    return [];
+    return DEFAULT_CAO_BANG_LANDMARKS;
   }
 }
 
@@ -283,6 +301,13 @@ function compressImageFileToDataUrl(file: File, maxWidth = 1280, quality = 0.8):
   });
 }
 
+function normalizeExternalUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 export default function App() {
   const [appState, setAppState] = useState<PersistedAppState>(() => loadInitialState());
   const [currentAccount, setCurrentAccount] = useState<StaffAccount | null>(() =>
@@ -304,15 +329,23 @@ export default function App() {
     null,
   );
 
-  // Homepage-only multi-image & info posts state (Admin adds, audience views)
-  const [galleryItems, setGalleryItems] = useState<HomeGalleryItem[]>(() => loadSavedGallery());
-  const [postKind, setPostKind] = useState<FeedPostKind>('image');
-  const [galleryTitle, setGalleryTitle] = useState('');
-  const [galleryCaption, setGalleryCaption] = useState('');
-  const [urlInput, setUrlInput] = useState('');
-  const [draftImages, setDraftImages] = useState<string[]>([]);
+  // Homepage-only Cao Bang travel showcase state (Admin adds/edits/deletes)
+  const [landmarks, setLandmarks] = useState<CaoBangLandmark[]>(() =>
+    loadSavedCaoBangLandmarks(),
+  );
+  const [editingLandmarkId, setEditingLandmarkId] = useState<string | null>(null);
+  const [showLandmarkForm, setShowLandmarkForm] = useState(false);
+  const [spotName, setSpotName] = useState('');
+  const [spotArea, setSpotArea] = useState('');
+  const [spotTag, setSpotTag] = useState('Điểm đến nổi bật');
+  const [spotSummary, setSpotSummary] = useState('');
+  const [spotLinkUrl, setSpotLinkUrl] = useState('');
+  const [spotLinkLabel, setSpotLinkLabel] = useState('Xem chi tiết & bản đồ');
+  const [spotUrlInput, setSpotUrlInput] = useState('');
+  const [spotDraftImages, setSpotDraftImages] = useState<string[]>([]);
+
   const [lightboxState, setLightboxState] = useState<{
-    item: HomeGalleryItem;
+    landmark: CaoBangLandmark;
     imageIndex: number;
   } | null>(null);
 
@@ -333,17 +366,17 @@ export default function App() {
     }
   }, [activeTab]);
 
-  const saveGalleryAndSync = (nextGallery: HomeGalleryItem[]) => {
-    setGalleryItems(nextGallery);
+  const saveLandmarksAndSync = (nextSpots: CaoBangLandmark[]) => {
+    setLandmarks(nextSpots);
     try {
-      localStorage.setItem(GALLERY_STORAGE_KEY, JSON.stringify(nextGallery));
+      localStorage.setItem(CAO_BANG_STORAGE_KEY, JSON.stringify(nextSpots));
       if (typeof BroadcastChannel !== 'undefined') {
         const bc = new BroadcastChannel(SYNC_CHANNEL);
-        bc.postMessage({ type: 'gallery_sync', gallery: nextGallery });
+        bc.postMessage({ type: 'caobang_sync', landmarks: nextSpots });
         bc.close();
       }
     } catch (err) {
-      console.warn('Gallery storage warning:', err);
+      console.warn('Cao Bang storage warning:', err);
     }
   };
 
@@ -374,8 +407,8 @@ export default function App() {
     if (typeof BroadcastChannel === 'undefined') return;
     const bc = new BroadcastChannel(SYNC_CHANNEL);
     bc.onmessage = (event) => {
-      if (event.data?.type === 'gallery_sync' && Array.isArray(event.data.gallery)) {
-        setGalleryItems(event.data.gallery);
+      if (event.data?.type === 'caobang_sync' && Array.isArray(event.data.landmarks)) {
+        setLandmarks(event.data.landmarks);
         return;
       }
       if (event.data?.state && Array.isArray(event.data.state.tournaments)) {
@@ -424,101 +457,170 @@ export default function App() {
     }, 4200);
   };
 
-  const handleGalleryFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const resetLandmarkForm = () => {
+    setEditingLandmarkId(null);
+    setSpotName('');
+    setSpotArea('');
+    setSpotTag('Điểm đến nổi bật');
+    setSpotSummary('');
+    setSpotLinkUrl('');
+    setSpotLinkLabel('Xem chi tiết & bản đồ');
+    setSpotUrlInput('');
+    setSpotDraftImages([]);
+    setShowLandmarkForm(false);
+  };
+
+  const handleStartAddLandmark = () => {
+    if (!isAdmin) {
+      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để thêm địa danh Cao Bằng.');
+      return;
+    }
+    setEditingLandmarkId(null);
+    setSpotName('');
+    setSpotArea('Cao Bằng');
+    setSpotTag('Điểm đến nổi bật');
+    setSpotSummary('');
+    setSpotLinkUrl('');
+    setSpotLinkLabel('Xem chi tiết & bản đồ');
+    setSpotUrlInput('');
+    setSpotDraftImages([]);
+    setShowLandmarkForm(true);
+  };
+
+  const handleStartEditLandmark = (spot: CaoBangLandmark) => {
+    if (!isAdmin) {
+      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để chỉnh sửa nội dung Cao Bằng.');
+      return;
+    }
+    setEditingLandmarkId(spot.id);
+    setSpotName(spot.name);
+    setSpotArea(spot.area);
+    setSpotTag(spot.tag);
+    setSpotSummary(spot.summary);
+    setSpotLinkUrl(spot.linkUrl || '');
+    setSpotLinkLabel(spot.linkLabel || 'Xem chi tiết & bản đồ');
+    setSpotUrlInput('');
+    setSpotDraftImages(spot.images || []);
+    setShowLandmarkForm(true);
+  };
+
+  const handleSpotFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
     try {
-      const compressedList: string[] = [];
+      const compressed: string[] = [];
       for (const file of files) {
         const dataUrl = await compressImageFileToDataUrl(file);
-        compressedList.push(dataUrl);
+        compressed.push(dataUrl);
       }
-      setDraftImages((prev) => [...prev, ...compressedList]);
-      if (!galleryTitle.trim() && files[0]) {
-        const cleanName = files[0].name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ');
-        setGalleryTitle(cleanName);
-      }
-      showToast(
-        `Đã thêm ${compressedList.length} ảnh`,
-        'Bấm "Đưa lên trang chủ" để xuất bản cho khán giả.',
-      );
+      setSpotDraftImages((prev) => [...prev, ...compressed]);
+      showToast(`Đã thêm ${compressed.length} ảnh`, 'Ảnh đã sẵn sàng trong bài quảng bá Cao Bằng.');
     } catch {
-      showToast('Không thể tải ảnh', 'Vui lòng thử chọn ảnh khác hoặc dán đường dẫn URL ảnh.');
+      showToast('Không thể đọc ảnh', 'Vui lòng chọn ảnh khác hoặc dán đường dẫn URL ảnh.');
     } finally {
       e.target.value = '';
     }
   };
 
-  const handleAddDraftUrlImage = () => {
-    const cleanUrl = urlInput.trim();
-    if (!cleanUrl) return;
-    setDraftImages((prev) => [...prev, cleanUrl]);
-    setUrlInput('');
+  const handleAddSpotUrlImage = () => {
+    const clean = spotUrlInput.trim();
+    if (!clean) return;
+    setSpotDraftImages((prev) => [...prev, clean]);
+    setSpotUrlInput('');
   };
 
-  const handleRemoveDraftImage = (idx: number) => {
-    setDraftImages((prev) => prev.filter((_, i) => i !== idx));
+  const handleRemoveSpotDraftImage = (idx: number) => {
+    setSpotDraftImages((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleAddGalleryItem = (e: React.FormEvent) => {
+  const handleSaveLandmark = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin || !currentAccount) {
-      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để đăng nội dung lên trang chủ.');
+      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để lưu nội dung Cao Bằng.');
       return;
     }
 
-    const pendingUrl = urlInput.trim();
-    const finalImages = pendingUrl ? [...draftImages, pendingUrl] : [...draftImages];
-    const cleanTitle = galleryTitle.trim();
-    const cleanCaption = galleryCaption.trim();
+    const cleanName = spotName.trim();
+    const cleanArea = spotArea.trim() || 'Cao Bằng';
+    const cleanTag = spotTag.trim() || 'Điểm đến nổi bật';
+    const cleanSummary = spotSummary.trim();
+    const normalizedLink = normalizeExternalUrl(spotLinkUrl);
+    const cleanLinkLabel = spotLinkLabel.trim() || 'Xem chi tiết & bản đồ';
 
-    if (postKind === 'image' && finalImages.length === 0 && !cleanTitle && !cleanCaption) {
-      showToast('Thiếu nội dung', 'Vui lòng chọn ít nhất 1 hình ảnh hoặc nhập nội dung.');
+    if (!cleanName) {
+      showToast('Thiếu tên địa danh', 'Vui lòng nhập tên địa danh hoặc nội dung quảng bá.');
       return;
     }
 
-    if (postKind === 'info' && !cleanTitle && !cleanCaption && finalImages.length === 0) {
-      showToast('Thiếu thông tin', 'Vui lòng nhập tiêu đề hoặc nội dung thông tin.');
-      return;
+    const pendingUrl = spotUrlInput.trim();
+    const combinedImages = pendingUrl ? [...spotDraftImages, pendingUrl] : [...spotDraftImages];
+    const finalImages =
+      combinedImages.length > 0
+        ? combinedImages
+        : [createTravelPlaceholderSvg(cleanName, cleanTag.toUpperCase(), '#059669')];
+
+    if (editingLandmarkId) {
+      const updated = landmarks.map((item) =>
+        item.id === editingLandmarkId
+          ? {
+              ...item,
+              name: cleanName,
+              area: cleanArea,
+              tag: cleanTag,
+              summary: cleanSummary,
+              linkUrl: normalizedLink,
+              linkLabel: cleanLinkLabel,
+              images: finalImages,
+            }
+          : item,
+      );
+      saveLandmarksAndSync(updated);
+      showToast('Đã cập nhật địa danh', `"${cleanName}" đã được lưu thay đổi.`);
+    } else {
+      const newSpot: CaoBangLandmark = {
+        id: `spot_${Date.now().toString(36)}`,
+        name: cleanName,
+        area: cleanArea,
+        tag: cleanTag,
+        summary: cleanSummary,
+        linkUrl: normalizedLink,
+        linkLabel: cleanLinkLabel,
+        images: finalImages,
+      };
+      saveLandmarksAndSync([newSpot, ...landmarks]);
+      showToast('Đã thêm địa danh Cao Bằng', `"${cleanName}" đã hiển thị ở mục du lịch.`);
     }
 
-    const newItem: HomeGalleryItem = {
-      id: `post_${Date.now().toString(36)}`,
-      kind: postKind,
-      title:
-        cleanTitle ||
-        (postKind === 'info' ? 'Thông tin từ Ban Tổ Chức' : 'Hình ảnh sự kiện'),
-      caption: cleanCaption,
-      images: finalImages,
-      createdAt: new Date().toLocaleDateString('vi-VN'),
-      createdBy: currentAccount.displayName,
-    };
-
-    saveGalleryAndSync([newItem, ...galleryItems]);
-    setGalleryTitle('');
-    setGalleryCaption('');
-    setUrlInput('');
-    setDraftImages([]);
-    showToast(
-      postKind === 'info' ? 'Đã đăng thông tin lên trang chủ' : 'Đã đăng hình ảnh lên trang chủ',
-      `"${newItem.title}" đã hiển thị trên trang chủ.`,
-    );
+    resetLandmarkForm();
   };
 
-  const handleDeleteGalleryItem = (id: string) => {
+  const handleDeleteLandmark = (id: string) => {
     if (!isAdmin) {
-      openLoginWithReason('Chỉ tài khoản Admin mới có thể xóa nội dung trên trang chủ.');
+      openLoginWithReason('Chỉ tài khoản Admin mới có quyền xóa địa danh.');
       return;
     }
-    const target = galleryItems.find((item) => item.id === id);
-    saveGalleryAndSync(galleryItems.filter((item) => item.id !== id));
-    if (lightboxState?.item.id === id) {
+    const target = landmarks.find((item) => item.id === id);
+    saveLandmarksAndSync(landmarks.filter((item) => item.id !== id));
+    if (editingLandmarkId === id) {
+      resetLandmarkForm();
+    }
+    if (lightboxState?.landmark.id === id) {
       setLightboxState(null);
     }
     if (target) {
-      showToast('Đã gỡ mục khỏi trang chủ', target.title);
+      showToast('Đã xóa địa danh', target.name);
     }
+  };
+
+  const handleRestoreDefaultLandmarks = () => {
+    if (!isAdmin) {
+      openLoginWithReason('Chỉ tài khoản Admin mới có thể khôi phục danh sách địa danh mặc định.');
+      return;
+    }
+    saveLandmarksAndSync(DEFAULT_CAO_BANG_LANDMARKS);
+    resetLandmarkForm();
+    showToast('Đã khôi phục địa danh mặc định', 'Danh sách các điểm đến nổi bật Cao Bằng đã sẵn sàng.');
   };
 
   const handleLoginSuccess = (account: StaffAccount) => {
@@ -1223,315 +1325,349 @@ export default function App() {
     [isStaff],
   );
 
-  const renderHomeFeedAndCaoBangSection = () => (
-    <div className="space-y-5">
-      {/* SportConnect-style Feed & Media Showcase (Homepage only) */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-orange-600">
-              BẢNG TIN & HÌNH ẢNH SỰ KIỆN
-            </div>
-            <h2 className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
-              Cập nhật & Hình ảnh nổi bật
-            </h2>
+  const renderCaoBangTravelSection = () => (
+    <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+      {/* Travel Banner Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950 text-white px-5 py-5 sm:px-6 sm:py-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="space-y-1.5 max-w-2xl">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+            <Compass className="w-3.5 h-3.5" />
+            <span>Cẩm nang du lịch · Quê hương Cao Bằng</span>
           </div>
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 font-mono-num">
-            {galleryItems.length} mục
-          </span>
+          <h2 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight">
+            Khám phá non nước Cao Bằng — Điểm hẹn du lịch & thể thao
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Gợi ý các địa danh nổi tiếng, cảnh đẹp và điểm tham quan đáng trải nghiệm tại Cao Bằng dành cho VĐV, cổ động viên và du khách.
+          </p>
         </div>
 
-        {isAdmin && (
-          <form
-            onSubmit={handleAddGalleryItem}
-            className="p-4 rounded-xl bg-slate-50/90 border border-slate-200 space-y-3"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                <ImagePlus className="w-4 h-4 text-orange-600" />
-                Đăng nhiều hình ảnh hoặc thông tin mới
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setPostKind('image')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors ${
-                    postKind === 'image'
-                      ? 'bg-orange-600 text-white border-orange-600'
-                      : 'bg-white text-slate-700 border-slate-300'
-                  }`}
-                >
-                  Nhiều hình ảnh
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPostKind('info')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors ${
-                    postKind === 'info'
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-slate-700 border-slate-300'
-                  }`}
-                >
-                  Thông tin / Bản tin
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Tiêu đề
-                </label>
-                <input
-                  type="text"
-                  value={galleryTitle}
-                  onChange={(e) => setGalleryTitle(e.target.value)}
-                  placeholder={
-                    postKind === 'info'
-                      ? 'VD: Lịch tập trung & thông báo từ Ban Tổ Chức'
-                      : 'VD: Khoảnh khắc thi đấu & không gian cụm sân'
-                  }
-                  className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Chọn nhiều ảnh từ máy hoặc thêm link URL ảnh
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddDraftUrlImage();
-                      }
-                    }}
-                    placeholder="Dán link URL ảnh rồi bấm + Link"
-                    className="flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddDraftUrlImage}
-                    className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold shrink-0"
-                  >
-                    + Link
-                  </button>
-                  <label className="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-600 text-white text-xs font-semibold cursor-pointer flex items-center shrink-0 transition-colors">
-                    Chọn nhiều ảnh
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleGalleryFilesChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nội dung thông tin / Chú thích
-                </label>
-                <textarea
-                  rows={3}
-                  value={galleryCaption}
-                  onChange={(e) => setGalleryCaption(e.target.value)}
-                  placeholder="Nhập thông tin chi tiết, thông báo hoặc ghi chú hiển thị cho khán giả..."
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white"
-                />
-              </div>
-            </div>
-
-            {draftImages.length > 0 && (
-              <div className="pt-1 space-y-2">
-                <div className="text-xs font-semibold text-slate-700">
-                  Ảnh đã chọn ({draftImages.length} ảnh):
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {draftImages.map((src, idx) => (
-                    <div
-                      key={`${idx}_${src.slice(0, 24)}`}
-                      className="relative w-20 h-16 rounded-lg overflow-hidden border border-slate-300 bg-white"
-                    >
-                      <img
-                        src={src}
-                        alt={`Ảnh xem trước ${idx + 1}`}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveDraftImage(idx)}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-950/80 text-white text-[11px] flex items-center justify-center hover:bg-rose-600"
-                        title="Xóa ảnh này"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {isAdmin && (
+            <>
               <button
-                type="submit"
-                className="min-h-[38px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center gap-1.5"
+                type="button"
+                onClick={handleStartAddLandmark}
+                className="min-h-[38px] px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold inline-flex items-center gap-1.5 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Đưa lên trang chủ
+                Thêm địa danh / Link
               </button>
-            </div>
-          </form>
-        )}
-
-        {galleryItems.length === 0 ? (
-          <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
-            Chưa có hình ảnh hoặc thông tin nào được đăng.
+              <button
+                type="button"
+                onClick={handleRestoreDefaultLandmarks}
+                title="Khôi phục danh sách mặc định"
+                className="min-h-[38px] px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Mặc định
+              </button>
+            </>
+          )}
+          <div className="flex items-center gap-1.5 text-xs text-emerald-200 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+            <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Cao Bằng · Việt Nam</span>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {galleryItems.map((item) => (
+        </div>
+      </div>
+
+      {/* Admin Add / Edit Form */}
+      {isAdmin && showLandmarkForm && (
+        <form
+          onSubmit={handleSaveLandmark}
+          className="m-4 sm:m-6 p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm font-bold text-slate-900">
+              {editingLandmarkId
+                ? 'Chỉnh sửa địa danh & nội dung quảng bá Cao Bằng'
+                : 'Thêm địa danh / nội dung quảng bá Cao Bằng mới'}
+            </div>
+            <button
+              type="button"
+              onClick={resetLandmarkForm}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/70"
+              title="Đóng biểu mẫu"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Tên địa danh / Tiêu đề *
+              </label>
+              <input
+                type="text"
+                value={spotName}
+                onChange={(e) => setSpotName(e.target.value)}
+                placeholder="VD: Đèo Mã Phục, Núi Mắt Thần..."
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Khu vực / Địa chỉ
+              </label>
+              <input
+                type="text"
+                value={spotArea}
+                onChange={(e) => setSpotArea(e.target.value)}
+                placeholder="VD: Quảng Uyên · Cao Bằng"
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Thẻ chủ đề (Badge)
+              </label>
+              <input
+                type="text"
+                value={spotTag}
+                onChange={(e) => setSpotTag(e.target.value)}
+                placeholder="VD: Thắng cảnh, Check-in, Ẩm thực..."
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Đường dẫn link (Bản đồ, bài viết, video...)
+              </label>
+              <input
+                type="text"
+                value={spotLinkUrl}
+                onChange={(e) => setSpotLinkUrl(e.target.value)}
+                placeholder="VD: https://maps.google.com/?q=..."
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Tên nút hiển thị link
+              </label>
+              <input
+                type="text"
+                value={spotLinkLabel}
+                onChange={(e) => setSpotLinkLabel(e.target.value)}
+                placeholder="VD: Xem bản đồ, Khám phá ngay..."
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Giới thiệu / Mô tả địa danh
+            </label>
+            <textarea
+              rows={3}
+              value={spotSummary}
+              onChange={(e) => setSpotSummary(e.target.value)}
+              placeholder="Mô tả cảnh đẹp, trải nghiệm nổi bật hoặc lưu ý tham quan tại Cao Bằng..."
+              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-slate-700">
+              Hình ảnh địa danh (chọn nhiều ảnh từ máy hoặc dán link URL ảnh)
+            </label>
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+              <input
+                type="text"
+                value={spotUrlInput}
+                onChange={(e) => setSpotUrlInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddSpotUrlImage();
+                  }
+                }}
+                placeholder="Dán link URL ảnh rồi bấm + Ảnh"
+                className="flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddSpotUrlImage}
+                className="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold shrink-0"
+              >
+                + Ảnh
+              </button>
+              <label className="min-h-[38px] px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-600 text-white text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5 shrink-0 transition-colors">
+                <ImagePlus className="w-3.5 h-3.5" />
+                Tải ảnh lên
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleSpotFilesChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {spotDraftImages.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {spotDraftImages.map((src, idx) => (
+                  <div
+                    key={`${idx}_${src.slice(0, 20)}`}
+                    className="relative w-24 h-16 rounded-lg overflow-hidden border border-slate-300 bg-white"
+                  >
+                    <img
+                      src={src}
+                      alt={`Ảnh địa danh ${idx + 1}`}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSpotDraftImage(idx)}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-950/80 text-white text-[11px] flex items-center justify-center hover:bg-rose-600"
+                      title="Xóa ảnh này"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={resetLandmarkForm}
+              className="min-h-[38px] px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="min-h-[38px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+            >
+              {editingLandmarkId ? 'Lưu chỉnh sửa' : 'Đăng địa danh'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Travel Cards Grid */}
+      {landmarks.length === 0 ? (
+        <div className="p-6 text-center text-xs text-slate-500">
+          Chưa có địa danh Cao Bằng nào được hiển thị.
+        </div>
+      ) : (
+        <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/40">
+          {landmarks.map((spot) => {
+            const coverImage = spot.images[0];
+            return (
               <article
-                key={item.id}
-                className="rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors overflow-hidden flex flex-col justify-between"
+                key={spot.id}
+                className="rounded-2xl bg-white border border-slate-200 hover:border-emerald-400 transition-colors overflow-hidden flex flex-col justify-between shadow-2xs"
               >
                 <div>
-                  {item.images.length > 0 && (
-                    <div
-                      className={`grid gap-0.5 bg-slate-100 ${
-                        item.images.length === 1
-                          ? 'grid-cols-1'
-                          : item.images.length === 2
-                          ? 'grid-cols-2'
-                          : 'grid-cols-3'
-                      }`}
+                  <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
+                      className="block w-full h-full text-left"
                     >
-                      {item.images.map((imgSrc, imgIdx) => (
-                        <button
-                          key={`${item.id}_img_${imgIdx}`}
-                          type="button"
-                          onClick={() => setLightboxState({ item, imageIndex: imgIdx })}
-                          className={`block w-full overflow-hidden text-left ${
-                            item.images.length === 1 ? 'aspect-video' : 'aspect-square'
-                          }`}
-                        >
-                          <img
-                            src={imgSrc}
-                            alt={`${item.title} ${imgIdx + 1}`}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover hover:scale-[1.03] transition-transform"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                      <img
+                        src={coverImage}
+                        alt={spot.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300"
+                      />
+                    </button>
+                    <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-950/75 text-emerald-300 backdrop-blur-xs">
+                      {spot.tag}
+                    </span>
+                    {spot.images.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
+                        className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-950/80 text-white font-mono-num"
+                      >
+                        {spot.images.length} ảnh
+                      </button>
+                    )}
+                  </div>
 
-                  <div className="p-4 space-y-1.5">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700">
-                      {item.kind === 'info' ? (
-                        <>
-                          <FileText className="w-3 h-3" />
-                          <span>Thông tin</span>
-                        </>
-                      ) : (
-                        <>
-                          <ImagePlus className="w-3 h-3" />
-                          <span>
-                            {item.images.length > 1
-                              ? `${item.images.length} hình ảnh`
-                              : 'Hình ảnh'}
-                          </span>
-                        </>
-                      )}
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                      <MapPin className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{spot.area}</span>
                     </div>
 
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
-                      {item.title}
+                    <h3 className="font-display text-base font-bold text-slate-900 leading-snug">
+                      {spot.name}
                     </h3>
 
-                    {item.caption && (
-                      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
-                        {item.caption}
+                    {spot.summary && (
+                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                        {spot.summary}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                  <span className="font-mono-num">{item.createdAt}</span>
-                  {isAdmin && (
+                <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+                  {spot.linkUrl ? (
+                    <a
+                      href={spot.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 truncate"
+                    >
+                      <span className="truncate">{spot.linkLabel || 'Xem chi tiết'}</span>
+                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                    </a>
+                  ) : (
                     <button
                       type="button"
-                      onClick={() => handleDeleteGalleryItem(item.id)}
-                      className="text-rose-600 hover:text-rose-700 font-semibold inline-flex items-center gap-1"
+                      onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
+                      className="text-xs font-semibold text-slate-600 hover:text-slate-900"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Xóa
+                      Xem ảnh
                     </button>
+                  )}
+
+                  {isAdmin && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditLandmark(spot)}
+                        className="text-xs font-semibold text-slate-700 hover:text-emerald-700 inline-flex items-center gap-1"
+                        title="Chỉnh sửa địa danh"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Sửa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLandmark(spot.id)}
+                        className="text-xs font-semibold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1"
+                        title="Xóa địa danh"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Xóa
+                      </button>
+                    </div>
                   )}
                 </div>
               </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Cao Bang Destination Spotlight (Homepage only) */}
-      <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950 text-white px-5 py-5 sm:px-6 sm:py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-1.5 max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-              <Compass className="w-3.5 h-3.5" />
-              <span>Khám phá điểm đến · Non nước Cao Bằng</span>
-            </div>
-            <h2 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight">
-              Quê hương Cao Bằng — Non xanh nước biếc, đậm đà bản sắc
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Vùng đất miền núi phía Bắc nổi tiếng với Công viên địa chất toàn cầu UNESCO, những dòng thác hùng vĩ, hồ nước cao nguyên thơ mộng và các địa danh lịch sử giàu giá trị.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-emerald-200 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 shrink-0 self-start md:self-center">
-            <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Cao Bằng · Việt Nam</span>
-          </div>
+            );
+          })}
         </div>
-
-        <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/40">
-          {CAO_BANG_LANDMARKS.map((spot) => (
-            <div
-              key={spot.id}
-              className="rounded-xl bg-white border border-slate-200 hover:border-emerald-400/80 transition-colors p-4 flex flex-col justify-between gap-3"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700">
-                    {spot.tag}
-                  </span>
-                </div>
-                <h3 className="font-display text-base font-bold text-slate-900">
-                  {spot.name}
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {spot.summary}
-                </p>
-              </div>
-              <div className="pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-                <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="truncate">{spot.area}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
+      )}
+    </section>
   );
 
   return (
@@ -1618,11 +1754,10 @@ export default function App() {
                 setAuthModalMode('login');
                 setShowAuthModal(true);
               }}
-              className="px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5"
+              className="px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5"
             >
               <LogIn className="w-4 h-4 shrink-0" />
-              <span className="sm:hidden">Đăng nhập</span>
-              <span className="hidden sm:inline">Đăng nhập</span>
+              <span>Đăng nhập</span>
             </button>
           )}
         </div>
@@ -1766,7 +1901,7 @@ export default function App() {
                   </button>
                 </div>
               )}
-              {renderHomeFeedAndCaoBangSection()}
+              {renderCaoBangTravelSection()}
             </div>
           ) : (
             <section className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-xs text-slate-500">
@@ -2034,7 +2169,7 @@ export default function App() {
                   </div>
                 </section>
 
-                {renderHomeFeedAndCaoBangSection()}
+                {renderCaoBangTravelSection()}
               </div>
             )}
 
@@ -2332,7 +2467,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Lightbox Modal for Multi-Image Preview */}
+      {/* Lightbox Modal for Landmark Photos */}
       {lightboxState && (
         <div
           onClick={() => setLightboxState(null)}
@@ -2345,12 +2480,12 @@ export default function App() {
             <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <div className="text-sm font-bold truncate">
-                  {lightboxState.item.title} ({lightboxState.imageIndex + 1}/
-                  {lightboxState.item.images.length})
+                  {lightboxState.landmark.name} ({lightboxState.imageIndex + 1}/
+                  {lightboxState.landmark.images.length})
                 </div>
-                {lightboxState.item.caption && (
-                  <div className="text-xs text-slate-300 truncate">{lightboxState.item.caption}</div>
-                )}
+                <div className="text-xs text-slate-300 truncate">
+                  {lightboxState.landmark.area}
+                </div>
               </div>
               <button
                 type="button"
@@ -2362,23 +2497,23 @@ export default function App() {
             </div>
             <div className="bg-slate-950 flex flex-col items-center justify-center max-h-[75vh] overflow-auto p-3 gap-3">
               <img
-                src={lightboxState.item.images[lightboxState.imageIndex]}
-                alt={lightboxState.item.title}
+                src={lightboxState.landmark.images[lightboxState.imageIndex]}
+                alt={lightboxState.landmark.name}
                 referrerPolicy="no-referrer"
                 className="max-h-[60vh] w-auto object-contain rounded-lg"
               />
-              {lightboxState.item.images.length > 1 && (
+              {lightboxState.landmark.images.length > 1 && (
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  {lightboxState.item.images.map((thumb, idx) => (
+                  {lightboxState.landmark.images.map((thumb, idx) => (
                     <button
-                      key={`${lightboxState.item.id}_thumb_${idx}`}
+                      key={`${lightboxState.landmark.id}_thumb_${idx}`}
                       type="button"
                       onClick={() =>
                         setLightboxState({ ...lightboxState, imageIndex: idx })
                       }
                       className={`w-14 h-10 rounded-md overflow-hidden border-2 ${
                         lightboxState.imageIndex === idx
-                          ? 'border-orange-500'
+                          ? 'border-emerald-400'
                           : 'border-transparent opacity-60 hover:opacity-100'
                       }`}
                     >
