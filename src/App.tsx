@@ -25,6 +25,8 @@ import {
   Trophy,
   UserPlus,
   Users,
+  Utensils,
+  Route,
   X,
 } from 'lucide-react';
 import { AnalyticsReportView } from './components/AnalyticsReportView';
@@ -72,6 +74,8 @@ type ActiveTab =
   | 'members'
   | 'reports';
 
+type HomepageGuideTab = 'places' | 'cuisine' | 'guide';
+
 interface LandmarkLink {
   label: string;
   url: string;
@@ -86,6 +90,79 @@ interface CaoBangLandmark {
   links: LandmarkLink[];
   images: string[];
 }
+
+interface CaoBangCuisineItem {
+  id: string;
+  name: string;
+  mealTime: string;
+  tag: string;
+  description: string;
+  tip: string;
+}
+
+const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
+  {
+    id: 'banh_cuon_canh',
+    name: 'Bánh cuốn canh Cao Bằng',
+    mealTime: 'Ăn sáng · Chợ & quán địa phương',
+    tag: 'Đặc sản sáng',
+    description:
+      'Bánh tráng mỏng dẻo ăn kèm nước dùng ninh xương ngọt thanh, thêm thịt băm, mộc nhĩ, măng chua và rau thơm.',
+    tip: 'Nên ăn khi bánh còn nóng mới tráng, gia giảm măng chua và ớt tùy khẩu vị.',
+  },
+  {
+    id: 'pho_chua',
+    name: 'Phở chua Cao Bằng',
+    mealTime: 'Ăn sáng / Xế trưa',
+    tag: 'Chua ngọt thanh mát',
+    description:
+      'Sợi phở mềm dẻo trộn cùng thịt vịt quay, ba chỉ giòn, khoai tàu chiên, lạc rang và nước sốt chua ngọt sánh nhẹ.',
+    tip: 'Thích hợp đổi vị vào ngày nắng nhẹ hoặc buổi sáng dạo phố.',
+  },
+  {
+    id: 'vit_quay_7_vi',
+    name: 'Vịt quay 7 vị & Lạp sườn mắc mật',
+    mealTime: 'Bữa chính · Quà biếu',
+    tag: 'Hương vị núi rừng',
+    description:
+      'Vịt quay tẩm ướp gia vị đặc trưng cùng mật ong cho lớp da vàng giòn; lạp sườn hong khói lá/quả mắc mật thơm đậm đà.',
+    tip: 'Phù hợp cho bữa ăn đoàn tụ sau thi đấu và mua làm quà mang về.',
+  },
+  {
+    id: 'hat_de_rau_da_hien',
+    name: 'Hạt dẻ Trùng Khánh & Rau dạ hiến',
+    mealTime: 'Theo mùa · Đặc sản vùng cao',
+    tag: 'Thủ phủ đặc sản',
+    description:
+      'Hạt dẻ bùi béo đặc trưng khu vực Trùng Khánh (mùa thu – đông) và rau dạ hiến xanh giòn, ngọt thanh xào tỏi hoặc nấu canh.',
+    tip: 'Nên hỏi giá và chọn mua tại điểm uy tín khi đi cung đường Trùng Khánh – Bản Giốc.',
+  },
+];
+
+const CAO_BANG_TRAVEL_GUIDE = [
+  {
+    title: '1. Đường đi & di chuyển',
+    points: [
+      'Từ Hà Nội lên Cao Bằng phổ biến theo trục cao tốc Hà Nội – Thái Nguyên – Chợ Mới – QL3 hoặc hướng Lạng Sơn – Cao Bằng.',
+      'Đường đèo dốc vùng núi (như Đèo Mã Phục, cung đường lên Bản Giốc hoặc Phia Oắc) có nhiều khúc cua, cần kiểm tra phanh và giữ tốc độ an toàn.',
+    ],
+  },
+  {
+    title: '2. Thời điểm & trang phục',
+    points: [
+      'Tháng 8 – 10 thác Bản Giốc nhiều nước, cảnh sắc xanh mát; tháng 11 – 12 trời se lạnh, có mùa hoa đặc trưng; mùa xuân có hoa nở.',
+      'Mang giày đế bám tốt khi vào hang động hoặc đường dốc, kèm áo khoác nhẹ vì sáng sớm và chiều tối vùng núi khá mát/lạnh.',
+    ],
+  },
+  {
+    title: '3. Gợi ý lịch trình 3 ngày 2 đêm',
+    points: [
+      'Ngày 1: Di chuyển đến Cao Bằng, tham quan khu vực trung tâm, dạo phố và thưởng thức ẩm thực địa phương.',
+      'Ngày 2: Cung Đông Bắc — Động Ngườm Ngao, Làng đá Khuổi Ky, Thác Bản Giốc, Chùa Phật Tích Trúc Lâm (hoặc kết hợp Hồ Thang Hen / Núi Mắt Thần tùy thời gian).',
+      'Ngày 3: Khu di tích Quốc gia đặc biệt Pác Bó (Suối Lê-nin, núi Các Mác, hang Cốc Bó) trước khi kết thúc hành trình.',
+    ],
+  },
+];
 
 function createTravelPlaceholderSvg(title: string, tag: string, accentHex: string): string {
   const safeTitle = title.replace(/[<>&"]/g, '');
@@ -135,7 +212,7 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
     area: 'Đàm Thủy · Cao Bằng',
     tag: 'Hang động thạch nhũ',
     summary:
-      'Hang động đá vôi kỳ ảo dài khoảng 2 km với hệ thống nhũ đá, măng đá lấp lánh nhiều hình thù độc đáo.',
+      'Hang động đá vôi kỳ ảo với hệ thống nhũ đá, măng đá lấp lánh nhiều hình thù độc đáo, nằm gần khu vực thác Bản Giốc.',
     links: [
       {
         label: 'Bản đồ',
@@ -425,6 +502,7 @@ export default function App() {
   const [authReasonMessage, setAuthReasonMessage] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => loadSavedActiveTab());
+  const [homepageGuideTab, setHomepageGuideTab] = useState<HomepageGuideTab>('places');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(
     () => loadInitialState().tournaments[0]?.id || '',
   );
@@ -584,6 +662,7 @@ export default function App() {
       openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để thêm địa danh Cao Bằng.');
       return;
     }
+    setHomepageGuideTab('places');
     setEditingLandmarkId(null);
     setSpotName('');
     setSpotArea('Cao Bằng');
@@ -602,6 +681,7 @@ export default function App() {
       openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để chỉnh sửa nội dung Cao Bằng.');
       return;
     }
+    setHomepageGuideTab('places');
     setEditingLandmarkId(spot.id);
     setSpotName(spot.name);
     setSpotArea(spot.area);
@@ -1471,10 +1551,10 @@ export default function App() {
             <span>Cẩm nang du lịch · Quê hương Cao Bằng</span>
           </div>
           <h2 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight">
-            Khám phá non nước Cao Bằng — Điểm hẹn du lịch & thể thao
+            Khám phá non nước Cao Bằng — Điểm hẹn du lịch, ẩm thực & trải nghiệm
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Gợi ý các địa danh nổi tiếng, cảnh đẹp và điểm tham quan đáng trải nghiệm tại Cao Bằng dành cho VĐV, cổ động viên và du khách.
+            Thông tin địa danh nổi tiếng, đặc sản ẩm thực vùng cao và hướng dẫn di chuyển – lịch trình dành cho VĐV, cổ động viên và du khách.
           </p>
         </div>
 
@@ -1504,6 +1584,54 @@ export default function App() {
             <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>Cao Bằng · Việt Nam</span>
           </div>
+        </div>
+      </div>
+
+      {/* Sub-navigation: Địa danh | Ẩm thực | Hướng dẫn chi tiết */}
+      <div className="px-4 sm:px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHomepageGuideTab('places')}
+            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${
+              homepageGuideTab === 'places'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>Địa danh nổi bật ({landmarks.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setHomepageGuideTab('cuisine')}
+            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${
+              homepageGuideTab === 'cuisine'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <Utensils className="w-3.5 h-3.5" />
+            <span>Ăn uống & Đặc sản ({CAO_BANG_CUISINE.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setHomepageGuideTab('guide')}
+            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${
+              homepageGuideTab === 'guide'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <Route className="w-3.5 h-3.5" />
+            <span>Hướng dẫn chi tiết</span>
+          </button>
+        </div>
+
+        <div className="text-[11px] text-slate-500">
+          Mùa thác đẹp: Tháng 8–10 · Mùa hoa/se lạnh: Tháng 11–12 & Mùa xuân
         </div>
       </div>
 
@@ -1723,118 +1851,166 @@ export default function App() {
         </form>
       )}
 
-      {/* Travel Cards Grid */}
-      {landmarks.length === 0 ? (
-        <div className="p-6 text-center text-xs text-slate-500">
-          Chưa có địa danh Cao Bằng nào được hiển thị.
-        </div>
-      ) : (
-        <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/40">
-          {landmarks.map((spot) => {
-            const coverImage = spot.images[0];
-            return (
-              <article
-                key={spot.id}
-                className="rounded-2xl bg-white border border-slate-200 hover:border-emerald-400 transition-colors overflow-hidden flex flex-col justify-between shadow-2xs"
-              >
-                <div>
-                  <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
-                      className="block w-full h-full text-left"
-                    >
-                      <img
-                        src={coverImage}
-                        alt={spot.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300"
-                      />
-                    </button>
-                    <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-950/75 text-emerald-300 backdrop-blur-xs">
-                      {spot.tag}
-                    </span>
-                    {spot.images.length > 1 && (
+      {/* Sub-tab 1: Places Grid */}
+      {homepageGuideTab === 'places' &&
+        (landmarks.length === 0 ? (
+          <div className="p-6 text-center text-xs text-slate-500">
+            Chưa có địa danh Cao Bằng nào được hiển thị.
+          </div>
+        ) : (
+          <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/40">
+            {landmarks.map((spot) => {
+              const coverImage = spot.images[0];
+              return (
+                <article
+                  key={spot.id}
+                  className="rounded-2xl bg-white border border-slate-200 hover:border-emerald-400 transition-colors overflow-hidden flex flex-col justify-between shadow-2xs"
+                >
+                  <div>
+                    <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
                       <button
                         type="button"
                         onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
-                        className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-950/80 text-white font-mono-num"
+                        className="block w-full h-full text-left"
                       >
-                        {spot.images.length} ảnh
+                        <img
+                          src={coverImage}
+                          alt={spot.name}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300"
+                        />
                       </button>
-                    )}
-                  </div>
-
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-700">
-                      <MapPin className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{spot.area}</span>
-                    </div>
-
-                    <h3 className="font-display text-base font-bold text-slate-900 leading-snug">
-                      {spot.name}
-                    </h3>
-
-                    {spot.summary && (
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
-                        {spot.summary}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                    {spot.links && spot.links.length > 0 ? (
-                      spot.links.map((lnk, idx) => (
-                        <a
-                          key={`${spot.id}_lnk_${idx}`}
-                          href={lnk.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold inline-flex items-center gap-1 transition-colors"
+                      <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-950/75 text-emerald-300 backdrop-blur-xs">
+                        {spot.tag}
+                      </span>
+                      {spot.images.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
+                          className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-950/80 text-white font-mono-num"
                         >
-                          <span>{lnk.label}</span>
-                          <ExternalLink className="w-3 h-3 shrink-0" />
-                        </a>
-                      ))
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
-                        className="text-xs font-semibold text-slate-600 hover:text-slate-900"
-                      >
-                        Xem ảnh
-                      </button>
-                    )}
+                          {spot.images.length} ảnh
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                        <MapPin className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{spot.area}</span>
+                      </div>
+
+                      <h3 className="font-display text-base font-bold text-slate-900 leading-snug">
+                        {spot.name}
+                      </h3>
+
+                      {spot.summary && (
+                        <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                          {spot.summary}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
-                  {isAdmin && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleStartEditLandmark(spot)}
-                        className="text-xs font-semibold text-slate-700 hover:text-emerald-700 inline-flex items-center gap-1"
-                        title="Chỉnh sửa địa danh"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Sửa
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteLandmark(spot.id)}
-                        className="text-xs font-semibold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1"
-                        title="Xóa địa danh"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Xóa
-                      </button>
+                  <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                      {spot.links && spot.links.length > 0 ? (
+                        spot.links.map((lnk, idx) => (
+                          <a
+                            key={`${spot.id}_lnk_${idx}`}
+                            href={lnk.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold inline-flex items-center gap-1 transition-colors"
+                          >
+                            <span>{lnk.label}</span>
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                        ))
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
+                          className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                        >
+                          Xem ảnh
+                        </button>
+                      )}
                     </div>
-                  )}
+
+                    {isAdmin && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditLandmark(spot)}
+                          className="text-xs font-semibold text-slate-700 hover:text-emerald-700 inline-flex items-center gap-1"
+                          title="Chỉnh sửa địa danh"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Sửa
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLandmark(spot.id)}
+                          className="text-xs font-semibold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1"
+                          title="Xóa địa danh"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Xóa
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ))}
+
+      {/* Sub-tab 2: Cuisine & Specialties */}
+      {homepageGuideTab === 'cuisine' && (
+        <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/40">
+          {CAO_BANG_CUISINE.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 flex flex-col justify-between gap-3"
+            >
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    {item.tag}
+                  </span>
+                  <span className="text-[11px] text-slate-500">{item.mealTime}</span>
                 </div>
-              </article>
-            );
-          })}
+                <h3 className="font-display text-base sm:text-lg font-bold text-slate-900">
+                  {item.name}
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">{item.description}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/70 text-xs text-amber-950">
+                <strong>Mẹo thưởng thức:</strong> {item.tip}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Sub-tab 3: Detailed Guide */}
+      {homepageGuideTab === 'guide' && (
+        <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4 bg-slate-50/40">
+          {CAO_BANG_TRAVEL_GUIDE.map((block) => (
+            <div
+              key={block.title}
+              className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 space-y-3"
+            >
+              <h3 className="font-display text-base font-bold text-slate-900">{block.title}</h3>
+              <ul className="space-y-2 text-xs text-slate-600 leading-relaxed list-disc pl-4">
+                {block.points.map((pt, idx) => (
+                  <li key={idx}>{pt}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       )}
     </section>
