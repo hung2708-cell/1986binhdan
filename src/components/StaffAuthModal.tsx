@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Gavel,
   KeyRound,
@@ -15,6 +15,7 @@ import {
   BRAND_LOGO_URL,
   ROLE_LABELS,
   type StaffAccount,
+  type StaffRole,
 } from '../types/tournament';
 
 interface StaffAuthModalProps {
@@ -47,23 +48,25 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Create new account state
+  // Create new account state (chỉ Admin hoặc Trọng tài)
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('1986');
   const [newDisplayName, setNewDisplayName] = useState('');
-  const [newRole, setNewRole] = useState<'admin' | 'referee'>('referee');
+  const [newRole, setNewRole] = useState<StaffRole>('referee');
   const [newCourts, setNewCourts] = useState('Sân 1, Sân 2');
   const [createSuccessMsg, setCreateSuccessMsg] = useState<string | null>(null);
 
-    const handleLoginSubmit = (e: React.FormEvent) => {
+  const staffAccounts = useMemo(
+    () => accounts.filter((acc) => acc.role === 'admin' || acc.role === 'referee'),
+    [accounts],
+  );
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
-    const found = accounts.find(
-      (a) =>
-        a.username.toLowerCase() === cleanUser &&
-        a.password === cleanPass &&
-        (a.role === 'admin' || a.role === 'referee'),
+    const found = staffAccounts.find(
+      (a) => a.username.toLowerCase() === cleanUser && a.password === cleanPass,
     );
     if (!found) {
       setErrorMsg(
@@ -76,8 +79,11 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
     onClose();
   };
 
-
   const handleQuickLogin = (acc: StaffAccount) => {
+    if (acc.role !== 'admin' && acc.role !== 'referee') {
+      setErrorMsg('Chỉ tài khoản Admin hoặc Trọng tài mới được phép đăng nhập.');
+      return;
+    }
     setUsername(acc.username);
     setPassword(acc.password);
     setErrorMsg(null);
@@ -96,7 +102,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
       setErrorMsg('Vui lòng nhập đầy đủ Tên đăng nhập, Mật khẩu và Họ tên.');
       return;
     }
-    if (accounts.some((a) => a.username.toLowerCase() === cleanU)) {
+    if (staffAccounts.some((a) => a.username.toLowerCase() === cleanU)) {
       setErrorMsg(`Tên đăng nhập "${cleanU}" đã tồn tại. Vui lòng chọn tên khác.`);
       return;
     }
@@ -130,10 +136,10 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
             />
             <div>
               <h3 className="font-display text-lg font-bold tracking-tight text-slate-900 uppercase">
-                TÀI KHOẢN BAN TỔ CHỨC & TRỌNG TÀI 1986
+                ĐĂNG NHẬP ADMIN & TRỌNG TÀI 1986
               </h3>
               <p className="text-xs text-slate-500">
-                Đăng nhập để thêm VĐV, bốc thăm, chấm điểm sân hoặc duyệt lệ phí
+                Hệ thống chỉ cấp quyền đăng nhập cho Ban Tổ Chức (Admin) và Trọng tài
               </p>
             </div>
           </div>
@@ -177,7 +183,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
             }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
-            Quản lý & Tạo tài khoản ({accounts.length})
+            Quản lý tài khoản ({staffAccounts.length})
           </button>
         </div>
 
@@ -232,7 +238,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
               <form onSubmit={handleLoginSubmit} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Tên đăng nhập (Username)
+                    Tên đăng nhập (Admin hoặc Trọng tài)
                   </label>
                   <input
                     type="text"
@@ -267,14 +273,14 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 </button>
               </form>
 
-              {/* Quick One-Tap Login Cards for Testing & Convenience */}
+              {/* Quick One-Tap Login Cards */}
               <div className="pt-3 border-t border-slate-200 space-y-2.5">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Đăng nhập nhanh tài khoản có sẵn (Mật khẩu: 1986)
+                  Đăng nhập nhanh tài khoản Admin / Trọng tài (Mật khẩu: 1986)
                 </div>
 
                 <div className="grid grid-cols-1 gap-2">
-                  {accounts.map((acc) => {
+                  {staffAccounts.map((acc) => {
                     const isCurrent = currentAccount?.id === acc.id;
                     return (
                       <button
@@ -320,7 +326,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                 </div>
               </div>
 
-                            {/* Role Permission Matrix Explanation */}
+              {/* Role Permission Matrix Explanation */}
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 text-slate-600">
                 <div className="font-bold text-slate-900">
                   Phân quyền đăng nhập hệ thống 1986 (Chỉ Admin & Trọng tài):
@@ -332,10 +338,9 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                   • <strong className="text-emerald-700">Trọng tài (Referee)</strong>: Sử dụng App Trọng tài (Sơ đồ sân, Bốc thăm sân/giao bóng, Chọn VĐV ra sân đồng đội, Chấm điểm trực tiếp, Gọi sân) và điểm danh Check-in VĐV.
                 </div>
                 <div>
-                  • <strong className="text-slate-800">Chưa đăng nhập</strong>: Chỉ xem công khai tỉ số Live Score, Lịch đấu, Bảng xếp hạng và Nhánh đấu (không có luồng đăng nhập VĐV/khách).
+                  • <strong className="text-slate-800">Chưa đăng nhập</strong>: Chỉ xem công khai tỉ số Live Score, Lịch đấu, Bảng xếp hạng và Nhánh đấu (không có luồng đăng nhập cho vai trò khác).
                 </div>
               </div>
-
             </>
           ) : (
             /* TAB 2: CREATE & MANAGE ACCOUNTS */
@@ -371,7 +376,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                       </label>
                       <select
                         value={newRole}
-                        onChange={(e) => setNewRole(e.target.value as 'admin' | 'referee')}
+                        onChange={(e) => setNewRole(e.target.value as StaffRole)}
                         className="w-full min-h-[40px] px-3 py-1.5 text-xs font-semibold border border-slate-300 rounded-lg bg-white"
                       >
                         <option value="referee">Trọng tài (Chấm điểm, Bốc thăm, Chọn VĐV)</option>
@@ -448,10 +453,10 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
               {/* Account Directory List */}
               <div className="space-y-2">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Danh sách tài khoản hiện có ({accounts.length})
+                  Danh sách tài khoản hiện có ({staffAccounts.length})
                 </div>
                 <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden">
-                  {accounts.map((acc) => (
+                  {staffAccounts.map((acc) => (
                     <div
                       key={acc.id}
                       className="p-3 bg-white flex items-center justify-between gap-2 text-xs"
@@ -476,7 +481,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                           <UserCheck className="w-3.5 h-3.5 text-orange-600" />
                           Dùng
                         </button>
-                        {currentAccount?.role === 'admin' && accounts.length > 1 && (
+                        {currentAccount?.role === 'admin' && staffAccounts.length > 1 && (
                           <button
                             type="button"
                             onClick={() => onDeleteAccount(acc.id)}
