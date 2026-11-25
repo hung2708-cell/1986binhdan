@@ -54,7 +54,7 @@ import {
   formatScoreCallout,
   isTeamDivision,
 } from './utils/pickleballEngine';
-import { formatVND, generatePaymentCode } from './utils/vietqr';
+import { generatePaymentCode } from './utils/vietqr';
 
 type ActiveTab =
   | 'overview'
@@ -66,7 +66,17 @@ type ActiveTab =
 
 const STORAGE_KEY = 'pickleball_1986_state_v6';
 const AUTH_SESSION_KEY = 'pickleball_1986_auth_user_v1';
+const ACTIVE_TAB_KEY = 'pickleball_1986_active_tab_v1';
 const SYNC_CHANNEL = 'pickleball_1986_realtime_channel';
+
+const VALID_TABS: ActiveTab[] = [
+  'overview',
+  'schedule',
+  'referee',
+  'standings',
+  'members',
+  'reports',
+];
 
 interface PersistedAppState {
   tournaments: Tournament[];
@@ -79,6 +89,18 @@ interface PersistedAppState {
 
 function isStaffRole(role: unknown): role is 'admin' | 'referee' {
   return role === 'admin' || role === 'referee';
+}
+
+function loadSavedActiveTab(): ActiveTab {
+  try {
+    const saved = localStorage.getItem(ACTIVE_TAB_KEY) as ActiveTab | null;
+    if (saved && VALID_TABS.includes(saved)) {
+      return saved;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return 'overview';
 }
 
 function loadInitialState(): PersistedAppState {
@@ -132,7 +154,7 @@ export default function App() {
   const [authModalMode, setAuthModalMode] = useState<'login' | 'manage'>('login');
   const [authReasonMessage, setAuthReasonMessage] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => loadSavedActiveTab());
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(
     () => loadInitialState().tournaments[0]?.id || 't_1986_binh_dan_open',
   );
@@ -145,6 +167,14 @@ export default function App() {
   );
 
   const isAdmin = currentAccount?.role === 'admin';
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ACTIVE_TAB_KEY, activeTab);
+    } catch {
+      // ignore storage errors
+    }
+  }, [activeTab]);
 
   const openLoginWithReason = (reason: string, mode: 'login' | 'manage' = 'login') => {
     setAuthReasonMessage(reason);
@@ -278,13 +308,20 @@ export default function App() {
     }));
     showToast(
       `Đã tạo tài khoản ${ROLE_LABELS[newAccount.role]}`,
-      `${newAccount.displayName} (Tên ĐN: ${newAccount.username} / MK: ${newAccount.password})`,
+      `${newAccount.displayName} (Tên ĐN: ${newAccount.username})`,
     );
   };
 
   const handleDeleteStaffAccount = (accountId: string) => {
     if (!isAdmin || !currentAccount) {
       openLoginWithReason('Chỉ tài khoản Ban Tổ Chức (Admin) mới được phép xóa tài khoản.');
+      return;
+    }
+    if (currentAccount.id === accountId) {
+      showToast(
+        'Không thể tự xóa tài khoản',
+        'Bạn không thể xóa tài khoản đang đăng nhập của chính mình.',
+      );
       return;
     }
     const target = appState.staffAccounts.find((a) => a.id === accountId);
@@ -349,7 +386,6 @@ export default function App() {
     [tournamentRegistrations, tournamentMatches, currentTournament],
   );
 
-  // Handlers
   const pushNotification = (
     type: AppNotification['type'],
     title: string,
@@ -376,7 +412,7 @@ export default function App() {
   const handleOpenCreateTournament = () => {
     if (!isAdmin) {
       openLoginWithReason(
-        'Vui lòng đăng nhập tài khoản Ban Tổ Chức (admin / 1986) để khởi tạo giải đấu mới.',
+        'Vui lòng đăng nhập tài khoản Ban Tổ Chức (Admin) để khởi tạo giải đấu mới.',
       );
       return;
     }
@@ -405,7 +441,7 @@ export default function App() {
   const handleAddDivision = (divisionName: string, compType: 'doubles' | 'team') => {
     if (!isAdmin || !currentAccount) {
       openLoginWithReason(
-        'Phải đăng nhập tài khoản Admin (admin / 1986) mới có thể thêm nội dung Đôi hoặc Đồng đội.',
+        'Phải đăng nhập tài khoản Admin mới có thể thêm nội dung Đôi hoặc Đồng đội.',
       );
       return;
     }
@@ -446,7 +482,7 @@ export default function App() {
   }) => {
     if (!isAdmin || !currentAccount) {
       openLoginWithReason(
-        'Phải đăng nhập tài khoản Admin (admin / 1986) mới có thể thêm VĐV/đội và sắp xếp bảng.',
+        'Phải đăng nhập tài khoản Admin mới có thể thêm VĐV/đội và sắp xếp bảng.',
       );
       return;
     }
@@ -508,7 +544,7 @@ export default function App() {
   const handleAddRosterAthlete = (registrationId: string, athleteLabel: string) => {
     if (!isAdmin || !currentAccount) {
       openLoginWithReason(
-        'Chỉ tài khoản Admin (admin / 1986) mới có quyền thêm VĐV vào danh sách đội hình Đồng đội hoặc Đôi.',
+        'Chỉ tài khoản Admin mới có quyền thêm VĐV vào danh sách đội hình Đồng đội hoặc Đôi.',
       );
       return;
     }
@@ -544,7 +580,7 @@ export default function App() {
   const handleGenerateSchedule = (division: string) => {
     if (!isAdmin) {
       openLoginWithReason(
-        'Chỉ tài khoản Ban Tổ Chức (admin / 1986) mới có quyền xếp lịch thi đấu từ các bảng đã chia.',
+        'Chỉ tài khoản Ban Tổ Chức (Admin) mới có quyền xếp lịch thi đấu từ các bảng đã chia.',
       );
       return;
     }
@@ -891,13 +927,12 @@ export default function App() {
           : 'min-h-screen flex flex-col bg-[#F8FAFC] text-[#0F172A] pb-16 lg:pb-0'
       }
     >
-      {/* TOP BAR CONTRACT: Sticky Top Bar with Pinned 1986 Bính Dần Logo | Navigation Links | Top-Right Login */}
+      {/* TOP BAR CONTRACT */}
       <header
         className={`no-print sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-slate-200 px-3 sm:px-6 shrink-0 flex items-center justify-between gap-2 sm:gap-8 ${
           activeTab === 'referee' ? 'h-10 sm:h-12 hide-on-mobile-landscape' : 'h-12 sm:h-14'
         }`}
       >
-        {/* Zone 1: Pinned 1986 Bính Dần Logo + Brand Wordmark */}
         <a
           href="#overview"
           onClick={(e) => {
@@ -917,7 +952,6 @@ export default function App() {
           </span>
         </a>
 
-        {/* Zone 2: Desktop Single-Line Navigation Links */}
         <nav className="hidden lg:flex items-center gap-5 xl:gap-6 text-sm font-medium text-slate-600">
           {navItems.map((item) => (
             <button
@@ -935,7 +969,6 @@ export default function App() {
           ))}
         </nav>
 
-        {/* Zone 3: 1 Primary Action Button (Sole login entry point in top-right corner) */}
         <div className="flex items-center gap-2 shrink-0">
           {currentAccount ? (
             <button
@@ -974,14 +1007,13 @@ export default function App() {
         </div>
       </header>
 
-      {/* Secondary Workspace Context Toolbar (Hidden in Referee mode so 3D court & scorepads fit cleanly on 1 screen) */}
+      {/* Secondary Workspace Context Toolbar */}
       <div
         className={`no-print bg-white border-b border-slate-200 px-2.5 sm:px-6 py-2 shrink-0 ${
           activeTab === 'referee' ? 'hidden' : ''
         }`}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
-          {/* Active Tournament Selector */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <select
               value={currentTournament.id}
@@ -996,7 +1028,6 @@ export default function App() {
             </select>
           </div>
 
-          {/* Right Workspace Controls: Create Tournament + Notification Center + Reset Demo */}
           <div className="flex items-center justify-end gap-1.5 shrink-0">
             <button
               type="button"
@@ -1089,7 +1120,6 @@ export default function App() {
       >
         {activeTab === 'overview' && (
           <div className="space-y-5">
-            {/* Hero Banner with 1986 Bính Dần Brand Identity */}
             <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
               <div className="lg:col-span-8 flex flex-col justify-between space-y-4">
                 <div className="space-y-2">
@@ -1127,7 +1157,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Primary Quick Workflow Triggers */}
                 <div className="grid grid-cols-1 sm:flex flex-wrap items-center gap-2.5 pt-1">
                   <button
                     type="button"
@@ -1158,7 +1187,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Right Emblem Card */}
               <div className="lg:col-span-4 bg-slate-900 text-white rounded-xl p-4 sm:p-5 flex flex-col items-center justify-between text-center border border-slate-800">
                 <img
                   src={BRAND_LOGO_URL}
@@ -1197,7 +1225,6 @@ export default function App() {
               </div>
             </section>
 
-            {/* Responsive 2x2 / 4-Column KPI Strip */}
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4">
                 <div className="text-xs text-slate-500">Sân đang thi đấu</div>
@@ -1250,9 +1277,7 @@ export default function App() {
               </div>
             </section>
 
-            {/* LIVE COURTS SCOREBOARD + REALTIME STANDINGS SPLIT */}
             <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              {/* Left 7 Cols: Live Courtside Scoreboards */}
               <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl overflow-hidden">
                 <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
                   <div>
@@ -1357,7 +1382,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Right 5 Cols: Real-Time Standings Preview */}
               <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl overflow-hidden">
                 <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
                   <div>
@@ -1442,7 +1466,6 @@ export default function App() {
               </div>
             </section>
 
-            {/* UPCOMING & ACTIVE TOURNAMENTS DIRECTORY */}
             <section className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -1498,10 +1521,7 @@ export default function App() {
                         <p className="text-xs text-slate-600 line-clamp-2">{t.description}</p>
 
                         <div className="pt-1 text-xs text-slate-500">
-                          {t.location} · {t.courtsCount} sân · Lệ phí{' '}
-                          <span className="font-mono-num font-semibold text-slate-800">
-                            {formatVND(t.entryFee)}
-                          </span>
+                          {t.location} · {t.courtsCount} sân
                         </div>
                       </div>
 
@@ -1609,7 +1629,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Quiet Footer (Hidden in single-screen Referee mode) */}
+      {/* Quiet Footer */}
       <footer
         className={`no-print bg-white border-t border-slate-200 px-4 sm:px-6 py-4 text-xs text-slate-500 ${
           activeTab === 'referee' ? 'hidden' : ''
