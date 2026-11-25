@@ -9,6 +9,7 @@ import {
   Bell,
   Calendar,
   CheckCircle2,
+  Compass,
   FileText,
   Gavel,
   ImagePlus,
@@ -79,6 +80,49 @@ interface HomeGalleryItem {
   createdAt: string;
   createdBy: string;
 }
+
+interface CaoBangLandmark {
+  id: string;
+  name: string;
+  area: string;
+  tag: string;
+  summary: string;
+}
+
+const CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
+  {
+    id: 'ban_gioc',
+    name: 'Thác Bản Giốc',
+    area: 'Đàm Thủy · Cao Bằng',
+    tag: 'Kỳ quan thác nước',
+    summary:
+      'Một trong những thác nước tự nhiên hùng vĩ bậc nhất Đông Nam Á, tầng tầng bọt trắng đổ xuống giữa núi non biên cương xanh mát.',
+  },
+  {
+    id: 'quay_son',
+    name: 'Sông Quây Sơn',
+    area: 'Trùng Khánh · Cao Bằng',
+    tag: 'Dòng sông ngọc bích',
+    summary:
+      'Dòng sông trong xanh uốn lượn qua những cánh đồng và thung lũng đá vôi, tạo nên khung cảnh yên bình đặc trưng vùng biên.',
+  },
+  {
+    id: 'thang_hen',
+    name: 'Hồ Thang Hen',
+    area: 'Trà Lĩnh · Cao Bằng',
+    tag: 'Thắng cảnh cao nguyên',
+    summary:
+      'Quần thể hồ nước tự nhiên nằm giữa rừng núi xanh thẳm, mặt nước phẳng lặng đổi sắc theo mùa quanh năm.',
+  },
+  {
+    id: 'pac_bo',
+    name: 'Khu di tích Quốc gia đặc biệt Pác Bó',
+    area: 'Trường Hà · Cao Bằng',
+    tag: 'Cội nguồn lịch sử',
+    summary:
+      'Nơi gắn liền với suối Lê-nin trong vắt và núi Các Mác sừng sững, lưu giữ dấu ấn lịch sử hào hùng của dân tộc.',
+  },
+];
 
 const STORAGE_KEY = 'pickleball_1986_state_v7';
 const AUTH_SESSION_KEY = 'pickleball_1986_auth_user_v1';
@@ -257,7 +301,7 @@ export default function App() {
     null,
   );
 
-  // Homepage multi-image & info posts state (Admin adds, audience views)
+  // Homepage-only multi-image & info posts state (Admin adds, audience views)
   const [galleryItems, setGalleryItems] = useState<HomeGalleryItem[]>(() => loadSavedGallery());
   const [postKind, setPostKind] = useState<FeedPostKind>('image');
   const [galleryTitle, setGalleryTitle] = useState('');
@@ -455,7 +499,7 @@ export default function App() {
     setDraftImages([]);
     showToast(
       postKind === 'info' ? 'Đã đăng thông tin lên trang chủ' : 'Đã đăng hình ảnh lên trang chủ',
-      `"${newItem.title}" đã hiển thị cho khán giả.`,
+      `"${newItem.title}" đã hiển thị trên trang chủ.`,
     );
   };
 
@@ -1170,263 +1214,315 @@ export default function App() {
     [isStaff],
   );
 
-  const renderHomeGallerySection = () => (
-    <section className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
-            HÌNH ẢNH & THÔNG TIN TRANG CHỦ
-          </h2>
-          <p className="text-xs text-slate-500">
-            {isAdmin
-              ? 'Đăng nhiều hình ảnh hoặc các mục thông tin khác nhau để khán giả xem'
-              : 'Thông tin và hình ảnh cập nhật từ Ban Tổ Chức'}
-          </p>
-        </div>
-        <span className="text-xs font-mono-num text-slate-500">
-          {galleryItems.length} mục
-        </span>
-      </div>
-
-      {isAdmin && (
-        <form
-          onSubmit={handleAddGalleryItem}
-          className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-              <ImagePlus className="w-4 h-4 text-orange-600" />
-              Thêm nhiều hình ảnh hoặc thông tin mới
+  const renderHomeFeedAndCaoBangSection = () => (
+    <div className="space-y-5">
+      {/* SportConnect-style Feed & Media Showcase (Homepage only) */}
+      <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-orange-600">
+              BẢNG TIN & HÌNH ẢNH SỰ KIỆN
             </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setPostKind('image')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors ${
-                  postKind === 'image'
-                    ? 'bg-orange-600 text-white border-orange-600'
-                    : 'bg-white text-slate-700 border-slate-300'
-                }`}
-              >
-                Nhiều hình ảnh
-              </button>
-              <button
-                type="button"
-                onClick={() => setPostKind('info')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors ${
-                  postKind === 'info'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white text-slate-700 border-slate-300'
-                }`}
-              >
-                Thông tin / Bản tin
-              </button>
-            </div>
+            <h2 className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
+              Cập nhật & Hình ảnh nổi bật
+            </h2>
           </div>
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 font-mono-num">
+            {galleryItems.length} mục
+          </span>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Tiêu đề
-              </label>
-              <input
-                type="text"
-                value={galleryTitle}
-                onChange={(e) => setGalleryTitle(e.target.value)}
-                placeholder={
-                  postKind === 'info'
-                    ? 'VD: Thông báo lịch tập trung & quy định sân'
-                    : 'VD: Ảnh không khí thi đấu & cụm sân'
-                }
-                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-            </div>
+        {isAdmin && (
+          <form
+            onSubmit={handleAddGalleryItem}
+            className="p-4 rounded-xl bg-slate-50/90 border border-slate-200 space-y-3"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                <ImagePlus className="w-4 h-4 text-orange-600" />
+                Đăng nhiều hình ảnh hoặc thông tin mới
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Chọn nhiều ảnh từ máy hoặc thêm link URL ảnh
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddDraftUrlImage();
-                    }
-                  }}
-                  placeholder="Dán link URL ảnh rồi bấm + Link"
-                  className="flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-                />
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={handleAddDraftUrlImage}
-                  className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold shrink-0"
+                  onClick={() => setPostKind('image')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors ${
+                    postKind === 'image'
+                      ? 'bg-orange-600 text-white border-orange-600'
+                      : 'bg-white text-slate-700 border-slate-300'
+                  }`}
                 >
-                  + Link
+                  Nhiều hình ảnh
                 </button>
-                <label className="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-600 text-white text-xs font-semibold cursor-pointer flex items-center shrink-0 transition-colors">
-                  Chọn nhiều ảnh
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleGalleryFilesChange}
-                    className="hidden"
-                  />
-                </label>
+                <button
+                  type="button"
+                  onClick={() => setPostKind('info')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors ${
+                    postKind === 'info'
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-700 border-slate-300'
+                  }`}
+                >
+                  Thông tin / Bản tin
+                </button>
               </div>
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Nội dung thông tin / Chú thích cho khán giả
-              </label>
-              <textarea
-                rows={3}
-                value={galleryCaption}
-                onChange={(e) => setGalleryCaption(e.target.value)}
-                placeholder="Nhập thông tin chi tiết, thông báo hoặc ghi chú hiển thị cho khán giả..."
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-            </div>
-          </div>
-
-          {draftImages.length > 0 && (
-            <div className="pt-1 space-y-2">
-              <div className="text-xs font-semibold text-slate-700">
-                Ảnh đã chọn ({draftImages.length} ảnh):
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {draftImages.map((src, idx) => (
-                  <div
-                    key={`${idx}_${src.slice(0, 24)}`}
-                    className="relative w-20 h-16 rounded-lg overflow-hidden border border-slate-300 bg-white group"
-                  >
-                    <img
-                      src={src}
-                      alt={`Ảnh xem trước ${idx + 1}`}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveDraftImage(idx)}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-950/80 text-white text-[11px] flex items-center justify-center hover:bg-rose-600"
-                      title="Xóa ảnh này"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="min-h-[38px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              Đưa lên trang chủ
-            </button>
-          </div>
-        </form>
-      )}
-
-      {galleryItems.length === 0 ? (
-        <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
-          Chưa có hình ảnh hoặc thông tin nào trên trang chủ.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {galleryItems.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col justify-between"
-            >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                {item.images.length > 0 && (
-                  <div
-                    className={`grid gap-0.5 bg-slate-100 ${
-                      item.images.length === 1
-                        ? 'grid-cols-1'
-                        : item.images.length === 2
-                        ? 'grid-cols-2'
-                        : 'grid-cols-3'
-                    }`}
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Tiêu đề
+                </label>
+                <input
+                  type="text"
+                  value={galleryTitle}
+                  onChange={(e) => setGalleryTitle(e.target.value)}
+                  placeholder={
+                    postKind === 'info'
+                      ? 'VD: Lịch tập trung & thông báo từ Ban Tổ Chức'
+                      : 'VD: Khoảnh khắc thi đấu & không gian cụm sân'
+                  }
+                  className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Chọn nhiều ảnh từ máy hoặc thêm link URL ảnh
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddDraftUrlImage();
+                      }
+                    }}
+                    placeholder="Dán link URL ảnh rồi bấm + Link"
+                    className="flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddDraftUrlImage}
+                    className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold shrink-0"
                   >
-                    {item.images.map((imgSrc, imgIdx) => (
-                      <button
-                        key={`${item.id}_img_${imgIdx}`}
-                        type="button"
-                        onClick={() => setLightboxState({ item, imageIndex: imgIdx })}
-                        className={`block w-full overflow-hidden text-left ${
-                          item.images.length === 1 ? 'aspect-video' : 'aspect-square'
-                        }`}
-                      >
-                        <img
-                          src={imgSrc}
-                          alt={`${item.title} ${imgIdx + 1}`}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover hover:scale-[1.03] transition-transform"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <div className="p-3.5 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-orange-600">
-                    {item.kind === 'info' ? (
-                      <>
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>Thông tin</span>
-                      </>
-                    ) : (
-                      <>
-                        <ImagePlus className="w-3.5 h-3.5" />
-                        <span>
-                          {item.images.length > 1
-                            ? `${item.images.length} hình ảnh`
-                            : 'Hình ảnh'}
-                        </span>
-                      </>
-                    )}
-                  </div>
-
-                  <h3 className="text-sm font-bold text-slate-900">{item.title}</h3>
-
-                  {item.caption && (
-                    <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
-                      {item.caption}
-                    </p>
-                  )}
+                    + Link
+                  </button>
+                  <label className="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-600 text-white text-xs font-semibold cursor-pointer flex items-center shrink-0 transition-colors">
+                    Chọn nhiều ảnh
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleGalleryFilesChange}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
               </div>
 
-              <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span className="font-mono-num">{item.createdAt}</span>
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteGalleryItem(item.id)}
-                    className="text-rose-600 hover:text-rose-700 font-semibold inline-flex items-center gap-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Xóa
-                  </button>
-                )}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nội dung thông tin / Chú thích
+                </label>
+                <textarea
+                  rows={3}
+                  value={galleryCaption}
+                  onChange={(e) => setGalleryCaption(e.target.value)}
+                  placeholder="Nhập thông tin chi tiết, thông báo hoặc ghi chú hiển thị cho khán giả..."
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white"
+                />
+              </div>
+            </div>
+
+            {draftImages.length > 0 && (
+              <div className="pt-1 space-y-2">
+                <div className="text-xs font-semibold text-slate-700">
+                  Ảnh đã chọn ({draftImages.length} ảnh):
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {draftImages.map((src, idx) => (
+                    <div
+                      key={`${idx}_${src.slice(0, 24)}`}
+                      className="relative w-20 h-16 rounded-lg overflow-hidden border border-slate-300 bg-white"
+                    >
+                      <img
+                        src={src}
+                        alt={`Ảnh xem trước ${idx + 1}`}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDraftImage(idx)}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-950/80 text-white text-[11px] flex items-center justify-center hover:bg-rose-600"
+                        title="Xóa ảnh này"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="min-h-[38px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                Đưa lên trang chủ
+              </button>
+            </div>
+          </form>
+        )}
+
+        {galleryItems.length === 0 ? (
+          <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
+            Chưa có hình ảnh hoặc thông tin nào được đăng.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {galleryItems.map((item) => (
+              <article
+                key={item.id}
+                className="rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors overflow-hidden flex flex-col justify-between"
+              >
+                <div>
+                  {item.images.length > 0 && (
+                    <div
+                      className={`grid gap-0.5 bg-slate-100 ${
+                        item.images.length === 1
+                          ? 'grid-cols-1'
+                          : item.images.length === 2
+                          ? 'grid-cols-2'
+                          : 'grid-cols-3'
+                      }`}
+                    >
+                      {item.images.map((imgSrc, imgIdx) => (
+                        <button
+                          key={`${item.id}_img_${imgIdx}`}
+                          type="button"
+                          onClick={() => setLightboxState({ item, imageIndex: imgIdx })}
+                          className={`block w-full overflow-hidden text-left ${
+                            item.images.length === 1 ? 'aspect-video' : 'aspect-square'
+                          }`}
+                        >
+                          <img
+                            src={imgSrc}
+                            alt={`${item.title} ${imgIdx + 1}`}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover hover:scale-[1.03] transition-transform"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="p-4 space-y-1.5">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700">
+                      {item.kind === 'info' ? (
+                        <>
+                          <FileText className="w-3 h-3" />
+                          <span>Thông tin</span>
+                        </>
+                      ) : (
+                        <>
+                          <ImagePlus className="w-3 h-3" />
+                          <span>
+                            {item.images.length > 1
+                              ? `${item.images.length} hình ảnh`
+                              : 'Hình ảnh'}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+                      {item.title}
+                    </h3>
+
+                    {item.caption && (
+                      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
+                        {item.caption}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                  <span className="font-mono-num">{item.createdAt}</span>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteGalleryItem(item.id)}
+                      className="text-rose-600 hover:text-rose-700 font-semibold inline-flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Xóa
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Cao Bang Destination Spotlight (Homepage only) */}
+      <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950 text-white px-5 py-5 sm:px-6 sm:py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+              <Compass className="w-3.5 h-3.5" />
+              <span>Khám phá điểm đến · Non nước Cao Bằng</span>
+            </div>
+            <h2 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight">
+              Quê hương Cao Bằng — Non xanh nước biếc, đậm đà bản sắc
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              Vùng đất miền núi phía Bắc nổi tiếng với Công viên địa chất toàn cầu UNESCO, những dòng thác hùng vĩ, hồ nước cao nguyên thơ mộng và các địa danh lịch sử giàu giá trị.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-emerald-200 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 shrink-0 self-start md:self-center">
+            <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Cao Bằng · Việt Nam</span>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/40">
+          {CAO_BANG_LANDMARKS.map((spot) => (
+            <div
+              key={spot.id}
+              className="rounded-xl bg-white border border-slate-200 hover:border-emerald-400/80 transition-colors p-4 flex flex-col justify-between gap-3"
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700">
+                    {spot.tag}
+                  </span>
+                </div>
+                <h3 className="font-display text-base font-bold text-slate-900">
+                  {spot.name}
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {spot.summary}
+                </p>
+              </div>
+              <div className="pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="truncate">{spot.area}</span>
               </div>
             </div>
           ))}
         </div>
-      )}
-    </section>
+      </section>
+    </div>
   );
 
   return (
@@ -1647,21 +1743,27 @@ export default function App() {
         }
       >
         {!currentTournament ? (
-          <div className="space-y-5">
-            {isAdmin && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleOpenCreateTournament}
-                  className="min-h-[40px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  Tạo giải đấu mới
-                </button>
-              </div>
-            )}
-            {renderHomeGallerySection()}
-          </div>
+          activeTab === 'overview' ? (
+            <div className="space-y-5">
+              {isAdmin && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleOpenCreateTournament}
+                    className="min-h-[40px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Tạo giải đấu mới
+                  </button>
+                </div>
+              )}
+              {renderHomeFeedAndCaoBangSection()}
+            </div>
+          ) : (
+            <section className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-xs text-slate-500">
+              Chưa có giải đấu nào được chọn.
+            </section>
+          )
         ) : (
           <>
             {activeTab === 'overview' && (
@@ -2011,8 +2113,6 @@ export default function App() {
                   </div>
                 </section>
 
-                {renderHomeGallerySection()}
-
                 <section className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -2098,6 +2198,8 @@ export default function App() {
                     })}
                   </div>
                 </section>
+
+                {renderHomeFeedAndCaoBangSection()}
               </div>
             )}
 
