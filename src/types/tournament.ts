@@ -1,7 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
 
 export type StaffRole = 'admin' | 'referee';
-export type UserRole = StaffRole;
+export type UserRole = StaffRole | 'player';
 export type TournamentFormat = 'group_knockout' | 'round_robin' | 'single_elimination';
 export type TournamentStatus = 'draft' | 'open' | 'ongoing' | 'completed';
 export type ScoringMode = 'side_out' | 'rally';
@@ -70,7 +70,7 @@ export interface StaffAccount {
   username: string;
   password: string;
   displayName: string;
-  role: 'admin' | 'referee';
+  role: StaffRole;
   assignedCourts: string;
   phone?: string;
 }
@@ -89,11 +89,11 @@ export interface Tournament {
   startDate: string;
   endDate: string;
   format: TournamentFormat;
-  competitionType?: CompetitionType; // 'doubles' (Nội dung Đôi) | 'team' (Nội dung Đồng đội 4 trận đôi + 1 đơn)
+  competitionType?: CompetitionType;
   status: TournamentStatus;
   courtsCount: number;
   pointsToWin: 11 | 15 | 21;
-  maxPointsCap?: number; // VD: 18 điểm ở vòng loại trực tiếp khi hòa 14-14 cách biệt 2 điểm
+  maxPointsCap?: number;
   scoringMode: ScoringMode;
   winByTwo: boolean;
   entryFee: number;
@@ -117,7 +117,7 @@ export interface Registration {
   teamName: string;
   player1Name: string;
   player2Name: string;
-  squadRoster?: string[]; // Danh sách VĐV đội hình cho nội dung Đồng đội
+  squadRoster?: string[];
   club: string;
   combinedRating: number;
   groupName: string;
@@ -136,14 +136,14 @@ export interface Match {
   id: string;
   tournamentId: string;
   division: string;
-  competitionType?: CompetitionType; // 'doubles' | 'team'
-  teamSubCategory?: string; // Nội dung Đôi hoặc Lượt trận Đồng đội (Trận 1: Đôi Nữ, Trận 2: Đôi Nam...)
-  teamLineupSlots?: TeamLineupSlot[]; // Đăng ký cả 04 trận đôi & trận đơn quyết định cho nội dung Đồng đội
-  activeSlotOrder?: 1 | 2 | 3 | 4 | 5; // Trận con đang thi đấu trong loạt trận Đồng đội
-  teamGamesWonA?: number; // Số hiệp (trận con) Đội A thắng trong loạt trận Đồng đội
-  teamGamesWonB?: number; // Số hiệp (trận con) Đội B thắng trong loạt trận Đồng đội
-  forfeitSide?: '' | 'A' | 'B'; // Đội bỏ cuộc (0 điểm, xử thua 0-15 hoặc 0-4)
-  maxPointsCap?: number; // Điểm tối đa (VD: 18 điểm ở vòng loại trực tiếp khi chạm 15 cách biệt 2)
+  competitionType?: CompetitionType;
+  teamSubCategory?: string;
+  teamLineupSlots?: TeamLineupSlot[];
+  activeSlotOrder?: 1 | 2 | 3 | 4 | 5;
+  teamGamesWonA?: number;
+  teamGamesWonB?: number;
+  forfeitSide?: '' | 'A' | 'B';
+  maxPointsCap?: number;
   stage: MatchStage;
   roundOrder: number;
   matchNumber: number;
@@ -159,9 +159,9 @@ export interface Match {
   teamBName: string;
   teamBPlayer1?: string;
   teamBPlayer2?: string;
-  courtSideA?: 'left' | 'right'; // Sân Trái hoặc Sân Phải của Đội A trên sơ đồ sân
-  tossWinner?: '' | 'A' | 'B'; // Đội thắng bốc thăm
-  tossNote?: string; // Kết quả bốc thăm (VD: Đội A chọn giao bóng, Sân Trái)
+  courtSideA?: 'left' | 'right';
+  tossWinner?: '' | 'A' | 'B';
+  tossNote?: string;
   courtNumber: number;
   scheduledTime: string;
   refereeUid: string;
@@ -206,17 +206,17 @@ export interface StandingRow {
   groupName: string;
   division: string;
   played: number;
-  wins: number; // Thắng: 03 điểm
-  draws: number; // Hòa (2-2 ở vòng bảng đồng đội): 02 điểm
-  losses: number; // Thua: 01 điểm
-  forfeits: number; // Bỏ cuộc: 0 điểm
-  gamesWon: number; // Số hiệp thắng
-  gamesLost: number; // Số hiệp thua
-  gameDiff: number; // Hiệu số hiệp thắng - hiệp thua
-  pointsFor: number; // Tổng điểm thắng
-  pointsAgainst: number; // Tổng điểm thua
-  pointDiff: number; // Hiệu số điểm thắng - điểm thua
-  rankPoints: number; // Điểm xếp hạng (Thắng 3, Hòa 2, Thua 1, Bỏ cuộc 0)
+  wins: number;
+  draws: number;
+  losses: number;
+  forfeits: number;
+  gamesWon: number;
+  gamesLost: number;
+  gameDiff: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointDiff: number;
+  rankPoints: number;
   qualified: boolean;
 }
 
@@ -275,11 +275,10 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   paid: 'Đã xác nhận',
 };
 
-eexport const ROLE_LABELS: Record<UserRole, string> = {
+export const ROLE_LABELS: Record<StaffRole, string> = {
   admin: 'Ban Tổ Chức',
   referee: 'Trọng tài',
 };
-
 
 export const DEFAULT_DIVISIONS = [
   'Đồng Đội CLB 1986 (4 Đôi + 1 Đơn)',
@@ -309,4 +308,4 @@ export const CHARTER_REGULATION_SUMMARY = {
 
 export const BRAND_LOGO_URL = './assets/aistudio/logo_22f96794.jpg';
 export const CHARTER_IMAGE_URL = './assets/aistudio/IMG_20261117_213832_1526f22b.jpg';
-
+export const ADMIN_BOOTSTRAP_EMAIL = 'hung.2708@gmail.com';
