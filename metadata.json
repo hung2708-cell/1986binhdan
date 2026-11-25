@@ -1,0 +1,6 @@
+{
+  "name": "1986 — Quản Lý & Trọng Tài Pickleball",
+  "description": "Nền tảng quản lý giải đấu, điều hành trọng tài trực tiếp, bảng xếp hạng thời gian thực, thanh toán VietQR và xuất báo cáo chuyên sâu môn Pickleball.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

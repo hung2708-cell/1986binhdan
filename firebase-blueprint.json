@@ -1,0 +1,573 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public profile of a 1986 Pickleball member without PII.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "club": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "rating": {
+          "type": "number"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "referee", "player"]
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "displayName", "photoURL", "club", "rating", "role", "visibility", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "PII-isolated private contact information owned strictly by the user or admin.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "phone", "updatedAt"]
+    },
+    "RoleAssignment": {
+      "title": "RoleAssignment",
+      "description": "Trusted RBAC document in admins or referees collection.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "assignedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "displayName", "assignedAt"]
+    },
+    "Tournament": {
+      "title": "Tournament",
+      "description": "Pickleball tournament metadata, scoring rules, and VietQR fee settings.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 140
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "startDate": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "endDate": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "format": {
+          "type": "string",
+          "enum": ["group_knockout", "round_robin", "single_elimination"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "open", "ongoing", "completed"]
+        },
+        "courtsCount": {
+          "type": "number"
+        },
+        "pointsToWin": {
+          "type": "number",
+          "enum": [11, 15, 21]
+        },
+        "scoringMode": {
+          "type": "string",
+          "enum": ["side_out", "rally"]
+        },
+        "winByTwo": {
+          "type": "boolean"
+        },
+        "entryFee": {
+          "type": "number"
+        },
+        "bankBin": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "bankName": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "bankAccountNo": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "bankAccountName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "divisions": {
+          "type": "array"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"]
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "name",
+        "location",
+        "startDate",
+        "endDate",
+        "format",
+        "status",
+        "courtsCount",
+        "pointsToWin",
+        "scoringMode",
+        "winByTwo",
+        "entryFee",
+        "bankBin",
+        "bankName",
+        "bankAccountNo",
+        "bankAccountName",
+        "divisions",
+        "description",
+        "visibility",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Registration": {
+      "title": "Registration",
+      "description": "Team or athlete registration in a tournament division with VietQR payment tracking.",
+      "type": "object",
+      "properties": {
+        "tournamentId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "division": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "teamName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "player1Name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "player2Name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "club": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "combinedRating": {
+          "type": "number"
+        },
+        "groupName": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "seed": {
+          "type": "number"
+        },
+        "checkedIn": {
+          "type": "boolean"
+        },
+        "feeAmount": {
+          "type": "number"
+        },
+        "paymentCode": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 40
+        },
+        "paymentStatus": {
+          "type": "string",
+          "enum": ["unpaid", "pending_review", "paid"]
+        },
+        "transferRef": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "tournamentId",
+        "ownerUid",
+        "division",
+        "teamName",
+        "player1Name",
+        "player2Name",
+        "club",
+        "combinedRating",
+        "groupName",
+        "seed",
+        "checkedIn",
+        "feeAmount",
+        "paymentCode",
+        "paymentStatus",
+        "transferRef",
+        "visibility",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Match": {
+      "title": "Match",
+      "description": "Live or scheduled Pickleball match with court assignment, server tracking, and point log.",
+      "type": "object",
+      "properties": {
+        "tournamentId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "division": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "stage": {
+          "type": "string",
+          "enum": ["group", "quarterfinal", "semifinal", "third_place", "final"]
+        },
+        "roundOrder": {
+          "type": "number"
+        },
+        "matchNumber": {
+          "type": "number"
+        },
+        "groupName": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "bracketSlot": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "nextMatchId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "nextMatchSide": {
+          "type": "string",
+          "enum": ["", "A", "B"]
+        },
+        "teamAId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "teamAName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "teamBId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "teamBName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "courtNumber": {
+          "type": "number"
+        },
+        "scheduledTime": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "refereeUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "refereeName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "status": {
+          "type": "string",
+          "enum": ["scheduled", "live", "completed"]
+        },
+        "scoringMode": {
+          "type": "string",
+          "enum": ["side_out", "rally"]
+        },
+        "pointsToWin": {
+          "type": "number"
+        },
+        "winByTwo": {
+          "type": "boolean"
+        },
+        "scoreA": {
+          "type": "number"
+        },
+        "scoreB": {
+          "type": "number"
+        },
+        "servingTeam": {
+          "type": "string",
+          "enum": ["A", "B"]
+        },
+        "serverNumber": {
+          "type": "number"
+        },
+        "timeoutsA": {
+          "type": "number"
+        },
+        "timeoutsB": {
+          "type": "number"
+        },
+        "sideSwitched": {
+          "type": "boolean"
+        },
+        "winnerTeamId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "winnerSide": {
+          "type": "string",
+          "enum": ["", "A", "B"]
+        },
+        "startedAtMs": {
+          "type": "number"
+        },
+        "durationSeconds": {
+          "type": "number"
+        },
+        "scoreHistory": {
+          "type": "array"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "tournamentId",
+        "division",
+        "stage",
+        "roundOrder",
+        "matchNumber",
+        "groupName",
+        "bracketSlot",
+        "nextMatchId",
+        "nextMatchSide",
+        "teamAId",
+        "teamAName",
+        "teamBId",
+        "teamBName",
+        "courtNumber",
+        "scheduledTime",
+        "refereeUid",
+        "refereeName",
+        "status",
+        "scoringMode",
+        "pointsToWin",
+        "winByTwo",
+        "scoreA",
+        "scoreB",
+        "servingTeam",
+        "serverNumber",
+        "timeoutsA",
+        "timeoutsB",
+        "sideSwitched",
+        "winnerTeamId",
+        "winnerSide",
+        "startedAtMs",
+        "durationSeconds",
+        "scoreHistory",
+        "visibility",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real-time in-app notification for match results, court calls, and fee approvals.",
+      "type": "object",
+      "properties": {
+        "tournamentId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "targetUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["match_result", "court_call", "payment_approved", "schedule_update"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "matchId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "tournamentId",
+        "targetUid",
+        "type",
+        "title",
+        "message",
+        "matchId",
+        "createdBy",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Public athlete & official profile directory (no PII)."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Isolated PII document (email, phone) accessible only by owner or admin."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/RoleAssignment" },
+      "description": "Trusted admin role membership."
+    },
+    "/referees/{userId}": {
+      "schema": { "$ref": "#/entities/RoleAssignment" },
+      "description": "Trusted referee role membership."
+    },
+    "/tournaments/{tournamentId}": {
+      "schema": { "$ref": "#/entities/Tournament" },
+      "description": "Pickleball tournaments managed on 1986."
+    },
+    "/tournaments/{tournamentId}/registrations/{registrationId}": {
+      "schema": { "$ref": "#/entities/Registration" },
+      "description": "Tournament division registrations and VietQR payment statuses."
+    },
+    "/tournaments/{tournamentId}/matches/{matchId}": {
+      "schema": { "$ref": "#/entities/Match" },
+      "description": "Matches, schedules, live referee scoring states, and bracket links."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Real-time notifications for match results, court calls, and fee confirmations."
+    }
+  }
+}
