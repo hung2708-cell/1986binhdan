@@ -105,6 +105,16 @@ interface CaoBangCuisineItem {
   tip: string;
 }
 
+interface LightboxPreview {
+  title: string;
+  subtitle: string;
+  images: string[];
+  imageIndex: number;
+  fallbackTitle: string;
+  fallbackTag: string;
+  fallbackAccent: string;
+}
+
 function createTravelPlaceholderSvg(
   title: string,
   tag: string,
@@ -126,12 +136,23 @@ function createTravelPlaceholderSvg(
     <circle cx="660" cy="120" r="95" fill="${accentHex}" opacity="0.22"/>
     <path d="M0 370 Q180 290 360 365 T800 340 L800 500 L0 500 Z" fill="#064e3b" opacity="0.55"/>
     <path d="M0 405 Q240 335 470 400 T800 385 L800 500 L0 500 Z" fill="#022c22" opacity="0.7"/>
-    <rect x="36" y="36" width="260" height="34" rx="17" fill="#ffffff" fill-opacity="0.14"/>
+    <rect x="36" y="36" width="270" height="34" rx="17" fill="#ffffff" fill-opacity="0.14"/>
     <text x="54" y="58" fill="#a7f3d0" font-family="system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="1">${safeTag}</text>
     <text x="36" y="424" fill="#ffffff" font-family="system-ui, sans-serif" font-size="31" font-weight="800">${safeTitle}</text>
     <text x="36" y="458" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="16">${safeSub}</text>
   </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function resolveMediaSrc(
+  src: string | undefined,
+  fallbackTitle: string,
+  fallbackTag: string,
+  fallbackAccent: string,
+): string {
+  const trimmed = (src || '').trim();
+  if (trimmed) return trimmed;
+  return createTravelPlaceholderSvg(fallbackTitle, fallbackTag, fallbackAccent);
 }
 
 const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
@@ -140,12 +161,8 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Bánh cuốn canh Cao Bằng',
     mealTime: 'Ăn sáng · Chợ & phố trung tâm',
     tag: 'Đặc sản ăn sáng',
-    image: createTravelPlaceholderSvg(
-      'Bánh cuốn canh Cao Bằng',
-      'ẨM THỰC SÁNG ĐẶC TRƯNG',
-      '#d97706',
-      'Bánh tráng nóng mềm dùng kèm nước xương ninh ngọt thanh',
-    ),
+    image:
+      'https://cdn.tgdd.vn/Files/2021/08/25/1377667/cach-lam-banh-cuon-cao-bang-nong-hoi-thom-ngon-chuan-vi-202108251508096488.jpg',
     description:
       'Bánh được tráng mỏng thủ công từ gạo nếp nương, nhân thịt băm mộc nhĩ, ăn cùng bát nước dùng ninh xương nóng hổi thay vì chấm nước mắm như miền xuôi.',
     detailedGuide:
@@ -157,12 +174,8 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Phở chua Cao Bằng',
     mealTime: 'Ăn sáng / Xế trưa',
     tag: 'Chua ngọt thanh mát',
-    image: createTravelPlaceholderSvg(
-      'Phở chua Cao Bằng',
-      'MÓN NGON TRUYỀN THỐNG',
-      '#ea580c',
-      'Sợi phở dẻo trộn vịt quay, khoai tàu chiên giòn & sốt chua ngọt',
-    ),
+    image:
+      'https://cdn.tgdd.vn/Files/2021/09/14/1382522/cach-lam-pho-chua-cao-bang-chuan-vi-ngon-kho-cuong-202109141634133804.jpg',
     description:
       'Sợi bánh phở mềm dai trộn đều với thịt vịt quay, ba chỉ rán giòn, khoai tàu thái sợi chiên vàng, lạc rang giã dập và nước sốt chua ngọt sánh mịn.',
     detailedGuide:
@@ -174,12 +187,8 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Vịt quay 7 vị & Lạp sườn mắc mật',
     mealTime: 'Bữa trưa / Bữa tối · Quà biếu',
     tag: 'Hương vị núi rừng',
-    image: createTravelPlaceholderSvg(
-      'Vịt quay 7 vị & Lạp sườn',
-      'ĐẶC SẢN BỮA CHÍNH & QUÀ BIẾU',
-      '#b45309',
-      'Tẩm ướp lá mắc mật, mật ong rừng và gia vị bản địa',
-    ),
+    image:
+      'https://cdn.tgdd.vn/Files/2021/09/03/1379886/cach-lam-vit-quay-7-vi-cao-bang-da-gion-thit-mem-ngot-202109031109551593.jpg',
     description:
       'Vịt cỏ địa phương tẩm ướp 7 loại gia vị bí truyền cùng lá mắc mật, phết mật ong quay than hồng cho lớp da vàng óng giòn rụm, thịt bên trong mềm ngọt.',
     detailedGuide:
@@ -191,12 +200,8 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Hạt dẻ Trùng Khánh & Rau dạ hiến',
     mealTime: 'Theo mùa · Đặc sản vùng cao',
     tag: 'Thủ phủ Trùng Khánh',
-    image: createTravelPlaceholderSvg(
-      'Hạt dẻ Trùng Khánh',
-      'ĐẶC SẢN VÙNG BIÊN CƯƠNG',
-      '#059669',
-      'Hạt dẻ bùi béo thơm ngậy & rau rừng giòn ngọt tự nhiên',
-    ),
+    image:
+      'https://cdn.tgdd.vn/Files/2021/10/12/1389903/hat-de-trung-khanh-cao-bang-co-gi-dac-biet-cach-che-bien-ngon-202110121545123209.jpg',
     description:
       'Hạt dẻ Trùng Khánh hạt to, vỏ nâu bóng, khi luộc hoặc rang chín có vị bùi béo và hương thơm đặc trưng hiếm nơi nào sánh bằng.',
     detailedGuide:
@@ -208,12 +213,8 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Bánh áp chao Cao Bằng',
     mealTime: 'Ăn vặt chiều · Mùa thu đông',
     tag: 'Quà chiều ấm nóng',
-    image: createTravelPlaceholderSvg(
-      'Bánh áp chao Cao Bằng',
-      'MÓN NGON MÙA SE LẠNH',
-      '#dc2626',
-      'Vỏ bột nếp tẻ chiên phồng giòn rụm, nhân thịt vịt ướp đậm đà',
-    ),
+    image:
+      'https://cdn.tgdd.vn/Files/2021/10/29/1394009/banh-ap-chao-cao-bang-la-gi-cach-lam-banh-ap-chao-gion-ngon-202110291615274036.jpg',
     description:
       'Chiếc bánh làm từ bột gạo nếp pha gạo tẻ bọc nhân thịt vịt tẩm gia vị, thả chảo dầu sôi chiên vàng phồng, bên ngoài giòn tan bên trong mềm dẻo.',
     detailedGuide:
@@ -225,12 +226,8 @@ const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
     name: 'Xôi trám đen & Bánh khảo',
     mealTime: 'Lễ Tết · Quà đặc sản',
     tag: 'Tinh hoa ẩm thực Tày',
-    image: createTravelPlaceholderSvg(
-      'Xôi trám đen & Bánh khảo',
-      'TINH HOA ẨM THỰC TÀY - NÙNG',
-      '#4f46e5',
-      'Nếp nương dẻo thơm hòa quyện vị bùi của quả trám rừng',
-    ),
+    image:
+      'https://cdn.tgdd.vn/Files/2021/09/22/1384512/cach-lam-xoi-tram-den-cao-bang-thom-deo-chuan-vi-202109221420129876.jpg',
     description:
       'Xôi nếp nương đồ cùng thịt quả trám đen tạo sắc tím hồng bắt mắt, vị dẻo thơm bùi ngậy; bánh khảo làm từ gạo nếp rang xay mịn nhân đường phên, lạc vừng.',
     detailedGuide:
@@ -292,7 +289,10 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
         url: 'https://ecotour.com.vn/dia-diem-du-lich-cao-bang-2',
       },
     ],
-    images: [createTravelPlaceholderSvg('Thác Bản Giốc', 'KỲ QUAN THÁC NƯỚC', '#0d9488')],
+    images: [
+      'https://vcdn1-dulich.vnecdn.net/2022/04/18/thac-ban-gioc-cao-bang-1-1650270341.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=0G2oF9w2r8cF7t2v6sQ0qQ',
+      createTravelPlaceholderSvg('Thác Bản Giốc', 'KỲ QUAN THÁC NƯỚC', '#0d9488'),
+    ],
   },
   {
     id: 'nguom_ngao',
@@ -313,7 +313,10 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
         url: 'https://www.dulichvtv.com/check-in-cao-bang/',
       },
     ],
-    images: [createTravelPlaceholderSvg('Động Ngườm Ngao', 'HANG ĐỘNG THẠCH NHŨ', '#0e7490')],
+    images: [
+      'https://vcdn1-dulich.vnecdn.net/2022/04/18/dong-nguom-ngao-cao-bang-1-1650270512.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=1qW8zR5t4yU6iO9p3lK2jA',
+      createTravelPlaceholderSvg('Động Ngườm Ngao', 'HANG ĐỘNG THẠCH NHŨ', '#0e7490'),
+    ],
   },
   {
     id: 'nui_mat_than',
@@ -334,7 +337,10 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
         url: 'https://www.dulichvtv.com/check-in-cao-bang/',
       },
     ],
-    images: [createTravelPlaceholderSvg('Núi Mắt Thần', 'THẢO NGUYÊN & CHECK-IN', '#059669')],
+    images: [
+      'https://vcdn1-dulich.vnecdn.net/2022/04/18/nui-mat-than-cao-bang-1-1650270650.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=9xC7vB5n3mZ1aS8dF4gH6j',
+      createTravelPlaceholderSvg('Núi Mắt Thần', 'THẢO NGUYÊN & CHECK-IN', '#059669'),
+    ],
   },
   {
     id: 'pac_bo',
@@ -351,7 +357,10 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
         url: 'https://www.google.com/maps/search/?api=1&query=Khu+di+tich+Pac+Bo+Cao+Bang',
       },
     ],
-    images: [createTravelPlaceholderSvg('Khu di tích Pác Bó', 'CỘI NGUỒN LỊCH SỬ', '#15803d')],
+    images: [
+      'https://vcdn1-dulich.vnecdn.net/2022/04/18/suoi-le-nin-pac-bo-cao-bang-1-1650270780.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=4pL2kJ9hG7fD5sA3zX1cV8b',
+      createTravelPlaceholderSvg('Khu di tích Pác Bó', 'CỘI NGUỒN LỊCH SỬ', '#15803d'),
+    ],
   },
   {
     id: 'deo_ma_phuc',
@@ -368,7 +377,10 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
         url: 'https://www.google.com/maps/search/?api=1&query=Deo+Ma+Phuc+Cao+Bang',
       },
     ],
-    images: [createTravelPlaceholderSvg('Đèo Mã Phục', 'CUNG ĐÈO NGOẠN MỤC', '#0284c7')],
+    images: [
+      'https://vcdn1-dulich.vnecdn.net/2022/04/18/deo-ma-phuc-cao-bang-1-1650270900.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=7mN5bV3cX1zA9sD8fG6hJ4k',
+      createTravelPlaceholderSvg('Đèo Mã Phục', 'CUNG ĐÈO NGOẠN MỤC', '#0284c7'),
+    ],
   },
   {
     id: 'khuoi_ky',
@@ -385,7 +397,10 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
         url: 'https://www.google.com/maps/search/?api=1&query=Lang+da+Khuoi+Ky+Cao+Bang',
       },
     ],
-    images: [createTravelPlaceholderSvg('Làng đá Khuổi Ky', 'BẢN SẮC VĂN HÓA TÀY', '#b45309')],
+    images: [
+      'https://vcdn1-dulich.vnecdn.net/2022/04/18/lang-da-khuoi-ky-cao-bang-1-1650271020.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=2wQ4eR6tY8uI0oP9lK7jH5g',
+      createTravelPlaceholderSvg('Làng đá Khuổi Ky', 'BẢN SẮC VĂN HÓA TÀY', '#b45309'),
+    ],
   },
   {
     id: 'phia_oac',
@@ -402,7 +417,10 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
         url: 'https://www.google.com/maps/search/?api=1&query=Phia+Oac+Cao+Bang',
       },
     ],
-    images: [createTravelPlaceholderSvg('Phia Oắc – Phia Đén', 'RỪNG RÊU & SĂN MÂY', '#047857')],
+    images: [
+      'https://vcdn1-dulich.vnecdn.net/2022/04/18/phia-oac-cao-bang-1-1650271150.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=6tY8uI0oP9lK7jH5gF3dS1a',
+      createTravelPlaceholderSvg('Phia Oắc – Phia Đén', 'RỪNG RÊU & SĂN MÂY', '#047857'),
+    ],
   },
   {
     id: 'thang_hen',
@@ -419,14 +437,17 @@ const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
         url: 'https://www.google.com/maps/search/?api=1&query=Ho+Thang+Hen+Cao+Bang',
       },
     ],
-    images: [createTravelPlaceholderSvg('Hồ Thang Hen', 'THẮNG CẢNH CAO NGUYÊN', '#0d9488')],
+    images: [
+      'https://vcdn1-dulich.vnecdn.net/2022/04/18/ho-thang-hen-cao-bang-1-1650271280.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=8uI0oP9lK7jH5gF3dS1aZ2x',
+      createTravelPlaceholderSvg('Hồ Thang Hen', 'THẮNG CẢNH CAO NGUYÊN', '#0d9488'),
+    ],
   },
 ];
 
 const STORAGE_KEY = 'pickleball_1986_state_v7';
 const AUTH_SESSION_KEY = 'pickleball_1986_auth_user_v1';
 const ACTIVE_TAB_KEY = 'pickleball_1986_active_tab_v1';
-const CAO_BANG_STORAGE_KEY = 'pickleball_1986_caobang_travel_v3';
+const CAO_BANG_STORAGE_KEY = 'pickleball_1986_caobang_travel_v4';
 const SYNC_CHANNEL = 'pickleball_1986_realtime_channel';
 
 const VALID_TABS: ActiveTab[] = [
@@ -641,10 +662,7 @@ export default function App() {
   const [spotUrlInput, setSpotUrlInput] = useState('');
   const [spotDraftImages, setSpotDraftImages] = useState<string[]>([]);
 
-  const [lightboxState, setLightboxState] = useState<{
-    landmark: CaoBangLandmark;
-    imageIndex: number;
-  } | null>(null);
+  const [lightboxState, setLightboxState] = useState<LightboxPreview | null>(null);
 
   const isStaff = Boolean(currentAccount && isStaffRole(currentAccount.role));
   const isAdmin = currentAccount?.role === 'admin';
@@ -942,7 +960,7 @@ export default function App() {
     if (editingLandmarkId === id) {
       resetLandmarkForm();
     }
-    if (lightboxState?.landmark.id === id) {
+    if (lightboxState && lightboxState.title === target?.name) {
       setLightboxState(null);
     }
     if (target) {
@@ -1953,9 +1971,21 @@ export default function App() {
                     className="relative w-24 h-16 rounded-lg overflow-hidden border border-slate-300 bg-white"
                   >
                     <img
-                      src={src}
+                      src={resolveMediaSrc(
+                        src,
+                        spotName || 'Cao Bằng',
+                        spotTag.toUpperCase(),
+                        '#059669',
+                      )}
                       alt={`Ảnh địa danh ${idx + 1}`}
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.src = createTravelPlaceholderSvg(
+                          spotName || 'Cao Bằng',
+                          spotTag.toUpperCase(),
+                          '#059669',
+                        );
+                      }}
                       className="w-full h-full object-cover"
                     />
                     <button
@@ -1990,7 +2020,7 @@ export default function App() {
         </form>
       )}
 
-      {/* Sub-tab 1: Places Grid with "Xem thêm" per card & per list */}
+      {/* Sub-tab 1: Places Grid with Photos & "Xem thêm" */}
       {homepageGuideTab === 'places' &&
         (landmarks.length === 0 ? (
           <div className="p-6 text-center text-xs text-slate-500">
@@ -2000,7 +2030,12 @@ export default function App() {
           <div className="p-4 sm:p-6 space-y-5 bg-slate-50/40">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
               {visibleLandmarks.map((spot) => {
-                const coverImage = spot.images[0];
+                const coverImage = resolveMediaSrc(
+                  spot.images[0],
+                  spot.name,
+                  spot.tag.toUpperCase(),
+                  '#059669',
+                );
                 const isCardExpanded = Boolean(expandedCardIds[spot.id]);
                 const hasMoreContent =
                   Boolean(spot.guideDetail) || spot.summary.length > 115;
@@ -2014,13 +2049,30 @@ export default function App() {
                       <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
                         <button
                           type="button"
-                          onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
+                          onClick={() =>
+                            setLightboxState({
+                              title: spot.name,
+                              subtitle: spot.area,
+                              images: spot.images,
+                              imageIndex: 0,
+                              fallbackTitle: spot.name,
+                              fallbackTag: spot.tag.toUpperCase(),
+                              fallbackAccent: '#059669',
+                            })
+                          }
                           className="block w-full h-full text-left"
                         >
                           <img
                             src={coverImage}
                             alt={spot.name}
                             referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              e.currentTarget.src = createTravelPlaceholderSvg(
+                                spot.name,
+                                spot.tag.toUpperCase(),
+                                '#059669',
+                              );
+                            }}
                             className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300"
                           />
                         </button>
@@ -2030,7 +2082,17 @@ export default function App() {
                         {spot.images.length > 1 && (
                           <button
                             type="button"
-                            onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
+                            onClick={() =>
+                              setLightboxState({
+                                title: spot.name,
+                                subtitle: spot.area,
+                                images: spot.images,
+                                imageIndex: 0,
+                                fallbackTitle: spot.name,
+                                fallbackTag: spot.tag.toUpperCase(),
+                                fallbackAccent: '#059669',
+                              })
+                            }
                             className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-950/80 text-white font-mono-num"
                           >
                             {spot.images.length} ảnh
@@ -2100,7 +2162,17 @@ export default function App() {
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setLightboxState({ landmark: spot, imageIndex: 0 })}
+                            onClick={() =>
+                              setLightboxState({
+                                title: spot.name,
+                                subtitle: spot.area,
+                                images: spot.images,
+                                imageIndex: 0,
+                                fallbackTitle: spot.name,
+                                fallbackTag: spot.tag.toUpperCase(),
+                                fallbackAccent: '#059669',
+                              })
+                            }
                             className="text-xs font-semibold text-slate-600 hover:text-slate-900"
                           >
                             Xem ảnh
@@ -2159,12 +2231,19 @@ export default function App() {
           </div>
         ))}
 
-      {/* Sub-tab 2: Cuisine & Specialties with Images & "Xem thêm" */}
+      {/* Sub-tab 2: Cuisine & Specialties with Photos & "Xem thêm" */}
       {homepageGuideTab === 'cuisine' && (
         <div className="p-4 sm:p-6 space-y-5 bg-slate-50/40">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
             {visibleCuisine.map((item) => {
               const isExpanded = Boolean(expandedCardIds[item.id]);
+              const foodSrc = resolveMediaSrc(
+                item.image,
+                item.name,
+                item.tag.toUpperCase(),
+                '#d97706',
+              );
+
               return (
                 <article
                   key={item.id}
@@ -2172,11 +2251,36 @@ export default function App() {
                 >
                   <div>
                     <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLightboxState({
+                            title: item.name,
+                            subtitle: item.mealTime,
+                            images: [foodSrc],
+                            imageIndex: 0,
+                            fallbackTitle: item.name,
+                            fallbackTag: item.tag.toUpperCase(),
+                            fallbackAccent: '#d97706',
+                          })
+                        }
+                        className="block w-full h-full text-left"
+                      >
+                        <img
+                          src={foodSrc}
+                          alt={item.name}
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.src = createTravelPlaceholderSvg(
+                              item.name,
+                              item.tag.toUpperCase(),
+                              '#d97706',
+                              item.mealTime,
+                            );
+                          }}
+                          className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300"
+                        />
+                      </button>
                       <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-950/75 text-amber-300 backdrop-blur-xs">
                         {item.tag}
                       </span>
@@ -2957,7 +3061,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Lightbox Modal for Landmark Photos */}
+      {/* Lightbox Modal for Landmark & Cuisine Photos */}
       {lightboxState && (
         <div
           onClick={() => setLightboxState(null)}
@@ -2970,12 +3074,10 @@ export default function App() {
             <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <div className="text-sm font-bold truncate">
-                  {lightboxState.landmark.name} ({lightboxState.imageIndex + 1}/
-                  {lightboxState.landmark.images.length})
+                  {lightboxState.title} ({lightboxState.imageIndex + 1}/
+                  {lightboxState.images.length})
                 </div>
-                <div className="text-xs text-slate-300 truncate">
-                  {lightboxState.landmark.area}
-                </div>
+                <div className="text-xs text-slate-300 truncate">{lightboxState.subtitle}</div>
               </div>
               <button
                 type="button"
@@ -2987,16 +3089,28 @@ export default function App() {
             </div>
             <div className="bg-slate-950 flex flex-col items-center justify-center max-h-[75vh] overflow-auto p-3 gap-3">
               <img
-                src={lightboxState.landmark.images[lightboxState.imageIndex]}
-                alt={lightboxState.landmark.name}
+                src={resolveMediaSrc(
+                  lightboxState.images[lightboxState.imageIndex],
+                  lightboxState.fallbackTitle,
+                  lightboxState.fallbackTag,
+                  lightboxState.fallbackAccent,
+                )}
+                alt={lightboxState.title}
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.currentTarget.src = createTravelPlaceholderSvg(
+                    lightboxState.fallbackTitle,
+                    lightboxState.fallbackTag,
+                    lightboxState.fallbackAccent,
+                  );
+                }}
                 className="max-h-[60vh] w-auto object-contain rounded-lg"
               />
-              {lightboxState.landmark.images.length > 1 && (
+              {lightboxState.images.length > 1 && (
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  {lightboxState.landmark.images.map((thumb, idx) => (
+                  {lightboxState.images.map((thumb, idx) => (
                     <button
-                      key={`${lightboxState.landmark.id}_thumb_${idx}`}
+                      key={`${lightboxState.title}_thumb_${idx}`}
                       type="button"
                       onClick={() =>
                         setLightboxState({ ...lightboxState, imageIndex: idx })
@@ -3008,9 +3122,21 @@ export default function App() {
                       }`}
                     >
                       <img
-                        src={thumb}
+                        src={resolveMediaSrc(
+                          thumb,
+                          lightboxState.fallbackTitle,
+                          lightboxState.fallbackTag,
+                          lightboxState.fallbackAccent,
+                        )}
                         alt={`Ảnh ${idx + 1}`}
                         referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          e.currentTarget.src = createTravelPlaceholderSvg(
+                            lightboxState.fallbackTitle,
+                            lightboxState.fallbackTag,
+                            lightboxState.fallbackAccent,
+                          );
+                        }}
                         className="w-full h-full object-cover"
                       />
                     </button>
