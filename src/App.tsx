@@ -910,11 +910,12 @@ export default function App() {
           className="flex items-center gap-2 sm:gap-2.5 shrink-0 group"
         >
           <img
-            src={BRAND_LOGO_URL}
-            alt="Logo 1986 Bính Dần Pickleball"
-            referrerPolicy="no-referrer"
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-cover border border-orange-400 shadow-2xs shrink-0"
-          />
+  src="./assets/aistudio/logo_22f96794.jpg"
+  alt="Logo 1986 Bính Dần Pickleball"
+  referrerPolicy="no-referrer"
+  className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-cover border border-orange-400 shadow-2xs shrink-0"
+/>
+
           <span className="font-display text-lg sm:text-2xl font-extrabold tracking-tight text-slate-900 group-hover:text-orange-600 transition-colors whitespace-nowrap">
             1986 PICKLEBALL
           </span>
