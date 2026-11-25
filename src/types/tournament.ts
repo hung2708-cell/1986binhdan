@@ -1,6 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'admin' | 'referee' | 'player';
+export type StaffRole = 'admin' | 'referee';
+export type UserRole = StaffRole;
 export type TournamentFormat = 'group_knockout' | 'round_robin' | 'single_elimination';
 export type TournamentStatus = 'draft' | 'open' | 'ongoing' | 'completed';
 export type ScoringMode = 'side_out' | 'rally';
@@ -274,11 +275,11 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   paid: 'Đã xác nhận',
 };
 
-export const ROLE_LABELS: Record<UserRole, string> = {
+eexport const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Ban Tổ Chức',
   referee: 'Trọng tài',
-  player: 'Vận động viên',
 };
+
 
 export const DEFAULT_DIVISIONS = [
   'Đồng Đội CLB 1986 (4 Đôi + 1 Đơn)',
@@ -306,6 +307,6 @@ export const CHARTER_REGULATION_SUMMARY = {
     '2 đội bằng điểm: Xét đối đầu trực tiếp. Từ 3 đội trở lên bằng điểm: (1) Hiệu số hiệp thắng - hiệp thua → (2) Hiệu số điểm thắng - điểm thua → (3) Bốc thăm (nếu còn 2 đội bằng nhau ở bất kỳ bước nào sẽ xét đối đầu trực tiếp).',
 };
 
-export const BRAND_LOGO_URL = '/assets/aistudio/logo_22f96794.jpg';
-export const CHARTER_IMAGE_URL = '/assets/aistudio/IMG_20261117_213832_1526f22b.jpg';
-export const ADMIN_BOOTSTRAP_EMAIL = 'hung.2708@gmail.com';
+export const BRAND_LOGO_URL = './assets/aistudio/logo_22f96794.jpg';
+export const CHARTER_IMAGE_URL = './assets/aistudio/IMG_20261117_213832_1526f22b.jpg';
+
