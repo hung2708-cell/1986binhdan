@@ -9,6 +9,7 @@ import {
   Bell,
   Calendar,
   CheckCircle2,
+  FileText,
   Gavel,
   ImagePlus,
   LayoutDashboard,
@@ -67,11 +68,14 @@ type ActiveTab =
   | 'members'
   | 'reports';
 
+type FeedPostKind = 'image' | 'info';
+
 interface HomeGalleryItem {
   id: string;
+  kind: FeedPostKind;
   title: string;
   caption: string;
-  imageUrl: string;
+  images: string[];
   createdAt: string;
   createdBy: string;
 }
@@ -79,7 +83,8 @@ interface HomeGalleryItem {
 const STORAGE_KEY = 'pickleball_1986_state_v7';
 const AUTH_SESSION_KEY = 'pickleball_1986_auth_user_v1';
 const ACTIVE_TAB_KEY = 'pickleball_1986_active_tab_v1';
-const GALLERY_STORAGE_KEY = 'pickleball_1986_home_gallery_v1';
+const GALLERY_STORAGE_KEY = 'pickleball_1986_home_gallery_v2';
+const LEGACY_GALLERY_KEY = 'pickleball_1986_home_gallery_v1';
 const SYNC_CHANNEL = 'pickleball_1986_realtime_channel';
 
 const VALID_TABS: ActiveTab[] = [
@@ -165,9 +170,41 @@ function loadSavedAuthAccount(accounts: StaffAccount[]): StaffAccount | null {
 function loadSavedGallery(): HomeGalleryItem[] {
   try {
     const raw = localStorage.getItem(GALLERY_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => ({
+          id: String(item.id || ''),
+          kind: item.kind === 'info' ? 'info' : 'image',
+          title: String(item.title || 'Thông tin từ Ban Tổ Chức'),
+          caption: String(item.caption || ''),
+          images: Array.isArray(item.images)
+            ? item.images.filter(Boolean)
+            : item.imageUrl
+            ? [String(item.imageUrl)]
+            : [],
+          createdAt: String(item.createdAt || new Date().toLocaleDateString('vi-VN')),
+          createdBy: String(item.createdBy || 'Ban Tổ Chức'),
+        }));
+      }
+    }
+
+    const legacyRaw = localStorage.getItem(LEGACY_GALLERY_KEY);
+    if (legacyRaw) {
+      const legacyParsed = JSON.parse(legacyRaw);
+      if (Array.isArray(legacyParsed)) {
+        return legacyParsed.map((item) => ({
+          id: String(item.id || ''),
+          kind: 'image' as const,
+          title: String(item.title || 'Hình ảnh từ Ban Tổ Chức'),
+          caption: String(item.caption || ''),
+          images: item.imageUrl ? [String(item.imageUrl)] : [],
+          createdAt: String(item.createdAt || new Date().toLocaleDateString('vi-VN')),
+          createdBy: String(item.createdBy || 'Ban Tổ Chức'),
+        }));
+      }
+    }
+    return [];
   } catch {
     return [];
   }
@@ -220,12 +257,17 @@ export default function App() {
     null,
   );
 
-  // Homepage media items state (Admin posts, audience views)
+  // Homepage multi-image & info posts state (Admin adds, audience views)
   const [galleryItems, setGalleryItems] = useState<HomeGalleryItem[]>(() => loadSavedGallery());
+  const [postKind, setPostKind] = useState<FeedPostKind>('image');
   const [galleryTitle, setGalleryTitle] = useState('');
   const [galleryCaption, setGalleryCaption] = useState('');
-  const [galleryImageUrl, setGalleryImageUrl] = useState('');
-  const [lightboxItem, setLightboxItem] = useState<HomeGalleryItem | null>(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [draftImages, setDraftImages] = useState<string[]>([]);
+  const [lightboxState, setLightboxState] = useState<{
+    item: HomeGalleryItem;
+    imageIndex: number;
+  } | null>(null);
 
   const isStaff = Boolean(currentAccount && isStaffRole(currentAccount.role));
   const isAdmin = currentAccount?.role === 'admin';
@@ -335,16 +377,25 @@ export default function App() {
     }, 4200);
   };
 
-  const handleGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleGalleryFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
     try {
-      const dataUrl = await compressImageFileToDataUrl(file);
-      setGalleryImageUrl(dataUrl);
-      if (!galleryTitle.trim()) {
-        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ');
+      const compressedList: string[] = [];
+      for (const file of files) {
+        const dataUrl = await compressImageFileToDataUrl(file);
+        compressedList.push(dataUrl);
+      }
+      setDraftImages((prev) => [...prev, ...compressedList]);
+      if (!galleryTitle.trim() && files[0]) {
+        const cleanName = files[0].name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ');
         setGalleryTitle(cleanName);
       }
+      showToast(
+        `Đã thêm ${compressedList.length} ảnh`,
+        'Bấm "Đưa lên trang chủ" để xuất bản cho khán giả.',
+      );
     } catch {
       showToast('Không thể tải ảnh', 'Vui lòng thử chọn ảnh khác hoặc dán đường dẫn URL ảnh.');
     } finally {
@@ -352,23 +403,47 @@ export default function App() {
     }
   };
 
+  const handleAddDraftUrlImage = () => {
+    const cleanUrl = urlInput.trim();
+    if (!cleanUrl) return;
+    setDraftImages((prev) => [...prev, cleanUrl]);
+    setUrlInput('');
+  };
+
+  const handleRemoveDraftImage = (idx: number) => {
+    setDraftImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleAddGalleryItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin || !currentAccount) {
-      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để đưa hình ảnh lên trang chủ.');
+      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để đăng nội dung lên trang chủ.');
       return;
     }
-    const cleanUrl = galleryImageUrl.trim();
-    if (!cleanUrl) {
-      showToast('Thiếu hình ảnh', 'Vui lòng chọn ảnh từ thiết bị hoặc nhập đường dẫn URL ảnh.');
+
+    const pendingUrl = urlInput.trim();
+    const finalImages = pendingUrl ? [...draftImages, pendingUrl] : [...draftImages];
+    const cleanTitle = galleryTitle.trim();
+    const cleanCaption = galleryCaption.trim();
+
+    if (postKind === 'image' && finalImages.length === 0 && !cleanTitle && !cleanCaption) {
+      showToast('Thiếu nội dung', 'Vui lòng chọn ít nhất 1 hình ảnh hoặc nhập nội dung.');
+      return;
+    }
+
+    if (postKind === 'info' && !cleanTitle && !cleanCaption && finalImages.length === 0) {
+      showToast('Thiếu thông tin', 'Vui lòng nhập tiêu đề hoặc nội dung thông tin.');
       return;
     }
 
     const newItem: HomeGalleryItem = {
-      id: `img_${Date.now().toString(36)}`,
-      title: galleryTitle.trim() || 'Hình ảnh giải đấu 1986',
-      caption: galleryCaption.trim(),
-      imageUrl: cleanUrl,
+      id: `post_${Date.now().toString(36)}`,
+      kind: postKind,
+      title:
+        cleanTitle ||
+        (postKind === 'info' ? 'Thông tin từ Ban Tổ Chức' : 'Hình ảnh sự kiện'),
+      caption: cleanCaption,
+      images: finalImages,
       createdAt: new Date().toLocaleDateString('vi-VN'),
       createdBy: currentAccount.displayName,
     };
@@ -376,22 +451,26 @@ export default function App() {
     saveGalleryAndSync([newItem, ...galleryItems]);
     setGalleryTitle('');
     setGalleryCaption('');
-    setGalleryImageUrl('');
-    showToast('Đã đăng ảnh lên trang chủ', `"${newItem.title}" đã hiển thị cho khán giả.`);
+    setUrlInput('');
+    setDraftImages([]);
+    showToast(
+      postKind === 'info' ? 'Đã đăng thông tin lên trang chủ' : 'Đã đăng hình ảnh lên trang chủ',
+      `"${newItem.title}" đã hiển thị cho khán giả.`,
+    );
   };
 
   const handleDeleteGalleryItem = (id: string) => {
     if (!isAdmin) {
-      openLoginWithReason('Chỉ tài khoản Admin mới có thể xóa hình ảnh trên trang chủ.');
+      openLoginWithReason('Chỉ tài khoản Admin mới có thể xóa nội dung trên trang chủ.');
       return;
     }
     const target = galleryItems.find((item) => item.id === id);
     saveGalleryAndSync(galleryItems.filter((item) => item.id !== id));
-    if (lightboxItem?.id === id) {
-      setLightboxItem(null);
+    if (lightboxState?.item.id === id) {
+      setLightboxState(null);
     }
     if (target) {
-      showToast('Đã gỡ ảnh khỏi trang chủ', target.title);
+      showToast('Đã gỡ mục khỏi trang chủ', target.title);
     }
   };
 
@@ -1096,16 +1175,16 @@ export default function App() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
-            THƯ VIỆN HÌNH ẢNH TRANG CHỦ
+            HÌNH ẢNH & THÔNG TIN TRANG CHỦ
           </h2>
           <p className="text-xs text-slate-500">
             {isAdmin
-              ? 'Đăng hình ảnh sự kiện, sơ đồ sân hoặc thông báo trực quan cho khán giả xem'
-              : 'Hình ảnh giải đấu và thông tin từ Ban Tổ Chức'}
+              ? 'Đăng nhiều hình ảnh hoặc các mục thông tin khác nhau để khán giả xem'
+              : 'Thông tin và hình ảnh cập nhật từ Ban Tổ Chức'}
           </p>
         </div>
         <span className="text-xs font-mono-num text-slate-500">
-          {galleryItems.length} hình ảnh
+          {galleryItems.length} mục
         </span>
       </div>
 
@@ -1114,43 +1193,88 @@ export default function App() {
           onSubmit={handleAddGalleryItem}
           className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3"
         >
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-            <ImagePlus className="w-4 h-4 text-orange-600" />
-            Đăng hình ảnh mới lên trang chủ
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+              <ImagePlus className="w-4 h-4 text-orange-600" />
+              Thêm nhiều hình ảnh hoặc thông tin mới
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPostKind('image')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors ${
+                  postKind === 'image'
+                    ? 'bg-orange-600 text-white border-orange-600'
+                    : 'bg-white text-slate-700 border-slate-300'
+                }`}
+              >
+                Nhiều hình ảnh
+              </button>
+              <button
+                type="button"
+                onClick={() => setPostKind('info')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors ${
+                  postKind === 'info'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-700 border-slate-300'
+                }`}
+              >
+                Thông tin / Bản tin
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Tiêu đề hình ảnh
+                Tiêu đề
               </label>
               <input
                 type="text"
                 value={galleryTitle}
                 onChange={(e) => setGalleryTitle(e.target.value)}
-                placeholder="VD: Khai mạc & Sơ đồ cụm sân"
+                placeholder={
+                  postKind === 'info'
+                    ? 'VD: Thông báo lịch tập trung & quy định sân'
+                    : 'VD: Ảnh không khí thi đấu & cụm sân'
+                }
                 className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Chọn ảnh từ máy hoặc dán link URL ảnh *
+                Chọn nhiều ảnh từ máy hoặc thêm link URL ảnh
               </label>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  value={galleryImageUrl}
-                  onChange={(e) => setGalleryImageUrl(e.target.value)}
-                  placeholder="https://... hoặc chọn tệp ảnh"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddDraftUrlImage();
+                    }
+                  }}
+                  placeholder="Dán link URL ảnh rồi bấm + Link"
                   className="flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
                 />
+                <button
+                  type="button"
+                  onClick={handleAddDraftUrlImage}
+                  className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold shrink-0"
+                >
+                  + Link
+                </button>
                 <label className="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-600 text-white text-xs font-semibold cursor-pointer flex items-center shrink-0 transition-colors">
-                  Chọn ảnh
+                  Chọn nhiều ảnh
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={handleGalleryFileChange}
+                    multiple
+                    onChange={handleGalleryFilesChange}
                     className="hidden"
                   />
                 </label>
@@ -1159,29 +1283,46 @@ export default function App() {
 
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Chú thích ngắn (hiển thị cho khán giả)
+                Nội dung thông tin / Chú thích cho khán giả
               </label>
-              <input
-                type="text"
+              <textarea
+                rows={3}
                 value={galleryCaption}
                 onChange={(e) => setGalleryCaption(e.target.value)}
-                placeholder="Nhập nội dung mô tả ngắn cho hình ảnh..."
-                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                placeholder="Nhập thông tin chi tiết, thông báo hoặc ghi chú hiển thị cho khán giả..."
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white"
               />
             </div>
           </div>
 
-          {galleryImageUrl.trim() && (
-            <div className="pt-1 flex items-center gap-3">
-              <img
-                src={galleryImageUrl.trim()}
-                alt="Xem trước ảnh"
-                referrerPolicy="no-referrer"
-                className="w-20 h-14 rounded-lg object-cover border border-slate-300 bg-white shrink-0"
-              />
-              <span className="text-xs text-slate-600 truncate">
-                Đã sẵn sàng đưa hình ảnh này lên trang chủ.
-              </span>
+          {draftImages.length > 0 && (
+            <div className="pt-1 space-y-2">
+              <div className="text-xs font-semibold text-slate-700">
+                Ảnh đã chọn ({draftImages.length} ảnh):
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {draftImages.map((src, idx) => (
+                  <div
+                    key={`${idx}_${src.slice(0, 24)}`}
+                    className="relative w-20 h-16 rounded-lg overflow-hidden border border-slate-300 bg-white group"
+                  >
+                    <img
+                      src={src}
+                      alt={`Ảnh xem trước ${idx + 1}`}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDraftImage(idx)}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-950/80 text-white text-[11px] flex items-center justify-center hover:bg-rose-600"
+                      title="Xóa ảnh này"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -1199,32 +1340,69 @@ export default function App() {
 
       {galleryItems.length === 0 ? (
         <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
-          Chưa có hình ảnh nào trên trang chủ.
+          Chưa có hình ảnh hoặc thông tin nào trên trang chủ.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {galleryItems.map((item) => (
             <div
               key={item.id}
               className="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col justify-between"
             >
               <div>
-                <button
-                  type="button"
-                  onClick={() => setLightboxItem(item)}
-                  className="block w-full aspect-video bg-slate-100 overflow-hidden text-left"
-                >
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover hover:scale-[1.02] transition-transform"
-                  />
-                </button>
-                <div className="p-3.5 space-y-1">
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-1">{item.title}</h3>
+                {item.images.length > 0 && (
+                  <div
+                    className={`grid gap-0.5 bg-slate-100 ${
+                      item.images.length === 1
+                        ? 'grid-cols-1'
+                        : item.images.length === 2
+                        ? 'grid-cols-2'
+                        : 'grid-cols-3'
+                    }`}
+                  >
+                    {item.images.map((imgSrc, imgIdx) => (
+                      <button
+                        key={`${item.id}_img_${imgIdx}`}
+                        type="button"
+                        onClick={() => setLightboxState({ item, imageIndex: imgIdx })}
+                        className={`block w-full overflow-hidden text-left ${
+                          item.images.length === 1 ? 'aspect-video' : 'aspect-square'
+                        }`}
+                      >
+                        <img
+                          src={imgSrc}
+                          alt={`${item.title} ${imgIdx + 1}`}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover hover:scale-[1.03] transition-transform"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="p-3.5 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-orange-600">
+                    {item.kind === 'info' ? (
+                      <>
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Thông tin</span>
+                      </>
+                    ) : (
+                      <>
+                        <ImagePlus className="w-3.5 h-3.5" />
+                        <span>
+                          {item.images.length > 1
+                            ? `${item.images.length} hình ảnh`
+                            : 'Hình ảnh'}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  <h3 className="text-sm font-bold text-slate-900">{item.title}</h3>
+
                   {item.caption && (
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                    <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
                       {item.caption}
                     </p>
                   )}
@@ -1470,33 +1648,18 @@ export default function App() {
       >
         {!currentTournament ? (
           <div className="space-y-5">
-            <section className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-10 text-center space-y-4">
-              <img
-                src={BRAND_LOGO_URL}
-                alt="1986 Bính Dần Pickleball"
-                referrerPolicy="no-referrer"
-                className="w-20 h-20 rounded-2xl object-cover border-2 border-orange-500 mx-auto"
-              />
-              <div className="space-y-1.5">
-                <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900">
-                  1986 PICKLEBALL
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
-                  Hiện chưa có giải đấu nào được mở.
-                </p>
-              </div>
-              {isAdmin && (
+            {isAdmin && (
+              <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={handleOpenCreateTournament}
-                  className="min-h-[42px] px-5 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-2"
+                  className="min-h-[40px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
                   Tạo giải đấu mới
                 </button>
-              )}
-            </section>
-
+              </div>
+            )}
             {renderHomeGallerySection()}
           </div>
         ) : (
@@ -2017,10 +2180,10 @@ export default function App() {
         )}
       </main>
 
-      {/* Lightbox Modal for Audience / Admin Image Preview */}
-      {lightboxItem && (
+      {/* Lightbox Modal for Multi-Image Preview */}
+      {lightboxState && (
         <div
-          onClick={() => setLightboxItem(null)}
+          onClick={() => setLightboxState(null)}
           className="no-print fixed inset-0 z-50 bg-slate-950/85 p-3 sm:p-6 flex items-center justify-center"
         >
           <div
@@ -2029,26 +2192,54 @@ export default function App() {
           >
             <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-sm font-bold truncate">{lightboxItem.title}</div>
-                {lightboxItem.caption && (
-                  <div className="text-xs text-slate-300 truncate">{lightboxItem.caption}</div>
+                <div className="text-sm font-bold truncate">
+                  {lightboxState.item.title} ({lightboxState.imageIndex + 1}/
+                  {lightboxState.item.images.length})
+                </div>
+                {lightboxState.item.caption && (
+                  <div className="text-xs text-slate-300 truncate">{lightboxState.item.caption}</div>
                 )}
               </div>
               <button
                 type="button"
-                onClick={() => setLightboxItem(null)}
+                onClick={() => setLightboxState(null)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="bg-slate-950 flex items-center justify-center max-h-[75vh] overflow-auto p-2">
+            <div className="bg-slate-950 flex flex-col items-center justify-center max-h-[75vh] overflow-auto p-3 gap-3">
               <img
-                src={lightboxItem.imageUrl}
-                alt={lightboxItem.title}
+                src={lightboxState.item.images[lightboxState.imageIndex]}
+                alt={lightboxState.item.title}
                 referrerPolicy="no-referrer"
-                className="max-h-[70vh] w-auto object-contain rounded-lg"
+                className="max-h-[60vh] w-auto object-contain rounded-lg"
               />
+              {lightboxState.item.images.length > 1 && (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {lightboxState.item.images.map((thumb, idx) => (
+                    <button
+                      key={`${lightboxState.item.id}_thumb_${idx}`}
+                      type="button"
+                      onClick={() =>
+                        setLightboxState({ ...lightboxState, imageIndex: idx })
+                      }
+                      className={`w-14 h-10 rounded-md overflow-hidden border-2 ${
+                        lightboxState.imageIndex === idx
+                          ? 'border-orange-500'
+                          : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img
+                        src={thumb}
+                        alt={`Ảnh ${idx + 1}`}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
