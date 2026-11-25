@@ -12,6 +12,7 @@ import {
   Lock,
   Plus,
   ShieldCheck,
+  Shuffle,
   Trash2,
   UserPlus,
   Users,
@@ -59,6 +60,32 @@ const TIER_RATING_MAP: Record<SkillTier, number> = {
   'Trình B': 5.5,
   'Trình C': 4.5,
 };
+
+const THREE_GROUPS = ['Bảng A', 'Bảng B', 'Bảng C'] as const;
+
+const SAMPLE_ATHLETES: Array<{ name: string; gender: AthleteGender; tier: SkillTier }> = [
+  { name: 'Lâm Anh Hùng', gender: 'Nam', tier: 'Trình B' },
+  { name: 'Đàm Thị Thùy Dương', gender: 'Nữ', tier: 'Trình B' },
+  { name: 'Trần Quốc Tuấn', gender: 'Nam', tier: 'Trình A' },
+  { name: 'Lê Hoàng Nam', gender: 'Nam', tier: 'Trình A' },
+  { name: 'Nguyễn Minh Duy', gender: 'Nam', tier: 'Trình B' },
+  { name: 'Hoàng Văn Trọng', gender: 'Nam', tier: 'Trình B' },
+  { name: 'Phạm Thu Hương', gender: 'Nữ', tier: 'Trình B' },
+  { name: 'Vũ Khánh Linh', gender: 'Nữ', tier: 'Trình C' },
+  { name: 'Bùi Đức Minh', gender: 'Nam', tier: 'Trình C' },
+  { name: 'Đỗ Phương Thảo', gender: 'Nữ', tier: 'Trình B' },
+  { name: 'Ngô Quang Hải', gender: 'Nam', tier: 'Trình A' },
+  { name: 'Lý Mai Anh', gender: 'Nữ', tier: 'Trình C' },
+];
+
+function shuffleArray<T>(items: T[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
   tournament,
@@ -155,7 +182,6 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
 
     setRosterAthletes((prev) => [...created, ...prev]);
 
-    // Tự động điền hoặc bổ sung vào ô đội / danh sách thành viên đồng đội nếu đang trống
     if (!player1Name.trim()) {
       setPlayer1Name(names[0]);
       if (names[1] && !player2Name.trim()) {
@@ -173,6 +199,45 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
     setSquadInput(mergedSquad.join(', '));
 
     setSingleAthleteName('');
+  };
+
+  const handleRandomizeThreeGroups = () => {
+    if (!isAdmin) {
+      onRequestLogin(
+        'Vui lòng đăng nhập tài khoản Ban Tổ Chức (Admin) để random chia 3 bảng.',
+      );
+      return;
+    }
+
+    // 1. Random lại Bảng A / B / C cho danh sách VĐV lẻ hiện có (nếu chưa có thì lấy danh sách mẫu)
+    const sourceAthletes: IndividualAthlete[] =
+      rosterAthletes.length > 0
+        ? rosterAthletes
+        : SAMPLE_ATHLETES.map((item, idx) => ({
+            id: `sample_${Date.now().toString(36)}_${idx}`,
+            name: item.name,
+            gender: item.gender,
+            tier: item.tier,
+            groupName: THREE_GROUPS[idx % 3],
+            division: activeDivision,
+          }));
+
+    const shuffledAthletes = shuffleArray(sourceAthletes).map((ath, idx) => ({
+      ...ath,
+      groupName: THREE_GROUPS[idx % 3],
+      division: activeDivision,
+    }));
+    setRosterAthletes(shuffledAthletes);
+
+    // 2. Random chia đều vào Bảng A / B / C cho các đăng ký hiện có của nội dung đang chọn (hoặc toàn giải)
+    const divRegs = registrations.filter((r) => r.division === activeDivision);
+    const targetRegs = divRegs.length > 0 ? divRegs : registrations;
+    if (targetRegs.length > 0) {
+      const shuffledRegs = shuffleArray(targetRegs);
+      shuffledRegs.forEach((reg, idx) => {
+        onAssignRegistrationGroup(reg.id, THREE_GROUPS[idx % 3]);
+      });
+    }
   };
 
   const handleApplyAthleteToSlot = (athlete: IndividualAthlete, slot: 'p1' | 'p2' | 'squad') => {
@@ -237,8 +302,7 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
     const rosterFromSlots = [player1Name.trim(), player2Name.trim()].filter(Boolean);
     const finalSquad = Array.from(new Set([...rosterFromSlots, ...parsedSquad]));
 
-    const resolvedClub =
-      clubName.trim() || `${genderFilter} · ${skillTier}`;
+    const resolvedClub = clubName.trim() || `${genderFilter} · ${skillTier}`;
 
     onAddRegistration({
       division: activeDivision,
@@ -287,11 +351,21 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
             <span>QUẢN LÝ VĐV, NỘI DUNG & SẮP XẾP BẢNG THI ĐẤU</span>
           </div>
           <h1 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">
-            Thêm từng VĐV Nam/Nữ, Đội & Chia Bảng — {tournament.name}
+            Thêm từng VĐV Nam/Nữ, Đội & Chia 3 Bảng — {tournament.name}
           </h1>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono-num">
+        <div className="flex flex-wrap items-center gap-2 text-xs font-mono-num">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={handleRandomizeThreeGroups}
+              className="min-h-[34px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-600 text-white font-sans font-bold inline-flex items-center gap-1.5 transition-colors"
+            >
+              <Shuffle className="w-3.5 h-3.5" />
+              <span>Random 3 bảng (A/B/C)</span>
+            </button>
+          )}
           <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 font-bold border border-blue-200">
             Nam: {maleCount}
           </span>
@@ -314,7 +388,7 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
             <span>
               <strong>Chế độ xem / Trọng tài:</strong> Chỉ tài khoản{' '}
               <strong>Ban Tổ Chức (Admin)</strong> mới có quyền thêm từng VĐV Nam/Nữ, tạo nội dung
-              mới, nhập đội và sắp xếp bảng.
+              mới, nhập đội và random chia 3 bảng.
             </span>
           </div>
           <button
@@ -421,16 +495,28 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
             </div>
           </form>
 
-          {/* STEP 2: Add Individual Male/Female Athletes + Team & Group */}
+          {/* STEP 2: Add Individual Male/Female Athletes + Random 3 Groups */}
           <form
             onSubmit={handleSubmitRegistration}
             className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4"
           >
-            <div className="flex items-center gap-2">
-              <UserPlus className="w-4 h-4 text-orange-600" />
-              <h2 className="font-display text-sm sm:text-base font-bold uppercase text-slate-900">
-                2. NHẬP TỪNG VĐV NAM / NỮ & SẮP XẾP BẢNG
-              </h2>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-orange-600" />
+                <h2 className="font-display text-sm sm:text-base font-bold uppercase text-slate-900">
+                  2. NHẬP TỪNG VĐV NAM / NỮ & RANDOM 3 BẢNG
+                </h2>
+              </div>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleRandomizeThreeGroups}
+                  className="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200 text-[11px] font-extrabold inline-flex items-center gap-1 shrink-0"
+                >
+                  <Shuffle className="w-3 h-3" />
+                  Random 3 bảng
+                </button>
+              )}
             </div>
 
             <div>
@@ -510,16 +596,20 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                     {tier}
                   </button>
                 ))}
-                <input
-                  type="text"
+                <select
                   value={singleGroup}
                   onChange={(e) => {
                     setSingleGroup(e.target.value);
                     setTargetGroup(e.target.value);
                   }}
-                  placeholder="Bảng A"
                   className="min-h-[32px] px-2 text-xs font-semibold border border-slate-300 rounded-lg bg-white"
-                />
+                >
+                  {THREE_GROUPS.map((grp) => (
+                    <option key={grp} value={grp}>
+                      {grp}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex items-center gap-2">
@@ -551,9 +641,19 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
 
               {rosterAthletes.length > 0 && (
                 <div className="space-y-2 pt-1 border-t border-slate-200/80">
-                  <div className="text-[11px] font-bold text-slate-600">
-                    Danh sách VĐV đã thêm ({rosterAthletes.length}):
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold text-slate-600">
+                      Danh sách VĐV đã thêm ({rosterAthletes.length}):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRandomizeThreeGroups}
+                      className="text-[11px] font-bold text-orange-700 hover:text-orange-800 inline-flex items-center gap-1"
+                    >
+                      <Shuffle className="w-3 h-3" /> Chia ngẫu nhiên 3 bảng
+                    </button>
                   </div>
+
                   <div className="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
                     {rosterAthletes.map((ath) => (
                       <div
@@ -575,8 +675,11 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                             {ath.gender}
                           </span>
                           <span className="font-bold">{ath.name}</span>
-                          <span className="text-[11px] text-slate-600 ml-1.5">
-                            · {ath.tier} · {ath.groupName}
+                          <span className="text-[11px] font-bold text-orange-800 ml-1.5">
+                            · {ath.groupName}
+                          </span>
+                          <span className="text-[11px] text-slate-600 ml-1">
+                            ({ath.tier})
                           </span>
                         </div>
 
@@ -763,6 +866,17 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleRandomizeThreeGroups}
+                  className="min-h-[34px] px-2.5 py-1 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1"
+                >
+                  <Shuffle className="w-3.5 h-3.5" />
+                  <span>Random 3 bảng</span>
+                </button>
+              )}
+
               <select
                 value={filterDivision}
                 onChange={(e) => setFilterDivision(e.target.value)}
