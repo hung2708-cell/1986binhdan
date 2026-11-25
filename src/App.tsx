@@ -64,7 +64,7 @@ type ActiveTab =
   | 'members'
   | 'reports';
 
-const STORAGE_KEY = 'pickleball_1986_state_v6';
+const STORAGE_KEY = 'pickleball_1986_state_v7';
 const AUTH_SESSION_KEY = 'pickleball_1986_auth_user_v1';
 const ACTIVE_TAB_KEY = 'pickleball_1986_active_tab_v1';
 const SYNC_CHANNEL = 'pickleball_1986_realtime_channel';
@@ -77,6 +77,9 @@ const VALID_TABS: ActiveTab[] = [
   'members',
   'reports',
 ];
+
+const AUDIENCE_TABS: ActiveTab[] = ['overview', 'schedule', 'standings'];
+const STAFF_ONLY_TABS: ActiveTab[] = ['referee', 'members', 'reports'];
 
 interface PersistedAppState {
   tournaments: Tournament[];
@@ -108,15 +111,17 @@ function loadInitialState(): PersistedAppState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as PersistedAppState;
-      if (parsed.tournaments?.length > 0) {
-        const validStaff = Array.isArray(parsed.staffAccounts)
-          ? parsed.staffAccounts.filter((acc) => isStaffRole(acc?.role))
-          : [];
-        return {
-          ...parsed,
-          staffAccounts: validStaff.length > 0 ? validStaff : INITIAL_STAFF_ACCOUNTS,
-        };
-      }
+      const validStaff = Array.isArray(parsed.staffAccounts)
+        ? parsed.staffAccounts.filter((acc) => isStaffRole(acc?.role))
+        : [];
+      return {
+        tournaments: Array.isArray(parsed.tournaments) ? parsed.tournaments : [],
+        registrations: Array.isArray(parsed.registrations) ? parsed.registrations : [],
+        matches: Array.isArray(parsed.matches) ? parsed.matches : [],
+        notifications: Array.isArray(parsed.notifications) ? parsed.notifications : [],
+        users: Array.isArray(parsed.users) ? parsed.users : INITIAL_USERS,
+        staffAccounts: validStaff.length > 0 ? validStaff : INITIAL_STAFF_ACCOUNTS,
+      };
     }
   } catch (err) {
     console.warn('Could not read saved state, using seed data:', err);
@@ -156,7 +161,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => loadSavedActiveTab());
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(
-    () => loadInitialState().tournaments[0]?.id || 't_1986_binh_dan_open',
+    () => loadInitialState().tournaments[0]?.id || '',
   );
   const [selectedRefereeMatchId, setSelectedRefereeMatchId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -166,7 +171,15 @@ export default function App() {
     null,
   );
 
+  const isStaff = Boolean(currentAccount && isStaffRole(currentAccount.role));
   const isAdmin = currentAccount?.role === 'admin';
+
+  // Nếu chưa đăng nhập (khán giả) mà đang ở tab dành cho BTC/Trọng tài thì đưa về Trang chủ
+  useEffect(() => {
+    if (!isStaff && STAFF_ONLY_TABS.includes(activeTab)) {
+      setActiveTab('overview');
+    }
+  }, [isStaff, activeTab]);
 
   useEffect(() => {
     try {
@@ -204,7 +217,7 @@ export default function App() {
     if (typeof BroadcastChannel === 'undefined') return;
     const bc = new BroadcastChannel(SYNC_CHANNEL);
     bc.onmessage = (event) => {
-      if (event.data && event.data.tournaments) {
+      if (event.data && Array.isArray(event.data.tournaments)) {
         setAppState(event.data as PersistedAppState);
       }
     };
@@ -279,6 +292,9 @@ export default function App() {
     } catch {
       // ignore
     }
+    if (STAFF_ONLY_TABS.includes(activeTab)) {
+      setActiveTab('overview');
+    }
     setShowAuthModal(false);
     setAuthReasonMessage(null);
     if (prevName) {
@@ -335,33 +351,42 @@ export default function App() {
   };
 
   const currentTournament = useMemo(() => {
+    if (appState.tournaments.length === 0) return null;
     return (
       appState.tournaments.find((t) => t.id === selectedTournamentId) ||
       appState.tournaments[0]
     );
   }, [appState.tournaments, selectedTournamentId]);
 
+  useEffect(() => {
+    if (!currentTournament && selectedTournamentId) {
+      setSelectedTournamentId(appState.tournaments[0]?.id || '');
+    }
+  }, [currentTournament, selectedTournamentId, appState.tournaments]);
+
   const tournamentRegistrations = useMemo(
     () =>
-      appState.registrations.filter(
-        (r) => r.tournamentId === currentTournament?.id,
-      ),
+      currentTournament
+        ? appState.registrations.filter((r) => r.tournamentId === currentTournament.id)
+        : [],
     [appState.registrations, currentTournament],
   );
 
   const tournamentMatches = useMemo(
     () =>
-      appState.matches
-        .filter((m) => m.tournamentId === currentTournament?.id)
-        .sort((a, b) => a.matchNumber - b.matchNumber),
+      currentTournament
+        ? appState.matches
+            .filter((m) => m.tournamentId === currentTournament.id)
+            .sort((a, b) => a.matchNumber - b.matchNumber)
+        : [],
     [appState.matches, currentTournament],
   );
 
   const tournamentNotifications = useMemo(
     () =>
-      appState.notifications.filter(
-        (n) => n.tournamentId === currentTournament?.id,
-      ),
+      currentTournament
+        ? appState.notifications.filter((n) => n.tournamentId === currentTournament.id)
+        : [],
     [appState.notifications, currentTournament],
   );
 
@@ -378,11 +403,13 @@ export default function App() {
 
   const standingsPreview = useMemo(
     () =>
-      computeGroupStandings(
-        tournamentRegistrations,
-        tournamentMatches,
-        currentTournament?.divisions[0],
-      ),
+      currentTournament
+        ? computeGroupStandings(
+            tournamentRegistrations,
+            tournamentMatches,
+            currentTournament.divisions[0],
+          )
+        : {},
     [tournamentRegistrations, tournamentMatches, currentTournament],
   );
 
@@ -392,6 +419,7 @@ export default function App() {
     message: string,
     matchId = '',
   ) => {
+    if (!currentTournament) return;
     const newNotif: AppNotification = {
       id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       tournamentId: currentTournament.id,
@@ -439,6 +467,7 @@ export default function App() {
   };
 
   const handleAddDivision = (divisionName: string, compType: 'doubles' | 'team') => {
+    if (!currentTournament) return;
     if (!isAdmin || !currentAccount) {
       openLoginWithReason(
         'Phải đăng nhập tài khoản Admin mới có thể thêm nội dung Đôi hoặc Đồng đội.',
@@ -480,6 +509,7 @@ export default function App() {
     groupName?: string;
     squadRoster?: string[];
   }) => {
+    if (!currentTournament) return;
     if (!isAdmin || !currentAccount) {
       openLoginWithReason(
         'Phải đăng nhập tài khoản Admin mới có thể thêm VĐV/đội và sắp xếp bảng.',
@@ -578,6 +608,7 @@ export default function App() {
   };
 
   const handleGenerateSchedule = (division: string) => {
+    if (!currentTournament) return;
     if (!isAdmin) {
       openLoginWithReason(
         'Chỉ tài khoản Ban Tổ Chức (Admin) mới có quyền xếp lịch thi đấu từ các bảng đã chia.',
@@ -669,6 +700,7 @@ export default function App() {
   };
 
   const handleSyncKnockoutFromGroups = (division: string) => {
+    if (!currentTournament) return;
     if (!isAdmin) {
       openLoginWithReason(
         'Chỉ tài khoản Ban Tổ Chức mới có quyền cập nhật đội Nhất/Nhì bảng vào nhánh Bán kết.',
@@ -868,11 +900,9 @@ export default function App() {
       staffAccounts: INITIAL_STAFF_ACCOUNTS,
     };
     setAppState(fresh);
-    setSelectedTournamentId(fresh.tournaments[0].id);
-    showToast(
-      'Đã làm mới dữ liệu giải 1986',
-      'Danh sách VĐV/đội đã được làm mới. Bạn có thể tự nhập VĐV và sắp xếp bảng thi đấu.',
-    );
+    setSelectedTournamentId('');
+    setActiveTab('overview');
+    showToast('Đã làm mới dữ liệu', 'Danh sách giải đấu đang trống. Admin có thể tạo giải mới.');
   };
 
   const navItems: Array<{
@@ -880,6 +910,7 @@ export default function App() {
     label: string;
     shortLabel: string;
     icon: React.ReactNode;
+    staffOnly?: boolean;
   }> = [
     {
       id: 'overview',
@@ -894,35 +925,43 @@ export default function App() {
       icon: <Calendar className="w-4 h-4" />,
     },
     {
-      id: 'referee',
-      label: 'Trọng tài (Sân)',
-      shortLabel: 'Trọng tài',
-      icon: <Gavel className="w-4 h-4" />,
-    },
-    {
       id: 'standings',
       label: 'Bảng xếp hạng',
       shortLabel: 'BXH',
       icon: <Trophy className="w-4 h-4" />,
     },
     {
+      id: 'referee',
+      label: 'Trọng tài (Sân)',
+      shortLabel: 'Trọng tài',
+      icon: <Gavel className="w-4 h-4" />,
+      staffOnly: true,
+    },
+    {
       id: 'members',
       label: 'VĐV & Sắp bảng',
       shortLabel: 'VĐV/Bảng',
       icon: <Users className="w-4 h-4" />,
+      staffOnly: true,
     },
     {
       id: 'reports',
       label: 'Báo cáo & Xuất file',
       shortLabel: 'Báo cáo',
       icon: <BarChart3 className="w-4 h-4" />,
+      staffOnly: true,
     },
   ];
+
+  const visibleNavItems = useMemo(
+    () => navItems.filter((item) => !item.staffOnly || isStaff),
+    [isStaff],
+  );
 
   return (
     <div
       className={
-        activeTab === 'referee'
+        activeTab === 'referee' && isStaff
           ? 'h-[100dvh] flex flex-col bg-slate-950 text-[#0F172A] overflow-hidden pb-11 sm:pb-12 lg:pb-0'
           : 'min-h-screen flex flex-col bg-[#F8FAFC] text-[#0F172A] pb-16 lg:pb-0'
       }
@@ -930,7 +969,9 @@ export default function App() {
       {/* TOP BAR CONTRACT */}
       <header
         className={`no-print sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-slate-200 px-3 sm:px-6 shrink-0 flex items-center justify-between gap-2 sm:gap-8 ${
-          activeTab === 'referee' ? 'h-10 sm:h-12 hide-on-mobile-landscape' : 'h-12 sm:h-14'
+          activeTab === 'referee' && isStaff
+            ? 'h-10 sm:h-12 hide-on-mobile-landscape'
+            : 'h-12 sm:h-14'
         }`}
       >
         <a
@@ -953,7 +994,7 @@ export default function App() {
         </a>
 
         <nav className="hidden lg:flex items-center gap-5 xl:gap-6 text-sm font-medium text-slate-600">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -984,7 +1025,11 @@ export default function App() {
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white'
               }`}
             >
-              {isAdmin ? <ShieldCheck className="w-4 h-4 shrink-0" /> : <Gavel className="w-4 h-4 shrink-0" />}
+              {isAdmin ? (
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+              ) : (
+                <Gavel className="w-4 h-4 shrink-0" />
+              )}
               <span className="truncate max-w-[130px] sm:max-w-none">
                 {isAdmin ? 'BTC' : 'TT'}: {currentAccount.displayName}
               </span>
@@ -1010,54 +1055,66 @@ export default function App() {
       {/* Secondary Workspace Context Toolbar */}
       <div
         className={`no-print bg-white border-b border-slate-200 px-2.5 sm:px-6 py-2 shrink-0 ${
-          activeTab === 'referee' ? 'hidden' : ''
+          activeTab === 'referee' && isStaff ? 'hidden' : ''
         }`}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <select
-              value={currentTournament.id}
-              onChange={(e) => setSelectedTournamentId(e.target.value)}
-              className="min-h-[36px] w-full sm:w-auto flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-900 bg-slate-100 hover:bg-slate-200/70 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 max-w-full sm:max-w-md truncate"
-            >
-              {appState.tournaments.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({TOURNAMENT_STATUS_LABELS[t.status]})
-                </option>
-              ))}
-            </select>
+            {appState.tournaments.length > 0 && currentTournament ? (
+              <select
+                value={currentTournament.id}
+                onChange={(e) => setSelectedTournamentId(e.target.value)}
+                className="min-h-[36px] w-full sm:w-auto flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-900 bg-slate-100 hover:bg-slate-200/70 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 max-w-full sm:max-w-md truncate"
+              >
+                {appState.tournaments.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({TOURNAMENT_STATUS_LABELS[t.status]})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-xs font-medium text-slate-500 truncate">
+                Chưa có giải đấu nào đang diễn ra
+              </span>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={handleOpenCreateTournament}
-              className="min-h-[34px] px-2.5 py-1 text-xs font-bold text-white bg-slate-900 hover:bg-orange-600 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Tạo giải mới</span>
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleOpenCreateTournament}
+                className="min-h-[34px] px-2.5 py-1 text-xs font-bold text-white bg-slate-900 hover:bg-orange-600 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Tạo giải mới</span>
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => {
-                setShowNotifDrawer((s) => !s);
-                setReadNotifIds(tournamentNotifications.map((n) => n.id));
-              }}
-              className="min-h-[34px] px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap"
-            >
-              <Bell className="w-3.5 h-3.5 text-orange-600" />
-              <span>{unreadCount > 0 ? `${unreadCount} mới` : tournamentNotifications.length}</span>
-            </button>
+            {currentTournament && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNotifDrawer((s) => !s);
+                  setReadNotifIds(tournamentNotifications.map((n) => n.id));
+                }}
+                className="min-h-[34px] px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap"
+              >
+                <Bell className="w-3.5 h-3.5 text-orange-600" />
+                <span>{unreadCount > 0 ? `${unreadCount} mới` : tournamentNotifications.length}</span>
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={handleResetDemoData}
-              title="Khôi phục dữ liệu mẫu ban đầu"
-              className="min-h-[34px] p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleResetDemoData}
+                title="Làm mới dữ liệu giải đấu"
+                className="min-h-[34px] p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1074,7 +1131,7 @@ export default function App() {
       )}
 
       {/* Notification Slide-Down Panel */}
-      {showNotifDrawer && (
+      {showNotifDrawer && currentTournament && (
         <div className="no-print bg-slate-900 text-white border-b border-slate-800 px-4 sm:px-6 py-4">
           <div className="max-w-7xl mx-auto space-y-3">
             <div className="flex items-center justify-between">
@@ -1091,7 +1148,7 @@ export default function App() {
             </div>
             {tournamentNotifications.length === 0 ? (
               <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
-                Hiện chưa có thông báo nào. Thông báo gọi sân và báo sân trống sẽ hiển thị tại đây.
+                Hiện chưa có thông báo nào.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto">
@@ -1113,541 +1170,580 @@ export default function App() {
       {/* MAIN WORKSPACE CONTENT */}
       <main
         className={
-          activeTab === 'referee'
+          activeTab === 'referee' && isStaff
             ? 'flex-1 min-h-0 max-w-7xl w-full mx-auto px-1 sm:px-4 py-0.5 sm:py-1.5 flex flex-col overflow-hidden'
             : 'flex-1 max-w-7xl w-full mx-auto px-2.5 sm:px-6 py-3.5 sm:py-6 space-y-4'
         }
       >
-        {activeTab === 'overview' && (
-          <div className="space-y-5">
-            <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-              <div className="lg:col-span-8 flex flex-col justify-between space-y-4">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-                    <span className="font-semibold text-orange-600 uppercase tracking-wider">
-                      HỆ THỐNG GIẢI ĐẤU & TRỌNG TÀI PICKLEBALL 1986
-                    </span>
-                    <span>·</span>
-                    <span>{FORMAT_LABELS[currentTournament.format]}</span>
-                    <span>·</span>
-                    <span>{TOURNAMENT_STATUS_LABELS[currentTournament.status]}</span>
-                  </div>
+        {!currentTournament ? (
+          <section className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-10 text-center space-y-4">
+            <img
+              src={BRAND_LOGO_URL}
+              alt="1986 Bính Dần Pickleball"
+              referrerPolicy="no-referrer"
+              className="w-20 h-20 rounded-2xl object-cover border-2 border-orange-500 mx-auto"
+            />
+            <div className="space-y-1.5">
+              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900">
+                1986 PICKLEBALL
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
+                Hiện chưa có giải đấu nào được mở.
+              </p>
+            </div>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleOpenCreateTournament}
+                className="min-h-[42px] px-5 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Tạo giải đấu mới
+              </button>
+            )}
+          </section>
+        ) : (
+          <>
+            {activeTab === 'overview' && (
+              <div className="space-y-5">
+                <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                  <div className="lg:col-span-8 flex flex-col justify-between space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                        <span className="font-semibold text-orange-600 uppercase tracking-wider">
+                          HỆ THỐNG GIẢI ĐẤU PICKLEBALL 1986
+                        </span>
+                        <span>·</span>
+                        <span>{FORMAT_LABELS[currentTournament.format]}</span>
+                        <span>·</span>
+                        <span>{TOURNAMENT_STATUS_LABELS[currentTournament.status]}</span>
+                      </div>
 
-                  <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900">
-                    {currentTournament.name}
-                  </h1>
+                      <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900">
+                        {currentTournament.name}
+                      </h1>
 
-                  <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
-                    {currentTournament.description}
-                  </p>
-
-                  <div className="pt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
-                    <span className="inline-flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-                      {currentTournament.location}
-                    </span>
-                    <span>·</span>
-                    <span className="font-mono-num">
-                      {currentTournament.startDate} → {currentTournament.endDate}
-                    </span>
-                    <span>·</span>
-                    <span className="font-mono-num font-semibold text-slate-900">
-                      {currentTournament.courtsCount} sân
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:flex flex-wrap items-center gap-2.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('referee')}
-                    className="min-h-[44px] px-4 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Gavel className="w-4 h-4" />
-                    Mở App Trọng Tài (Sân, Bốc thăm & Chọn VĐV)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('members')}
-                    className="min-h-[44px] px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center justify-center gap-2"
-                  >
-                    <UserPlus className="w-4 h-4 text-orange-600" />
-                    Nhập VĐV & Sắp Xếp Bảng Thi Đấu
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('reports')}
-                    className="min-h-[44px] px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center justify-center gap-2"
-                  >
-                    <BarChart3 className="w-4 h-4 text-emerald-600" />
-                    Xuất Báo Cáo PDF & Excel
-                  </button>
-                </div>
-              </div>
-
-              <div className="lg:col-span-4 bg-slate-900 text-white rounded-xl p-4 sm:p-5 flex flex-col items-center justify-between text-center border border-slate-800">
-                <img
-                  src={BRAND_LOGO_URL}
-                  alt="1986 Bính Dần Pickleball"
-                  referrerPolicy="no-referrer"
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-orange-500 shadow-md"
-                />
-                <div className="my-2.5">
-                  <div className="font-display text-xl sm:text-2xl font-extrabold tracking-wide text-orange-400">
-                    BÍNH DẦN 1986 PICKLEBALL
-                  </div>
-                  <p className="text-xs text-slate-300 mt-1">
-                    Nhập VĐV chủ động · Tự sắp xếp bảng thi đấu · Điều hành bàn trọng tài
-                  </p>
-                </div>
-                <div className="w-full pt-2.5 border-t border-slate-800 grid grid-cols-3 gap-2 font-mono-num text-xs">
-                  <div>
-                    <div className="text-slate-400">Tổng đội</div>
-                    <div className="text-base font-bold text-white">
-                      {tournamentRegistrations.length}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400">Tổng trận</div>
-                    <div className="text-base font-bold text-orange-400">
-                      {tournamentMatches.length}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400">Tài khoản</div>
-                    <div className="text-base font-bold text-emerald-400">
-                      {appState.staffAccounts.filter((a) => isStaffRole(a.role)).length} TK
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4">
-                <div className="text-xs text-slate-500">Sân đang thi đấu</div>
-                <div className="mt-1 font-mono-num text-xl sm:text-2xl font-bold text-emerald-600">
-                  {liveMatches.length} / {currentTournament.courtsCount} sân
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  Hoàn tất: {tournamentMatches.filter((m) => m.status === 'completed').length} trận
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4">
-                <div className="text-xs text-slate-500">Đội đã Check-in</div>
-                <div className="mt-1 font-mono-num text-xl sm:text-2xl font-bold text-slate-900">
-                  {tournamentRegistrations.filter((r) => r.checkedIn).length}/
-                  {tournamentRegistrations.length} đội
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500 truncate">
-                  {currentTournament.divisions.length} nội dung
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4">
-                <div className="text-xs text-slate-500">Số bảng đã phân</div>
-                <div className="mt-1 font-mono-num text-xl sm:text-2xl font-bold text-orange-600">
-                  {
-                    Array.from(
-                      new Set(
-                        tournamentRegistrations
-                          .map((r) => r.groupName)
-                          .filter(Boolean),
-                      ),
-                    ).length
-                  }{' '}
-                  bảng
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  Sắp xếp thủ công theo từng VĐV/đội
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4">
-                <div className="text-xs text-slate-500">Điều lệ QĐ 494/QĐTDTTVN</div>
-                <div className="mt-1 font-mono-num text-lg sm:text-xl font-bold text-slate-900">
-                  Chạm {currentTournament.pointsToWin}đ (8đ đổi sân)
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500 truncate">
-                  Thắng 3đ · Hòa 2đ · Thua 1đ · KO max 18đ
-                </div>
-              </div>
-            </section>
-
-            <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl overflow-hidden">
-                <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
-                  <div>
-                    <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
-                      BẢNG ĐIỂM TRỰC TIẾP TẠI SÂN (LIVE SCOREBOARD)
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      Hiển thị cặp VĐV đang đứng sân và lượt giao bóng trực tiếp
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('referee')}
-                    className="text-xs font-semibold text-orange-600 hover:text-orange-700 shrink-0"
-                  >
-                    App Trọng tài →
-                  </button>
-                </div>
-
-                <div className="p-4 sm:p-5 space-y-3.5">
-                  {liveMatches.length === 0 ? (
-                    <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200">
-                      <p className="text-sm text-slate-600">
-                        Hiện chưa có trận nào đang đấu. Bấm vào App Trọng tài để bốc thăm và bắt đầu trận.
+                      <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+                        {currentTournament.description}
                       </p>
+
+                      <div className="pt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                          {currentTournament.location}
+                        </span>
+                        <span>·</span>
+                        <span className="font-mono-num">
+                          {currentTournament.startDate} → {currentTournament.endDate}
+                        </span>
+                        <span>·</span>
+                        <span className="font-mono-num font-semibold text-slate-900">
+                          {currentTournament.courtsCount} sân
+                        </span>
+                      </div>
                     </div>
-                  ) : (
-                    liveMatches.map((m) => (
-                      <div
-                        key={m.id}
-                        className="border border-slate-200 rounded-xl p-3.5 sm:p-4 bg-slate-50/70 space-y-2.5"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-                          <div>
-                            <span className="font-mono-num font-bold text-orange-600">
-                              SÂN {m.courtNumber} · TRẬN #{m.matchNumber}
-                            </span>
-                            <span> · </span>
-                            <span className="font-semibold text-slate-800">
-                              {m.teamSubCategory || m.division}
-                            </span>
-                          </div>
-                          <span className="font-mono-num font-semibold text-emerald-600">
-                            Hô điểm: {formatScoreCallout(m)}
-                          </span>
-                        </div>
 
-                        <div className="grid grid-cols-12 items-center gap-2 py-1">
-                          <div className="col-span-5 min-w-0">
-                            <div className="text-sm font-bold text-slate-900 truncate">
-                              {m.teamAName}
-                            </div>
-                            {(m.teamAPlayer1 || m.teamAPlayer2) && (
-                              <div className="text-[11px] text-slate-600 truncate">
-                                {m.teamAPlayer1} · {m.teamAPlayer2}
-                              </div>
-                            )}
-                            <div className="text-[10px] text-orange-600 font-semibold">
-                              {m.servingTeam === 'A'
-                                ? `● Đang giao bóng (Người ${m.serverNumber})`
-                                : 'Đỡ giao bóng'}
-                            </div>
-                          </div>
-
-                          <div className="col-span-2 text-center font-mono-num text-xl sm:text-2xl font-extrabold text-slate-900">
-                            {m.scoreA} : {m.scoreB}
-                          </div>
-
-                          <div className="col-span-5 text-right min-w-0">
-                            <div className="text-sm font-bold text-slate-900 truncate">
-                              {m.teamBName}
-                            </div>
-                            {(m.teamBPlayer1 || m.teamBPlayer2) && (
-                              <div className="text-[11px] text-slate-600 truncate">
-                                {m.teamBPlayer1} · {m.teamBPlayer2}
-                              </div>
-                            )}
-                            <div className="text-[10px] text-orange-600 font-semibold">
-                              {m.servingTeam === 'B'
-                                ? `● Đang giao bóng (Người ${m.serverNumber})`
-                                : 'Đỡ giao bóng'}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
-                          <span className="truncate">TT: {m.refereeName || 'BTC 1986'}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedRefereeMatchId(m.id);
-                              setActiveTab('referee');
-                            }}
-                            className="min-h-[36px] px-3 py-1 font-semibold text-white bg-slate-900 hover:bg-orange-600 rounded-lg transition-colors shrink-0"
-                          >
-                            Mở sân trọng tài
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl overflow-hidden">
-                <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
-                  <div>
-                    <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
-                      BẢNG XẾP HẠNG THỜI GIAN THỰC
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      {currentTournament.divisions[0]
-                        ? `Nội dung ${currentTournament.divisions[0]}`
-                        : 'Chưa tạo nội dung thi đấu'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('standings')}
-                    className="text-xs font-semibold text-orange-600 hover:text-orange-700"
-                  >
-                    Chi tiết →
-                  </button>
-                </div>
-
-                <div className="divide-y divide-slate-200">
-                  {Object.keys(standingsPreview).length === 0 ? (
-                    <div className="p-6 text-center space-y-2.5">
-                      <p className="text-xs text-slate-500">
-                        Chưa có VĐV/đội nào trong giải đấu. Tài khoản Admin có thể vào mục VĐV & Sắp bảng để tự nhập VĐV và sắp xếp bảng thi đấu.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('members')}
-                        className="px-3 py-1.5 text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
-                      >
-                        Mở VĐV & Sắp bảng →
-                      </button>
-                    </div>
-                  ) : (
-                    Object.entries(standingsPreview).map(([gName, rows]) => (
-                      <div key={gName} className="p-3.5 sm:p-4">
-                        <div className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-                          {gName}
-                        </div>
-                        <table className="w-full text-left border-collapse text-xs">
-                          <thead>
-                            <tr className="border-b border-slate-200 text-slate-500">
-                              <th className="py-1.5 pr-2">#</th>
-                              <th className="py-1.5 px-2">Đội</th>
-                              <th className="py-1.5 px-2 text-right">T-B</th>
-                              <th className="py-1.5 px-2 text-right">Hiệu số</th>
-                              <th className="py-1.5 pl-2 text-right">Điểm</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {rows.map((r, i) => (
-                              <tr key={r.teamId}>
-                                <td className="py-2 pr-2 font-mono-num font-bold text-slate-700">
-                                  {i + 1}
-                                </td>
-                                <td className="py-2 px-2 font-semibold text-slate-900 truncate max-w-[140px]">
-                                  {r.teamName}
-                                </td>
-                                <td className="py-2 px-2 text-right font-mono-num">
-                                  {r.wins}-{r.losses}
-                                </td>
-                                <td
-                                  className={`py-2 px-2 text-right font-mono-num font-semibold ${
-                                    r.pointDiff >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                                  }`}
-                                >
-                                  {r.pointDiff > 0 ? `+${r.pointDiff}` : r.pointDiff}
-                                </td>
-                                <td className="py-2 pl-2 text-right font-mono-num font-bold text-orange-600">
-                                  {r.rankPoints}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
-                    DANH SÁCH GIẢI ĐẤU PICKLEBALL 1986 ĐANG & SẮP DIỄN RA
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Chọn giải đấu để xem lịch thi đấu, tự nhập VĐV/sắp bảng hoặc điều hành bàn trọng tài
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleOpenCreateTournament}
-                  className="px-3 py-1.5 text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
-                >
-                  + Thêm giải đấu mới (Cần TK BTC)
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {appState.tournaments.map((t) => {
-                  const isCurrent = t.id === currentTournament.id;
-                  const regCount = appState.registrations.filter(
-                    (r) => r.tournamentId === t.id,
-                  ).length;
-                  const matchCount = appState.matches.filter(
-                    (m) => m.tournamentId === t.id,
-                  ).length;
-
-                  return (
-                    <div
-                      key={t.id}
-                      className={`rounded-xl p-4 border transition-colors flex flex-col justify-between gap-3 ${
-                        isCurrent
-                          ? 'border-orange-500 bg-orange-50/20'
-                          : 'border-slate-200 hover:border-slate-300 bg-white'
-                      }`}
-                    >
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs text-slate-500">
-                          <span className="font-semibold text-orange-600">
-                            {TOURNAMENT_STATUS_LABELS[t.status]}
-                          </span>
-                          <span className="font-mono-num">
-                            {t.startDate} → {t.endDate}
-                          </span>
-                        </div>
-
-                        <h3 className="font-display text-lg sm:text-xl font-bold text-slate-900">
-                          {t.name}
-                        </h3>
-
-                        <p className="text-xs text-slate-600 line-clamp-2">{t.description}</p>
-
-                        <div className="pt-1 text-xs text-slate-500">
-                          {t.location} · {t.courtsCount} sân
-                        </div>
-                      </div>
-
-                      <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between">
-                        <div className="text-xs text-slate-600 font-mono-num">
-                          {regCount} đội · {matchCount} trận
-                        </div>
+                    {/* Chỉ hiển thị các nút nghiệp vụ cho tài khoản Admin / Trọng tài; khán giả không thấy */}
+                    {isStaff && (
+                      <div className="grid grid-cols-1 sm:flex flex-wrap items-center gap-2.5 pt-1">
                         <button
                           type="button"
-                          onClick={() => {
-                            setSelectedTournamentId(t.id);
-                            setActiveTab('schedule');
-                          }}
-                          className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                            isCurrent
-                              ? 'bg-orange-600 text-white'
-                              : 'bg-slate-900 text-white hover:bg-orange-600'
-                          }`}
+                          onClick={() => setActiveTab('referee')}
+                          className="min-h-[44px] px-4 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition-colors flex items-center justify-center gap-2"
                         >
-                          {isCurrent ? 'Xem lịch & nhánh đấu' : 'Chọn giải này'}
+                          <Gavel className="w-4 h-4" />
+                          Mở App Trọng Tài (Sân, Bốc thăm & Chọn VĐV)
                         </button>
+
+                        {isAdmin && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('members')}
+                              className="min-h-[44px] px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center justify-center gap-2"
+                            >
+                              <UserPlus className="w-4 h-4 text-orange-600" />
+                              Nhập VĐV & Sắp Xếp Bảng Thi Đấu
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('reports')}
+                              className="min-h-[44px] px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center justify-center gap-2"
+                            >
+                              <BarChart3 className="w-4 h-4 text-emerald-600" />
+                              Xuất Báo Cáo PDF & Excel
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="lg:col-span-4 bg-slate-900 text-white rounded-xl p-4 sm:p-5 flex flex-col items-center justify-between text-center border border-slate-800">
+                    <img
+                      src={BRAND_LOGO_URL}
+                      alt="1986 Bính Dần Pickleball"
+                      referrerPolicy="no-referrer"
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-orange-500 shadow-md"
+                    />
+                    <div className="my-2.5">
+                      <div className="font-display text-xl sm:text-2xl font-extrabold tracking-wide text-orange-400">
+                        BÍNH DẦN 1986 PICKLEBALL
+                      </div>
+                      <p className="text-xs text-slate-300 mt-1">
+                        {isStaff
+                          ? 'Nhập VĐV chủ động · Tự sắp xếp bảng thi đấu · Điều hành bàn trọng tài'
+                          : 'Theo dõi lịch thi đấu, tỷ số trực tiếp và bảng xếp hạng giải đấu'}
+                      </p>
+                    </div>
+                    <div className="w-full pt-2.5 border-t border-slate-800 grid grid-cols-2 gap-2 font-mono-num text-xs">
+                      <div>
+                        <div className="text-slate-400">Tổng đội</div>
+                        <div className="text-base font-bold text-white">
+                          {tournamentRegistrations.length}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400">Tổng trận</div>
+                        <div className="text-base font-bold text-orange-400">
+                          {tournamentMatches.length}
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                </section>
+
+                <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4">
+                    <div className="text-xs text-slate-500">Sân đang thi đấu</div>
+                    <div className="mt-1 font-mono-num text-xl sm:text-2xl font-bold text-emerald-600">
+                      {liveMatches.length} / {currentTournament.courtsCount} sân
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500">
+                      Hoàn tất: {tournamentMatches.filter((m) => m.status === 'completed').length} trận
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4">
+                    <div className="text-xs text-slate-500">Đội đã Check-in</div>
+                    <div className="mt-1 font-mono-num text-xl sm:text-2xl font-bold text-slate-900">
+                      {tournamentRegistrations.filter((r) => r.checkedIn).length}/
+                      {tournamentRegistrations.length} đội
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500 truncate">
+                      {currentTournament.divisions.length} nội dung
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4">
+                    <div className="text-xs text-slate-500">Số bảng đã phân</div>
+                    <div className="mt-1 font-mono-num text-xl sm:text-2xl font-bold text-orange-600">
+                      {
+                        Array.from(
+                          new Set(
+                            tournamentRegistrations
+                              .map((r) => r.groupName)
+                              .filter(Boolean),
+                          ),
+                        ).length
+                      }{' '}
+                      bảng
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500">
+                      {isStaff ? 'Sắp xếp thủ công theo từng VĐV/đội' : 'Cập nhật theo giải đấu'}
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4">
+                    <div className="text-xs text-slate-500">Điều lệ QĐ 494/QĐTDTTVN</div>
+                    <div className="mt-1 font-mono-num text-lg sm:text-xl font-bold text-slate-900">
+                      Chạm {currentTournament.pointsToWin}đ (8đ đổi sân)
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500 truncate">
+                      Thắng 3đ · Hòa 2đ · Thua 1đ · KO max 18đ
+                    </div>
+                  </div>
+                </section>
+
+                <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                  <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                      <div>
+                        <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
+                          BẢNG ĐIỂM TRỰC TIẾP TẠI SÂN (LIVE SCOREBOARD)
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          Hiển thị cặp VĐV đang đứng sân và lượt giao bóng trực tiếp
+                        </p>
+                      </div>
+                      {isStaff && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('referee')}
+                          className="text-xs font-semibold text-orange-600 hover:text-orange-700 shrink-0"
+                        >
+                          App Trọng tài →
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="p-4 sm:p-5 space-y-3.5">
+                      {liveMatches.length === 0 ? (
+                        <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200">
+                          <p className="text-sm text-slate-600">
+                            Hiện chưa có trận nào đang thi đấu.
+                          </p>
+                        </div>
+                      ) : (
+                        liveMatches.map((m) => (
+                          <div
+                            key={m.id}
+                            className="border border-slate-200 rounded-xl p-3.5 sm:p-4 bg-slate-50/70 space-y-2.5"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                              <div>
+                                <span className="font-mono-num font-bold text-orange-600">
+                                  SÂN {m.courtNumber} · TRẬN #{m.matchNumber}
+                                </span>
+                                <span> · </span>
+                                <span className="font-semibold text-slate-800">
+                                  {m.teamSubCategory || m.division}
+                                </span>
+                              </div>
+                              <span className="font-mono-num font-semibold text-emerald-600">
+                                Hô điểm: {formatScoreCallout(m)}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-12 items-center gap-2 py-1">
+                              <div className="col-span-5 min-w-0">
+                                <div className="text-sm font-bold text-slate-900 truncate">
+                                  {m.teamAName}
+                                </div>
+                                {(m.teamAPlayer1 || m.teamAPlayer2) && (
+                                  <div className="text-[11px] text-slate-600 truncate">
+                                    {m.teamAPlayer1} · {m.teamAPlayer2}
+                                  </div>
+                                )}
+                                <div className="text-[10px] text-orange-600 font-semibold">
+                                  {m.servingTeam === 'A'
+                                    ? `● Đang giao bóng (Người ${m.serverNumber})`
+                                    : 'Đỡ giao bóng'}
+                                </div>
+                              </div>
+
+                              <div className="col-span-2 text-center font-mono-num text-xl sm:text-2xl font-extrabold text-slate-900">
+                                {m.scoreA} : {m.scoreB}
+                              </div>
+
+                              <div className="col-span-5 text-right min-w-0">
+                                <div className="text-sm font-bold text-slate-900 truncate">
+                                  {m.teamBName}
+                                </div>
+                                {(m.teamBPlayer1 || m.teamBPlayer2) && (
+                                  <div className="text-[11px] text-slate-600 truncate">
+                                    {m.teamBPlayer1} · {m.teamBPlayer2}
+                                  </div>
+                                )}
+                                <div className="text-[10px] text-orange-600 font-semibold">
+                                  {m.servingTeam === 'B'
+                                    ? `● Đang giao bóng (Người ${m.serverNumber})`
+                                    : 'Đỡ giao bóng'}
+                                </div>
+                              </div>
+                            </div>
+
+                            {isStaff && (
+                              <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
+                                <span className="truncate">TT: {m.refereeName || 'BTC 1986'}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedRefereeMatchId(m.id);
+                                    setActiveTab('referee');
+                                  }}
+                                  className="min-h-[36px] px-3 py-1 font-semibold text-white bg-slate-900 hover:bg-orange-600 rounded-lg transition-colors shrink-0"
+                                >
+                                  Mở sân trọng tài
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                      <div>
+                        <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
+                          BẢNG XẾP HẠNG THỜI GIAN THỰC
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          {currentTournament.divisions[0]
+                            ? `Nội dung ${currentTournament.divisions[0]}`
+                            : 'Chưa có nội dung thi đấu'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('standings')}
+                        className="text-xs font-semibold text-orange-600 hover:text-orange-700"
+                      >
+                        Chi tiết →
+                      </button>
+                    </div>
+
+                    <div className="divide-y divide-slate-200">
+                      {Object.keys(standingsPreview).length === 0 ? (
+                        <div className="p-6 text-center space-y-2.5">
+                          <p className="text-xs text-slate-500">
+                            Chưa có dữ liệu bảng xếp hạng cho giải đấu này.
+                          </p>
+                        </div>
+                      ) : (
+                        Object.entries(standingsPreview).map(([gName, rows]) => (
+                          <div key={gName} className="p-3.5 sm:p-4">
+                            <div className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                              {gName}
+                            </div>
+                            <table className="w-full text-left border-collapse text-xs">
+                              <thead>
+                                <tr className="border-b border-slate-200 text-slate-500">
+                                  <th className="py-1.5 pr-2">#</th>
+                                  <th className="py-1.5 px-2">Đội</th>
+                                  <th className="py-1.5 px-2 text-right">T-B</th>
+                                  <th className="py-1.5 px-2 text-right">Hiệu số</th>
+                                  <th className="py-1.5 pl-2 text-right">Điểm</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {rows.map((r, i) => (
+                                  <tr key={r.teamId}>
+                                    <td className="py-2 pr-2 font-mono-num font-bold text-slate-700">
+                                      {i + 1}
+                                    </td>
+                                    <td className="py-2 px-2 font-semibold text-slate-900 truncate max-w-[140px]">
+                                      {r.teamName}
+                                    </td>
+                                    <td className="py-2 px-2 text-right font-mono-num">
+                                      {r.wins}-{r.losses}
+                                    </td>
+                                    <td
+                                      className={`py-2 px-2 text-right font-mono-num font-semibold ${
+                                        r.pointDiff >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                                      }`}
+                                    >
+                                      {r.pointDiff > 0 ? `+${r.pointDiff}` : r.pointDiff}
+                                    </td>
+                                    <td className="py-2 pl-2 text-right font-mono-num font-bold text-orange-600">
+                                      {r.rankPoints}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </section>
+
+                <section className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
+                        DANH SÁCH GIẢI ĐẤU PICKLEBALL 1986
+                      </h2>
+                      <p className="text-xs text-slate-500">
+                        Chọn giải đấu để xem lịch thi đấu và bảng xếp hạng
+                      </p>
+                    </div>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={handleOpenCreateTournament}
+                        className="px-3 py-1.5 text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+                      >
+                        + Thêm giải đấu mới
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {appState.tournaments.map((t) => {
+                      const isCurrent = t.id === currentTournament.id;
+                      const regCount = appState.registrations.filter(
+                        (r) => r.tournamentId === t.id,
+                      ).length;
+                      const matchCount = appState.matches.filter(
+                        (m) => m.tournamentId === t.id,
+                      ).length;
+
+                      return (
+                        <div
+                          key={t.id}
+                          className={`rounded-xl p-4 border transition-colors flex flex-col justify-between gap-3 ${
+                            isCurrent
+                              ? 'border-orange-500 bg-orange-50/20'
+                              : 'border-slate-200 hover:border-slate-300 bg-white'
+                          }`}
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between text-xs text-slate-500">
+                              <span className="font-semibold text-orange-600">
+                                {TOURNAMENT_STATUS_LABELS[t.status]}
+                              </span>
+                              <span className="font-mono-num">
+                                {t.startDate} → {t.endDate}
+                              </span>
+                            </div>
+
+                            <h3 className="font-display text-lg sm:text-xl font-bold text-slate-900">
+                              {t.name}
+                            </h3>
+
+                            <p className="text-xs text-slate-600 line-clamp-2">{t.description}</p>
+
+                            <div className="pt-1 text-xs text-slate-500">
+                              {t.location} · {t.courtsCount} sân
+                            </div>
+                          </div>
+
+                          <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between">
+                            <div className="text-xs text-slate-600 font-mono-num">
+                              {regCount} đội · {matchCount} trận
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedTournamentId(t.id);
+                                setActiveTab('schedule');
+                              }}
+                              className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                isCurrent
+                                  ? 'bg-orange-600 text-white'
+                                  : 'bg-slate-900 text-white hover:bg-orange-600'
+                              }`}
+                            >
+                              {isCurrent ? 'Xem lịch & nhánh đấu' : 'Chọn giải này'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
               </div>
-            </section>
-          </div>
-        )}
+            )}
 
-        {activeTab === 'schedule' && (
-          <ScheduleAndStandingsView
-            tournament={currentTournament}
-            registrations={tournamentRegistrations}
-            matches={tournamentMatches}
-            mode="schedule"
-            isAdmin={isAdmin}
-            onGenerateSchedule={handleGenerateSchedule}
-            onOpenRefereeForMatch={(matchId) => {
-              setSelectedRefereeMatchId(matchId);
-              setActiveTab('referee');
-            }}
-            onUpdateMatchSchedule={(matchId, courtNumber, scheduledTime) =>
-              handleUpdateMatch(matchId, { courtNumber, scheduledTime })
-            }
-            onSyncKnockoutFromGroups={handleSyncKnockoutFromGroups}
-          />
-        )}
+            {activeTab === 'schedule' && (
+              <ScheduleAndStandingsView
+                tournament={currentTournament}
+                registrations={tournamentRegistrations}
+                matches={tournamentMatches}
+                mode="schedule"
+                isAdmin={isAdmin}
+                onGenerateSchedule={handleGenerateSchedule}
+                onOpenRefereeForMatch={(matchId) => {
+                  setSelectedRefereeMatchId(matchId);
+                  setActiveTab('referee');
+                }}
+                onUpdateMatchSchedule={(matchId, courtNumber, scheduledTime) =>
+                  handleUpdateMatch(matchId, { courtNumber, scheduledTime })
+                }
+                onSyncKnockoutFromGroups={handleSyncKnockoutFromGroups}
+              />
+            )}
 
-        {activeTab === 'standings' && (
-          <ScheduleAndStandingsView
-            tournament={currentTournament}
-            registrations={tournamentRegistrations}
-            matches={tournamentMatches}
-            mode="standings"
-            isAdmin={isAdmin}
-            onGenerateSchedule={handleGenerateSchedule}
-            onOpenRefereeForMatch={(matchId) => {
-              setSelectedRefereeMatchId(matchId);
-              setActiveTab('referee');
-            }}
-            onUpdateMatchSchedule={(matchId, courtNumber, scheduledTime) =>
-              handleUpdateMatch(matchId, { courtNumber, scheduledTime })
-            }
-            onSyncKnockoutFromGroups={handleSyncKnockoutFromGroups}
-          />
-        )}
+            {activeTab === 'standings' && (
+              <ScheduleAndStandingsView
+                tournament={currentTournament}
+                registrations={tournamentRegistrations}
+                matches={tournamentMatches}
+                mode="standings"
+                isAdmin={isAdmin}
+                onGenerateSchedule={handleGenerateSchedule}
+                onOpenRefereeForMatch={(matchId) => {
+                  setSelectedRefereeMatchId(matchId);
+                  setActiveTab('referee');
+                }}
+                onUpdateMatchSchedule={(matchId, courtNumber, scheduledTime) =>
+                  handleUpdateMatch(matchId, { courtNumber, scheduledTime })
+                }
+                onSyncKnockoutFromGroups={handleSyncKnockoutFromGroups}
+              />
+            )}
 
-        {activeTab === 'referee' && (
-          <RefereeConsoleView
-            tournament={currentTournament}
-            matches={tournamentMatches}
-            registrations={tournamentRegistrations}
-            selectedMatchId={selectedRefereeMatchId}
-            currentAccount={currentAccount}
-            onRequestLogin={(reason) => openLoginWithReason(reason)}
-            onSelectMatch={(matchId) => setSelectedRefereeMatchId(matchId)}
-            onUpdateMatch={handleUpdateMatch}
-            onCompleteMatch={handleCompleteMatch}
-            onAnnounceCourtCall={handleAnnounceCourtCall}
-            onAnnounceCourtAvailable={handleAnnounceCourtAvailable}
-            onAddRosterAthlete={handleAddRosterAthlete}
-          />
-        )}
+            {activeTab === 'referee' && isStaff && (
+              <RefereeConsoleView
+                tournament={currentTournament}
+                matches={tournamentMatches}
+                registrations={tournamentRegistrations}
+                selectedMatchId={selectedRefereeMatchId}
+                currentAccount={currentAccount}
+                onRequestLogin={(reason) => openLoginWithReason(reason)}
+                onSelectMatch={(matchId) => setSelectedRefereeMatchId(matchId)}
+                onUpdateMatch={handleUpdateMatch}
+                onCompleteMatch={handleCompleteMatch}
+                onAnnounceCourtCall={handleAnnounceCourtCall}
+                onAnnounceCourtAvailable={handleAnnounceCourtAvailable}
+                onAddRosterAthlete={handleAddRosterAthlete}
+              />
+            )}
 
-        {activeTab === 'members' && (
-          <MembersAndPaymentsView
-            tournament={currentTournament}
-            registrations={tournamentRegistrations}
-            currentAccount={currentAccount}
-            onRequestLogin={(reason) => openLoginWithReason(reason)}
-            onAddDivision={handleAddDivision}
-            onAddRegistration={handleAddRegistration}
-            onAssignRegistrationGroup={handleAssignRegistrationGroup}
-            onToggleCheckIn={handleToggleCheckIn}
-          />
-        )}
+            {activeTab === 'members' && isStaff && (
+              <MembersAndPaymentsView
+                tournament={currentTournament}
+                registrations={tournamentRegistrations}
+                currentAccount={currentAccount}
+                onRequestLogin={(reason) => openLoginWithReason(reason)}
+                onAddDivision={handleAddDivision}
+                onAddRegistration={handleAddRegistration}
+                onAssignRegistrationGroup={handleAssignRegistrationGroup}
+                onToggleCheckIn={handleToggleCheckIn}
+              />
+            )}
 
-        {activeTab === 'reports' && (
-          <AnalyticsReportView
-            tournament={currentTournament}
-            registrations={tournamentRegistrations}
-            matches={tournamentMatches}
-          />
+            {activeTab === 'reports' && isStaff && (
+              <AnalyticsReportView
+                tournament={currentTournament}
+                registrations={tournamentRegistrations}
+                matches={tournamentMatches}
+              />
+            )}
+          </>
         )}
       </main>
 
       {/* Quiet Footer */}
       <footer
         className={`no-print bg-white border-t border-slate-200 px-4 sm:px-6 py-4 text-xs text-slate-500 ${
-          activeTab === 'referee' ? 'hidden' : ''
+          activeTab === 'referee' && isStaff ? 'hidden' : ''
         }`}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div>
-            © 2026 <strong className="text-slate-800">1986 — Bính Dần Pickleball</strong> · Quản lý giải đấu, tài khoản Trọng tài & Ban Tổ Chức.
+            © 2026 <strong className="text-slate-800">1986 — Bính Dần Pickleball</strong> · Hệ thống giải đấu Pickleball 1986.
           </div>
           <div>
-            Tối ưu thao tác trên điện thoại · Nhập VĐV & Sắp bảng chủ động · Xuất PDF/CSV
+            {isStaff
+              ? 'Nhập VĐV & Sắp bảng chủ động · Điều hành bàn trọng tài · Xuất PDF/CSV'
+              : 'Lịch thi đấu · Tỷ số trực tiếp · Bảng xếp hạng'}
           </div>
         </div>
       </footer>
 
       {/* FIXED BOTTOM THUMB-ZONE TAB BAR FOR MOBILE PHONES */}
-      <nav className="no-print lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 grid grid-cols-6 items-center h-11 sm:h-12 px-1 compact-on-mobile-landscape">
-        {navItems.map((item) => {
+      <nav
+        className={`no-print lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 grid items-center h-11 sm:h-12 px-1 compact-on-mobile-landscape ${
+          visibleNavItems.length <= 3 ? 'grid-cols-3' : 'grid-cols-6'
+        }`}
+      >
+        {visibleNavItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
