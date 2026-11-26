@@ -326,7 +326,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   onRequestLogin,
   onSelectMatch,
   onUpdateMatch,
-  onCompleteMatch,
   onAnnounceCourtCall,
   onAnnounceCourtAvailable,
   onAddRosterAthlete,
