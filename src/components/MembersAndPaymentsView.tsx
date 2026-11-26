@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ArrowDown,
+  ArrowUp,
   CheckCircle2,
   FolderPlus,
   Layers,
@@ -7,6 +9,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   Shuffle,
+  SlidersHorizontal,
+  Sparkles,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -40,10 +44,24 @@ interface MembersAndPaymentsViewProps {
   }) => void;
   onAssignRegistrationGroup: (registrationId: string, groupName: string) => void;
   onToggleCheckIn: (registrationId: string) => void;
+  onAutoArrangeDivision?: (division: string) => void;
 }
 
 const GROUP_OPTIONS = ['Bảng A', 'Bảng B', 'Bảng C', 'Bảng D'];
 const TIER_OPTIONS: SkillTier[] = ['Trình A', 'Trình B', 'Trình C'];
+
+const SAMPLE_ATHLETE_POOL: Array<{ name: string; gender: AthleteGender; tier: SkillTier }> = [
+  { name: 'Nguyễn Văn Hùng', gender: 'Nam', tier: 'Trình A' },
+  { name: 'Trần Minh Tuấn', gender: 'Nam', tier: 'Trình B' },
+  { name: 'Lê Hoàng Nam', gender: 'Nam', tier: 'Trình B' },
+  { name: 'Phạm Đức Anh', gender: 'Nam', tier: 'Trình C' },
+  { name: 'Đàm Thị Thùy Dương', gender: 'Nữ', tier: 'Trình B' },
+  { name: 'Hoàng Thu Trang', gender: 'Nữ', tier: 'Trình A' },
+  { name: 'Vũ Ngọc Lan', gender: 'Nữ', tier: 'Trình C' },
+  { name: 'Đỗ Phương Thảo', gender: 'Nữ', tier: 'Trình B' },
+];
+
+const SAMPLE_CLUBS = ['CLB Bính Dần 1986', 'CLB Độc Lập', 'CLB Sông Hiến'];
 
 export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
   tournament,
@@ -55,6 +73,7 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
   onAddRegistration,
   onAssignRegistrationGroup,
   onToggleCheckIn,
+  onAutoArrangeDivision,
 }) => {
   const isDark = themeMode === 'dark';
   const isAdmin = currentAccount?.role === 'admin';
@@ -62,6 +81,9 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
   // Mặc định không chọn nội dung để không hiển thị nội dung bên trong cho đến khi người dùng chọn
   const [selectedCategory, setSelectedCategory] = useState<CompCategory>('team');
   const [selectedDivision, setSelectedDivision] = useState<string>('');
+
+  // Chế độ sắp xếp của Admin
+  const [adminArrangeMode, setAdminArrangeMode] = useState<boolean>(true);
 
   // Form thêm nội dung mới
   const [newDivisionName, setNewDivisionName] = useState<string>('');
@@ -84,7 +106,6 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
     });
   }, [tournament.divisions, selectedCategory]);
 
-  // Nếu người dùng đổi loại Đồng đội / Đôi mà nội dung đang chọn không thuộc loại đó thì reset về rỗng
   useEffect(() => {
     if (selectedDivision && !divisionsInCategory.includes(selectedDivision)) {
       setSelectedDivision('');
@@ -215,9 +236,76 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
     setAthletesInput('');
   };
 
-  const handleRandomGroups = (targetList: Registration[]) => {
+  // Tạo sẵn 3 đội ngẫu nhiên để test trọng tài
+  const handleCreateThreeRandomTestTeams = () => {
     if (!isAdmin) {
-      onRequestLogin('Chỉ tài khoản Admin mới có quyền chia bảng ngẫu nhiên.');
+      onRequestLogin('Chỉ tài khoản Admin mới có quyền tạo đội mẫu để test trọng tài.');
+      return;
+    }
+
+    let targetDivision = selectedDivision || divisionsInCategory[0] || tournament.divisions[0];
+    if (!targetDivision) {
+      targetDivision = selectedCategory === 'team' ? 'Đồng đội Test' : 'Đôi Test';
+      onAddDivision(targetDivision, selectedCategory);
+      setSelectedDivision(targetDivision);
+    } else if (!selectedDivision) {
+      setSelectedDivision(targetDivision);
+    }
+
+    const shuffledPool = [...SAMPLE_ATHLETE_POOL].sort(() => Math.random() - 0.5);
+    const defaultGroups = ['Bảng A', 'Bảng A', 'Bảng B'];
+
+    for (let t = 0; t < 3; t += 1) {
+      const p1Raw = shuffledPool[(t * 2) % shuffledPool.length];
+      const p2Raw = shuffledPool[(t * 2 + 1) % shuffledPool.length];
+      const m1 = `${p1Raw.name} (${p1Raw.gender} · ${p1Raw.tier})`;
+      const m2 = `${p2Raw.name} (${p2Raw.gender} · ${p2Raw.tier})`;
+      const squad = selectedCategory === 'team' ? [m1, m2] : [m1, m2];
+
+      onAddRegistration({
+        division: targetDivision,
+        player1Name: m1,
+        player2Name: m2,
+        squadRoster: squad,
+        club: SAMPLE_CLUBS[t % SAMPLE_CLUBS.length],
+        combinedRating: 0,
+        groupName: defaultGroups[t],
+      });
+    }
+
+    setFilterDivision(targetDivision);
+  };
+
+  // Tự động sắp xếp bảng + sinh lịch thi đấu nếu có callback từ App
+  const handleAutoArrange = () => {
+    if (!isAdmin) {
+      onRequestLogin('Chỉ tài khoản Admin mới có quyền tự động sắp xếp bảng và lịch đấu.');
+      return;
+    }
+
+    const targetDiv =
+      selectedDivision ||
+      (filterDivision !== 'all' ? filterDivision : '') ||
+      registrations[0]?.division ||
+      tournament.divisions[0];
+
+    if (!targetDiv) return;
+
+    const divRegs = registrations.filter((r) => r.division === targetDiv);
+    const pool = ['Bảng A', 'Bảng B', 'Bảng C'];
+    divRegs.forEach((reg, idx) => {
+      onAssignRegistrationGroup(reg.id, pool[idx % pool.length]);
+    });
+
+    if (onAutoArrangeDivision) {
+      onAutoArrangeDivision(targetDiv);
+    }
+  };
+
+  // Admin sắp xếp ngẫu nhiên / chuyển bảng từng đội
+  const handleAdminShuffleGroups = (targetList: Registration[]) => {
+    if (!isAdmin) {
+      onRequestLogin('Chỉ tài khoản Admin mới có quyền sắp xếp bảng.');
       return;
     }
     if (targetList.length === 0) return;
@@ -225,14 +313,27 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
     const poolNames = ['Bảng A', 'Bảng B', 'Bảng C'];
     const shuffled = [...targetList].sort(() => Math.random() - 0.5);
     shuffled.forEach((reg, idx) => {
-      const nextGroup = poolNames[idx % poolNames.length];
-      onAssignRegistrationGroup(reg.id, nextGroup);
+      onAssignRegistrationGroup(reg.id, poolNames[idx % poolNames.length]);
     });
+  };
+
+  const handleStepGroup = (reg: Registration, direction: 'prev' | 'next') => {
+    if (!isAdmin) {
+      onRequestLogin('Chỉ tài khoản Admin mới có quyền chuyển bảng cho đội.');
+      return;
+    }
+    const currIdx = GROUP_OPTIONS.indexOf(reg.groupName || 'Bảng A');
+    const safeIdx = currIdx === -1 ? 0 : currIdx;
+    const nextIdx =
+      direction === 'next'
+        ? (safeIdx + 1) % GROUP_OPTIONS.length
+        : (safeIdx - 1 + GROUP_OPTIONS.length) % GROUP_OPTIONS.length;
+    onAssignRegistrationGroup(reg.id, GROUP_OPTIONS[nextIdx]);
   };
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      {/* Header tổng quan */}
+      {/* Header tổng quan & thanh thao tác sắp xếp */}
       <section className={`border rounded-2xl p-4 sm:p-5 space-y-3.5 ${cardSurface}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
@@ -261,8 +362,8 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
           </div>
         </div>
 
-        {/* Lựa chọn loại nội dung thi đấu: Đồng đội | Đôi */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Lựa chọn loại nội dung thi đấu: Đồng đội | Đôi + Nút test trọng tài & sắp xếp */}
+        <div className="flex flex-wrap items-center gap-2">
           <div
             className={`inline-flex rounded-xl p-1 border ${
               isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
@@ -298,11 +399,41 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
 
           <button
             type="button"
-            onClick={() => handleRandomGroups(registrations)}
-            className="min-h-[38px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors"
+            onClick={handleCreateThreeRandomTestTeams}
+            className="min-h-[38px] px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold inline-flex items-center gap-1.5 transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Tạo 3 đội ngẫu nhiên (Test trọng tài)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleAutoArrange}
+            className="min-h-[38px] px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold inline-flex items-center gap-1.5 transition-colors"
           >
             <Shuffle className="w-4 h-4" />
-            <span>Random 3 bảng (A/B/C)</span>
+            <span>Tự động sắp xếp</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!isAdmin) {
+                onRequestLogin('Chỉ tài khoản Admin mới có quyền bật chế độ Admin sắp xếp.');
+                return;
+              }
+              setAdminArrangeMode((prev) => !prev);
+            }}
+            className={`min-h-[38px] px-3.5 py-2 rounded-xl text-xs font-extrabold inline-flex items-center gap-1.5 border transition-colors ${
+              adminArrangeMode && isAdmin
+                ? 'bg-orange-600 hover:bg-orange-700 text-white border-orange-600'
+                : isDark
+                ? 'bg-slate-950 hover:bg-slate-800 text-slate-200 border-slate-700'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            <span>Admin sắp xếp: {adminArrangeMode && isAdmin ? 'Bật' : 'Tắt'}</span>
           </button>
         </div>
 
@@ -381,7 +512,8 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
               {divisionsInCategory.length === 0 ? (
                 <div className={`p-3 rounded-xl border text-xs ${subSurface} ${mutedText}`}>
                   Chưa có nội dung {selectedCategory === 'team' ? 'Đồng đội' : 'Đôi'}. Nhập tên ở
-                  trên rồi bấm <strong>+ Thêm</strong>.
+                  trên rồi bấm <strong>+ Thêm</strong> hoặc bấm{' '}
+                  <strong>Tạo 3 đội ngẫu nhiên (Test trọng tài)</strong>.
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
@@ -549,14 +681,16 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
             </h2>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleRandomGroups(filteredRegistrations)}
-                className="min-h-[34px] px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5"
-              >
-                <Shuffle className="w-3.5 h-3.5" />
-                <span>Random 3 bảng</span>
-              </button>
+              {isAdmin && adminArrangeMode && (
+                <button
+                  type="button"
+                  onClick={() => handleAdminShuffleGroups(filteredRegistrations)}
+                  className="min-h-[34px] px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5"
+                >
+                  <Shuffle className="w-3.5 h-3.5" />
+                  <span>Admin chia bảng</span>
+                </button>
+              )}
 
               <select
                 value={filterDivision}
@@ -634,9 +768,38 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isAdmin && adminArrangeMode && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleStepGroup(reg, 'prev')}
+                            title="Chuyển bảng trước"
+                            className={`min-h-[34px] px-2 py-1 rounded-xl border text-xs font-bold ${
+                              isDark
+                                ? 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                                : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleStepGroup(reg, 'next')}
+                            title="Chuyển bảng tiếp"
+                            className={`min-h-[34px] px-2 py-1 rounded-xl border text-xs font-bold ${
+                              isDark
+                                ? 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                                : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+
                       <select
-                        disabled={!isAdmin}
+                        disabled={!isAdmin || !adminArrangeMode}
                         value={reg.groupName || 'Bảng A'}
                         onChange={(e) => onAssignRegistrationGroup(reg.id, e.target.value)}
                         className={`min-h-[34px] px-2.5 py-1 text-xs font-bold border rounded-xl ${inputSurface}`}
