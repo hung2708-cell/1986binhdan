@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Clock,
   Flag,
-  Gavel,
   Megaphone,
   Minus,
   Plus,
@@ -54,7 +53,7 @@ function getNormalizedLineupSlots(match: Match): TeamLineupSlot[] {
     return match.teamLineupSlots.map((slot, index) => ({
       ...slot,
       order: slot.order ?? index + 1,
-      label: slot.label || TEAM_EVENT_SUBCATEGORIES[index] || `Trận ${index + 1}`,
+      label: slot.label || TEAM_EVENT_SUBCATEGORIES[index] || `Trận đôi ${index + 1}`,
       scoreA: slot.scoreA ?? 0,
       scoreB: slot.scoreB ?? 0,
       completed: Boolean(slot.completed),
@@ -124,7 +123,6 @@ const Player3DToken: React.FC<Player3DTokenProps> = ({
         align === 'right' ? 'flex-row-reverse text-right' : 'flex-row text-left'
       }`}
     >
-      {/* Icon người 3D đơn giản có chiều sâu */}
       <svg
         viewBox="0 0 28 32"
         className="w-5 h-6 sm:w-6 sm:h-7 shrink-0 drop-shadow-[0_4px_3px_rgba(0,0,0,0.7)]"
@@ -469,9 +467,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   };
 
   const handleSelectTeamSlot = (slotOrder: number) => {
-    if (!activeMatch || !isTeamMatch) return;
+    if (!activeMatch) return;
     requireStaffAction(
-      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để chuyển trận đồng đội.',
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để chuyển trận đôi đồng đội.',
       () => {
         const targetSlot = lineupSlots.find((s) => s.order === slotOrder);
         if (!targetSlot) return;
@@ -625,7 +623,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               serverNumber: 2,
             });
             setNotice(
-              `Đã lưu ${currentSlot?.label || 'Trận nhỏ'} (${activeMatch.scoreA}-${activeMatch.scoreB}). Chuyển sang ${nextUnfinished.label}.`,
+              `Đã lưu ${currentSlot?.label || 'Trận đôi'} (${activeMatch.scoreA}-${activeMatch.scoreB}). Chuyển sang ${nextUnfinished.label}.`,
             );
             return;
           }
@@ -649,11 +647,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     );
   }
 
-  // Luật giao bóng chéo sân chuẩn Pickleball:
-  // Điểm của bên ĐANG GIAO BÓNG (servingScore) chẵn -> đứng ô bên phải (nhìn từ vạch cuối sân hướng về lưới).
-  // Điểm chẵn/lẻ được tính theo điểm của bên đang phát:
-  // - Với nửa sân trái (nhìn sang phải): ô trên là bên trái của người phát (LẺ), ô dưới là bên phải của người phát (CHẴN).
-  // - Với nửa sân phải (nhìn sang trái): ô trên là bên phải của người phát (CHẴN), ô dưới là bên trái của người phát (LẺ).
+  // Luật giao bóng Pickleball (điểm chẵn = ô phải, điểm lẻ = ô trái tính theo hướng nhìn ra lưới của người giao):
+  // - Nửa sân trái nhìn sang phải: ô dưới là bên phải của người giao (CHẴN), ô trên là bên trái của người giao (LẺ).
+  // - Nửa sân phải nhìn sang trái: ô trên là bên phải của người giao (CHẴN), ô dưới là bên trái của người giao (LẺ).
   const leftSideIsA = activeMatch.courtSideA !== 'right';
   const leftTeamLabel = leftSideIsA ? 'ĐỘI A · TRÁI' : 'ĐỘI B · TRÁI';
   const rightTeamLabel = leftSideIsA ? 'ĐỘI B · PHẢI' : 'ĐỘI A · PHẢI';
@@ -682,13 +678,12 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     (leftSideIsA && servingSide === 'A') || (!leftSideIsA && servingSide === 'B');
   const rightIsServing = !leftIsServing;
 
-  // Vị trí ô giao bóng trên 2 nửa sân theo điểm của bên đang phát
   const leftTopServing = leftIsServing && isServingScoreOdd;
   const leftBottomServing = leftIsServing && !isServingScoreOdd;
   const rightTopServing = rightIsServing && !isServingScoreOdd;
   const rightBottomServing = rightIsServing && isServingScoreOdd;
 
-  // Người đỡ giao bóng đứng đúng ô giao chéo với người phát bóng
+  // Đúng 1 người đỡ ở ô đối diện chéo sân
   const leftTopReceiver = rightIsServing && rightBottomServing;
   const leftBottomReceiver = rightIsServing && rightTopServing;
   const rightTopReceiver = leftIsServing && leftBottomServing;
@@ -713,22 +708,38 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const serverDisplayName = shortenPlayerName(serverFullName);
   const receiverDisplayName = shortenPlayerName(receiverFullName);
 
-  // Mũi tên ngắn gọn ở vùng giữa sân, bám đúng đường chéo ô phát -> ô đỡ
+  // Mũi tên giao chéo ngắn ở giữa mặt sân
   const arrowLine = leftIsServing
     ? leftTopServing
-      ? { x1: 186, y1: 104, x2: 454, y2: 176 }
-      : { x1: 186, y1: 176, x2: 454, y2: 104 }
+      ? { x1: 215, y1: 108, x2: 425, y2: 172 }
+      : { x1: 215, y1: 172, x2: 425, y2: 108 }
     : rightTopServing
-    ? { x1: 454, y1: 104, x2: 186, y2: 176 }
-    : { x1: 454, y1: 176, x2: 186, y2: 104 };
+    ? { x1: 425, y1: 108, x2: 215, y2: 172 }
+    : { x1: 425, y1: 172, x2: 215, y2: 108 };
+
+  // Danh sách các trận đôi nhỏ để chọn thay thế cho phần SÂN 1 / chọn trận cũ
+  const doublesSubmatches = isTeamMatch
+    ? lineupSlots
+    : TEAM_EVENT_SUBCATEGORIES.map((label, idx) => ({
+        order: idx + 1,
+        label,
+        teamAPlayer1: activeMatch.teamAPlayer1 || 'VĐV A1',
+        teamAPlayer2: activeMatch.teamAPlayer2 || 'VĐV A2',
+        teamBPlayer1: activeMatch.teamBPlayer1 || 'VĐV B1',
+        teamBPlayer2: activeMatch.teamBPlayer2 || 'VĐV B2',
+        scoreA: idx === 0 ? activeMatch.scoreA : 0,
+        scoreB: idx === 0 ? activeMatch.scoreB : 0,
+        completed: false,
+        winnerSide: '' as const,
+      }));
 
   return (
     <div className="space-y-3 sm:space-y-4">
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
-        {/* LEFT: GỘP CHỌN SÂN + CHỌN TRẬN + SELECT TRẬN NHỎ + 4 NÚT + SÂN 3D */}
+        {/* LEFT: CHỌN SÂN + CÁC TRẬN ĐÔI NHỎ ĐỒNG ĐỘI + 4 NÚT + SÂN 3D */}
         <div className="lg:col-span-6 space-y-3.5">
           <div className={`border rounded-2xl p-3 sm:p-4 space-y-3 ${surfaceCard}`}>
-            {/* Thanh chọn sân gọn ngay trong khung điều khiển */}
+            {/* Thanh chọn sân gọn ở trên cùng */}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 overflow-x-auto max-w-full">
                 {courtNumbers.map((cNum) => {
@@ -788,63 +799,42 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-1.5 font-bold text-orange-500">
-                <Gavel className="w-3.5 h-3.5 shrink-0" />
-                <span>SÂN {activeMatch.courtNumber}</span>
-              </div>
-              {isStaff && currentAccount && (
-                <span className={`text-[11px] truncate ${mutedText}`}>
-                  {isAdmin ? 'BTC' : 'Trọng tài'}: {currentAccount.displayName}
-                </span>
-              )}
-            </div>
-
-            <select
-              value={activeMatch.id}
-              onChange={(e) => onSelectMatch(e.target.value)}
-              aria-label="Chọn trận đấu trên sân"
-              className={`w-full min-h-[38px] px-3 py-2 text-xs sm:text-sm font-bold border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                isDark
-                  ? 'bg-slate-950 border-slate-700 text-white'
-                  : 'bg-slate-50 border-slate-300 text-slate-900'
-              }`}
-            >
-              {matches.map((m) => (
-                <option key={m.id} value={m.id}>
-                  Trận #{m.matchNumber} (Sân {m.courtNumber}) — {m.teamAName} vs {m.teamBName}
-                </option>
-              ))}
-            </select>
-
-            {/* Select trận nhỏ cho nội dung Đồng đội ngay trên bảng trọng tài */}
-            {isTeamMatch && lineupSlots.length > 0 && (
-              <div className="space-y-1">
-                <label
-                  htmlFor="team-submatch-select"
-                  className="flex items-center gap-1.5 text-[11px] font-bold text-orange-500"
-                >
+            {/* Thay thế hoàn toàn khối SÂN 1 / chọn trận lớn cũ bằng các trận đôi nhỏ của đồng đội */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="inline-flex items-center gap-1 font-bold text-orange-500">
                   <Users className="w-3.5 h-3.5 shrink-0" />
-                  <span>Chọn trận nhỏ (Đồng đội)</span>
-                </label>
-                <select
-                  id="team-submatch-select"
-                  value={activeSlotOrder}
-                  onChange={(e) => handleSelectTeamSlot(Number(e.target.value))}
-                  className={`w-full min-h-[38px] px-3 py-2 text-xs font-bold border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                    isDark
-                      ? 'bg-slate-950 border-slate-700 text-amber-300'
-                      : 'bg-orange-50/50 border-orange-300 text-slate-900'
-                  }`}
-                >
-                  {lineupSlots.map((slot) => (
-                    <option key={slot.order} value={slot.order}>
-                      {slot.label} · ({slot.scoreA}-{slot.scoreB}){slot.completed ? ' ✓' : ''}
-                    </option>
-                  ))}
-                </select>
+                  <span>Các trận đôi nhỏ (Đồng đội)</span>
+                </span>
+                <span className={`truncate ${mutedText}`}>
+                  {activeMatch.teamAName} vs {activeMatch.teamBName}
+                </span>
               </div>
-            )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                {doublesSubmatches.map((slot) => {
+                  const isActiveSub = isTeamMatch && slot.order === activeSlotOrder;
+                  return (
+                    <button
+                      key={slot.order}
+                      type="button"
+                      onClick={() => handleSelectTeamSlot(slot.order)}
+                      className={`min-h-[36px] px-2.5 py-1.5 rounded-xl text-xs font-bold border text-left truncate transition-colors ${
+                        isActiveSub
+                          ? 'bg-orange-600 text-white border-orange-600 shadow-xs'
+                          : isDark
+                          ? 'bg-slate-950/70 hover:bg-slate-800 text-slate-200 border-slate-700'
+                          : 'bg-slate-50 hover:bg-orange-50 text-slate-800 border-slate-200'
+                      }`}
+                    >
+                      <span className="truncate block">
+                        {slot.label} · ({slot.scoreA}-{slot.scoreB})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* 4 Core Court Buttons */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -1083,13 +1073,13 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             )}
           </div>
 
-          {/* SÂN THI ĐẤU 3D ĐẸP HƠN + MŨI TÊN NGẮN + PHÁT/ĐỠ ĐÚNG LUẬT */}
+          {/* SÂN THI ĐẤU 3D */}
           <div className={`border rounded-2xl p-3 sm:p-4 space-y-2.5 ${surfaceCard}`}>
             <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-mono-num font-extrabold uppercase">
-                  SÂN 3D #{activeMatch.courtNumber} · {isServingScoreOdd ? 'LẺ' : 'CHẴN'} (
-                  {servingScore}đ) · N{serverNum}
+                  SÂN #{activeMatch.courtNumber} · {isServingScoreOdd ? 'LẺ (Ô TRÁI)' : 'CHẴN (Ô PHẢI)'}{' '}
+                  ({servingScore}đ) · N{serverNum}
                 </span>
                 <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-extrabold">
                   Phát
@@ -1109,7 +1099,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
             </div>
 
-            {/* Khung sân phối cảnh 3D có chiều sâu */}
             <div
               className="rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-2.5 sm:p-3.5 border border-slate-800 overflow-hidden"
               style={{ perspective: '820px' }}
@@ -1118,7 +1107,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 style={{ transform: 'rotateX(20deg) scale(0.98)', transformOrigin: 'center center' }}
                 className="relative w-full max-h-[34vh] sm:max-h-[250px] aspect-[20/9] mx-auto rounded-xl bg-gradient-to-b from-[#22c55e] via-[#16a34a] to-[#15803d] border-[3px] border-white shadow-[0_12px_0_#052e16,0_22px_34px_rgba(0,0,0,0.75)] overflow-hidden select-none"
               >
-                {/* Ánh đèn & bóng đổ 3D trên mặt sân */}
                 <div
                   className="pointer-events-none absolute inset-0"
                   style={{
@@ -1127,19 +1115,13 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   }}
                 />
 
-                {/* Vạch sân chuẩn Pickleball + lưới 3D + mũi tên giao chéo ngắn */}
                 <svg
                   viewBox="0 0 640 280"
                   className="pointer-events-none absolute inset-0 w-full h-full z-10"
                   preserveAspectRatio="none"
                 >
                   <defs>
-                    <pattern
-                      id="netMesh3D"
-                      width="8"
-                      height="8"
-                      patternUnits="userSpaceOnUse"
-                    >
+                    <pattern id="netMesh3D" width="8" height="8" patternUnits="userSpaceOnUse">
                       <path
                         d="M 8 0 L 0 0 0 8"
                         fill="none"
@@ -1159,7 +1141,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     </marker>
                   </defs>
 
-                  {/* Đường biên ngoài sân */}
                   <rect
                     x="16"
                     y="16"
@@ -1170,8 +1151,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     stroke="#FFFFFF"
                     strokeWidth="3.5"
                   />
-
-                  {/* Khu vực bếp / NVZ 7ft hai bên lưới */}
                   <rect
                     x="228"
                     y="16"
@@ -1190,32 +1169,13 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     stroke="#FFFFFF"
                     strokeWidth="3"
                   />
+                  <line x1="16" y1="140" x2="228" y2="140" stroke="#FFFFFF" strokeWidth="2.8" />
+                  <line x1="412" y1="140" x2="624" y2="140" stroke="#FFFFFF" strokeWidth="2.8" />
 
-                  {/* Đường chia ô giao bóng trái & phải (từ đường biên cuối tới đường NVZ) */}
-                  <line
-                    x1="16"
-                    y1="140"
-                    x2="228"
-                    y2="140"
-                    stroke="#FFFFFF"
-                    strokeWidth="2.8"
-                  />
-                  <line
-                    x1="412"
-                    y1="140"
-                    x2="624"
-                    y2="140"
-                    stroke="#FFFFFF"
-                    strokeWidth="2.8"
-                  />
-
-                  {/* Bóng lưới đổ nghiêng 3D xuống mặt sân */}
                   <polygon
                     points="316,12 336,16 336,268 316,268"
                     fill="rgba(2, 6, 23, 0.34)"
                   />
-
-                  {/* Dải lưới có mắt lưới 3D */}
                   <rect
                     x="315"
                     y="8"
@@ -1225,20 +1185,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     stroke="#FFFFFF"
                     strokeWidth="2"
                   />
-                  <line
-                    x1="320"
-                    y1="8"
-                    x2="320"
-                    y2="272"
-                    stroke="#FFFFFF"
-                    strokeWidth="3.5"
-                  />
-
-                  {/* Cột lưới 3D hai đầu */}
+                  <line x1="320" y1="8" x2="320" y2="272" stroke="#FFFFFF" strokeWidth="3.5" />
                   <circle cx="320" cy="14" r="5.5" fill="#F8FAFC" stroke="#0F172A" strokeWidth="2" />
                   <circle cx="320" cy="266" r="5.5" fill="#F8FAFC" stroke="#0F172A" strokeWidth="2" />
 
-                  {/* Nhãn NVZ */}
                   <text
                     x="274"
                     y="144"
@@ -1262,7 +1212,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     NVZ
                   </text>
 
-                  {/* Mũi tên giao bóng chéo sân ngắn gọn */}
                   <line
                     x1={arrowLine.x1}
                     y1={arrowLine.y1}
@@ -1284,9 +1233,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   />
                 </svg>
 
-                {/* Lớp đặt Icon Người 3D theo vị trí 4 ô trên sân */}
                 <div className="relative z-20 w-full h-full grid grid-cols-12">
-                  {/* Nửa sân trái */}
                   <div className="col-span-4 grid grid-rows-2 py-2 px-2">
                     <div
                       className={`flex items-center justify-start rounded-lg px-1 ${
@@ -1318,14 +1265,12 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Khu giữa (NVZ + Lưới) */}
                   <div className="col-span-4 flex items-center justify-center">
                     <span className="px-2 py-0.5 rounded bg-slate-950/85 text-white text-[9px] sm:text-[10px] font-extrabold tracking-wider border border-white/30 shadow-sm">
                       LƯỚI
                     </span>
                   </div>
 
-                  {/* Nửa sân phải */}
                   <div className="col-span-4 grid grid-rows-2 py-2 px-2">
                     <div
                       className={`flex items-center justify-end rounded-lg px-1 ${
@@ -1363,7 +1308,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 </div>
               </div>
 
-              {/* Chú thích 2 đội */}
               <div className="mt-2.5 flex items-center justify-between gap-2 text-[10px] text-slate-300 px-1">
                 <span className="truncate font-bold text-amber-300">{leftTeamName}</span>
                 <span className="text-slate-400 shrink-0">Giao chéo sân</span>
@@ -1381,7 +1325,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 #{activeMatch.matchNumber} · S{activeMatch.courtNumber}
               </span>
               <span className={mutedText}>
-                {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]}
+                {activeMatch.teamSubCategory ||
+                  activeMatch.groupName ||
+                  MATCH_STAGE_LABELS[activeMatch.stage]}
               </span>
             </div>
 
@@ -1391,7 +1337,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {/* LEFT TEAM CARD */}
             <div
               className={`rounded-xl border p-3 space-y-2.5 transition-colors ${
                 leftIsServing
@@ -1466,7 +1411,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
             </div>
 
-            {/* RIGHT TEAM CARD */}
             <div
               className={`rounded-xl border p-3 space-y-2.5 transition-colors ${
                 rightIsServing
