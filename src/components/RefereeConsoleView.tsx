@@ -1,4 +1,5 @@
 /**
+ * /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -362,6 +363,13 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const [newRosterName, setNewRosterName] = useState('');
   const [newRosterGender, setNewRosterGender] = useState<'male' | 'female'>('male');
 
+  // Tự động ẩn thông báo nổi sau 2.5s
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
   const courtMatches = useMemo(
     () =>
       matches
@@ -679,10 +687,8 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         const nextA = side === 'A' ? Math.max(0, activeMatch.scoreA + delta) : activeMatch.scoreA;
         const nextB = side === 'B' ? Math.max(0, activeMatch.scoreB + delta) : activeMatch.scoreB;
 
-        const currentServer = activeMatch.serverNumber || 2;
         const isScoringTeamServing = activeMatch.servingTeam === side;
-        const shouldSwapServingTeamPlayers =
-          delta > 0 && isScoringTeamServing && currentServer === 1;
+        const shouldSwapServingTeamPlayers = delta > 0 && isScoringTeamServing;
 
         let nextA1 = activeMatch.teamAPlayer1 || '';
         let nextA2 = activeMatch.teamAPlayer2 || '';
@@ -762,12 +768,18 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         if (delta > 0 && hitTarget) {
           setNotice(`Đã chạm mốc ${activeMatch.pointsToWin} điểm.`);
         } else if (shouldSwapServingTeamPlayers) {
-          setNotice(`Tay 1 ghi điểm (${nextA}-${nextB}) · Đổi chỗ 2 VĐV đội ${side}.`);
+          setNotice(`Ghi điểm (${nextA}-${nextB}) · Đổi vị trí 2 VĐV đội ${side}.`);
         }
       },
     );
   };
 
+  /**
+   * Luật Pickleball đánh đôi hiện hành:
+   * - Mở đầu trận (0-0-2): đội giao đầu tiên chỉ có 1 lượt giao ở Tay 2.
+   * - Hết 0-0-2 -> đổi sang đội kia giao từ Tay 1 (0-0-1).
+   * - Các lượt sau: Tay 1 mất bóng -> Tay 2 cùng đội; Tay 2 mất bóng -> đổi đội kia (Tay 1).
+   */
   const handleToggleServe = () => {
     if (!activeMatch) return;
     requireStaffAction(
@@ -785,19 +797,37 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         }
 
         const currentServer = activeMatch.serverNumber || 2;
-        if (currentServer === 1) {
-          onUpdateMatch(activeMatch.id, { status: 'live', serverNumber: 2 });
-          setNotice(`Chuyển sang Tay 2 của đội ${activeMatch.servingTeam}.`);
-        } else {
+        const isOpeningTurn =
+          activeMatch.scoreA === 0 &&
+          activeMatch.scoreB === 0 &&
+          (activeMatch.scoreHistory || []).length === 0;
+
+        if (isOpeningTurn && currentServer === 2) {
           const nextTeam: 'A' | 'B' = activeMatch.servingTeam === 'A' ? 'B' : 'A';
-          const isOpeningZeroZero = activeMatch.scoreA === 0 && activeMatch.scoreB === 0;
-          const nextServer: 1 | 2 = isOpeningZeroZero ? 2 : 1;
           onUpdateMatch(activeMatch.id, {
             status: 'live',
             servingTeam: nextTeam,
-            serverNumber: nextServer,
+            serverNumber: 1,
           });
-          setNotice(`Đổi giao sang đội ${nextTeam} (Tay ${nextServer}).`);
+          setNotice(`Hết lượt mở màn (0-0-2) · Đổi giao sang đội ${nextTeam} (Tay 1).`);
+          return;
+        }
+
+        if (currentServer === 1) {
+          onUpdateMatch(activeMatch.id, { status: 'live', serverNumber: 2 });
+          setNotice(
+            `Mất bóng Tay 1 · Chuyển sang Tay 2 đội ${activeMatch.servingTeam} (${activeMatch.scoreA}-${activeMatch.scoreB}-2).`,
+          );
+        } else {
+          const nextTeam: 'A' | 'B' = activeMatch.servingTeam === 'A' ? 'B' : 'A';
+          onUpdateMatch(activeMatch.id, {
+            status: 'live',
+            servingTeam: nextTeam,
+            serverNumber: 1,
+          });
+          setNotice(
+            `Mất bóng Tay 2 · Đổi giao sang đội ${nextTeam} (Tay 1 · ${activeMatch.scoreA}-${activeMatch.scoreB}-1).`,
+          );
         }
       },
     );
@@ -897,6 +927,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       servingTeam,
       serverNumber: 2,
       courtSideA,
+      scoreHistory: [],
     });
 
     const winnerName = winner === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
@@ -906,8 +937,8 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     setShowCoinTossModal(false);
     setNotice(
       coinChoice === 'side'
-        ? `${winnerName} chọn Sân ${chosenSide === 'left' ? 'Trái' : 'Phải'} · ${loserName} chọn Bóng (${servingName} phát).`
-        : `${winnerName} chọn Bóng (${servingName} phát) · ${loserName} chọn Sân ${chosenSide === 'left' ? 'Trái' : 'Phải'}.`,
+        ? `${winnerName} chọn Sân ${chosenSide === 'left' ? 'Trái' : 'Phải'} · ${loserName} chọn Bóng (${servingName} phát 0-0-2).`
+        : `${winnerName} chọn Bóng (${servingName} phát 0-0-2) · ${loserName} chọn Sân ${chosenSide === 'left' ? 'Trái' : 'Phải'}.`,
     );
   };
 
@@ -1306,28 +1337,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 <span className="truncate">Sân trống</span>
               </button>
             </div>
-
-            {notice && (
-              <div
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-medium border flex items-center justify-between gap-2 min-w-0 ${
-                  isDark
-                    ? 'bg-orange-950/40 border-orange-800/60 text-orange-200'
-                    : 'bg-orange-50 border-orange-200 text-orange-900'
-                }`}
-              >
-                <span className="truncate">{notice}</span>
-                <button
-                  type="button"
-                  onClick={() => setNotice(null)}
-                  className="text-xs font-bold opacity-70 hover:opacity-100 shrink-0"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* SÂN THI ĐẤU 3D — KHÓA KÍCH THƯỚC ĐỂ KHÔNG GIÃN KHI ĐỔI SÂN */}
+          {/* SÂN THI ĐẤU 3D */}
           <div
             className={`w-full max-w-full overflow-hidden border rounded-2xl p-2.5 sm:p-4 landscape:p-1.5 space-y-2 landscape:space-y-1 ${surfaceCard}`}
           >
@@ -1802,6 +1814,29 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         </div>
       </section>
 
+      {/* THÔNG BÁO NỔI CỐ ĐỊNH — KHÔNG ĐẨY BỐ CỤC */}
+      {notice && (
+        <div className="pointer-events-none fixed bottom-20 sm:bottom-6 landscape:bottom-12 inset-x-3 z-40 flex justify-center">
+          <div
+            className={`pointer-events-auto max-w-md w-full px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold border shadow-xl flex items-center justify-between gap-2 backdrop-blur-sm ${
+              isDark
+                ? 'bg-slate-900/95 border-orange-500/50 text-orange-200'
+                : 'bg-white/95 border-orange-300 text-slate-900'
+            }`}
+          >
+            <span className="truncate">{notice}</span>
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              aria-label="Đóng thông báo"
+              className="text-xs font-bold opacity-70 hover:opacity-100 shrink-0 px-1"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* POPUP ĐỒNG XU XOAY + CHỌN BÓNG / SÂN */}
       {showCoinTossModal && (
         <div
@@ -1929,7 +1964,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 </div>
 
                 <div className="text-[11px] font-bold text-amber-500 truncate">
-                  {coinLoserName} phải chọn Bóng → Bấm chọn Sân ở trên để vào trận ({coinLoserName} giao bóng).
+                  {coinLoserName} phải chọn Bóng → Bấm chọn Sân ở trên để vào trận ({coinLoserName} giao bóng 0-0-2).
                 </div>
               </div>
             )}
@@ -2328,3 +2363,96 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     </div>
   );
 };
+edCourt, setSelectedCourt] = useState<number>(1);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const [showCoinTossModal, setShowCoinTossModal] = useState(false);
+  const [coinWinner, setCoinWinner] = useState<'A' | 'B'>('A');
+  const [coinChoice, setCoinChoice] = useState<'ball' | 'side'>('ball');
+  const [coinFace, setCoinFace] = useState<'SẤP' | 'NGỬA'>('NGỬA');
+  const [isSpinningCoin, setIsSpinningCoin] = useState(false);
+  const [coinSpinKey, setCoinSpinKey] = useState(0);
+
+  const [showLineupModal, setShowLineupModal] = useState(false);
+  const [lineupStep, setLineupStep] = useState<'A' | 'B'>('A');
+  const [showSubmatchModal, setShowSubmatchModal] = useState(false);
+
+  const [draftA1, setDraftA1] = useState('');
+  const [draftA2, setDraftA2] = useState('');
+  const [draftB1, setDraftB1] = useState('');
+  const [draftB2, setDraftB2] = useState('');
+  const [newRosterName, setNewRosterName] = useState('');
+  const [newRosterGender, setNewRosterGender] = useState<'male' | 'female'>('male');
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const courtMatches = useMemo(
+    () =>
+      matches
+        .filter((m) => m.courtNumber === selectedCourt)
+        .sort((a, b) => {
+          const rank = (s: Match['status']) => (s === 'live' ? 0 : s === 'scheduled' ? 1 : 2);
+          return rank(a.status) !== rank(b.status)
+            ? rank(a.status) - rank(b.status)
+            : a.matchNumber - b.matchNumber;
+        }),
+    [matches, selectedCourt],
+  );
+
+  const activeMatch = useMemo(() => {
+    if (selectedMatchId) {
+      const explicit = matches.find((m) => m.id === selectedMatchId);
+      if (explicit) return explicit;
+    }
+    return (
+      courtMatches.find((m) => m.status === 'live') ||
+      courtMatches.find((m) => m.status === 'scheduled') ||
+      courtMatches[0] ||
+      matches.find((m) => m.status === 'live') ||
+      matches[0] ||
+      null
+    );
+  }, [selectedMatchId, matches, courtMatches]);
+
+  useEffect(() => {
+    if (activeMatch && activeMatch.courtNumber !== selectedCourt) {
+      setSelectedCourt(activeMatch.courtNumber);
+    }
+  }, [activeMatch?.id, activeMatch?.courtNumber, selectedCourt]);
+
+  const hasGroupStageTie = useMemo(() => {
+    if (!activeMatch) return false;
+    const slots = buildInitialSlots(activeMatch, false);
+    const completedGroupSlots = slots.slice(0, 4).filter((s) => s.completed);
+    if (completedGroupSlots.length < 4) return false;
+    const winsA = completedGroupSlots.filter((s) => s.winnerSide === 'A').length;
+    const winsB = completedGroupSlots.filter((s) => s.winnerSide === 'B').length;
+    return winsA === winsB;
+  }, [activeMatch]);
+
+  const lineupSlots = useMemo(
+    () => (activeMatch ? buildInitialSlots(activeMatch, hasGroupStageTie) : []),
+    [activeMatch, hasGroupStageTie],
+  );
+
+  const activeSlotOrder = activeMatch?.activeSlotOrder || 1;
+  const currentSlot =
+    lineupSlots.find((s) => s.order === activeSlotOrder) || lineupSlots[0] || null;
+
+  const currentSubEventConfig: MatchSubEventConfig = useMemo(() => {
+    const allConfigs = hasGroupStageTie
+      ? [...GROUP_STAGE_SUBEVENTS, TIEBREAKER_SINGLES_EVENT]
+      : GROUP_STAGE_SUBEVENTS;
+    return (
+      allConfigs.find((c) => c.order === activeSlotOrder) ||
+      allConfigs.find((c) => c.label === (activeMatch?.teamSubCategory || currentSlot?.label)) ||
+      GROUP_STAGE_SUBEVENTS[0]
+    );
+  }, [hasGroupStageTie, activeSlotOrder, activeMatch?.teamSubCategory, currentSlot?.label]);
+
+  useEffect(() => {
+    if
