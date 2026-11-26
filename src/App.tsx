@@ -126,6 +126,7 @@ const VALID_TABS: ActiveTab[] = [
 ];
 
 const STAFF_ONLY_TABS: ActiveTab[] = ['referee', 'members', 'reports', 'admin'];
+const ADMIN_ONLY_TABS: ActiveTab[] = ['admin'];
 
 function isStaffRole(role: unknown): role is 'admin' | 'referee' {
   return role === 'admin' || role === 'referee';
@@ -316,8 +317,10 @@ export default function App() {
   useEffect(() => {
     if (!isStaff && STAFF_ONLY_TABS.includes(activeTab)) {
       setActiveTab('overview');
+    } else if (!isAdmin && ADMIN_ONLY_TABS.includes(activeTab)) {
+      setActiveTab('overview');
     }
-  }, [isStaff, activeTab]);
+  }, [isStaff, isAdmin, activeTab]);
 
   useEffect(() => {
     try {
@@ -1235,6 +1238,7 @@ export default function App() {
     shortLabel: string;
     icon: React.ReactNode;
     staffOnly?: boolean;
+    adminOnly?: boolean;
   }> = [
     { id: 'overview', label: 'Trang chủ', shortLabel: 'Trang chủ', icon: <Home className="w-4 h-4" /> },
     { id: 'live', label: 'Live', shortLabel: 'Live', icon: <Radio className="w-4 h-4" /> },
@@ -1271,11 +1275,21 @@ export default function App() {
       icon: <BarChart3 className="w-4 h-4" />,
       staffOnly: true,
     },
+    {
+      id: 'admin',
+      label: 'Quản lý giải',
+      shortLabel: 'Quản lý giải',
+      icon: <ShieldCheck className="w-4 h-4" />,
+      adminOnly: true,
+    },
   ];
 
   const visibleNavItems = useMemo(
-    () => navItems.filter((item) => !item.staffOnly || isStaff),
-    [isStaff],
+    () =>
+      navItems.filter(
+        (item) => (!item.staffOnly || isStaff) && (!item.adminOnly || isAdmin),
+      ),
+    [isStaff, isAdmin],
   );
 
   const visiblePosts = useMemo(() => {
@@ -2214,7 +2228,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center justify-end gap-1.5 shrink-0">
-            {isAdmin && activeTab === 'admin' && (
+            {isAdmin && (
               <button
                 type="button"
                 onClick={handleOpenCreateTournament}
