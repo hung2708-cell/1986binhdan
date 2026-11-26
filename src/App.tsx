@@ -742,6 +742,59 @@ export default function App() {
     );
   };
 
+  const handleUpdateTournamentStatus = (
+    tournamentId: string,
+    status: Tournament['status'],
+  ) => {
+    if (!isAdmin) {
+      openLoginWithReason('Chỉ tài khoản Admin mới có quyền đổi trạng thái giải đấu.');
+      return;
+    }
+    const target = appState.tournaments.find((t) => t.id === tournamentId);
+    updateStateAndSync((prev) => ({
+      ...prev,
+      tournaments: prev.tournaments.map((t) =>
+        t.id === tournamentId ? { ...t, status } : t,
+      ),
+    }));
+    if (target) {
+      showToast(
+        `Đã cập nhật trạng thái: ${target.name}`,
+        `Trạng thái mới: ${TOURNAMENT_STATUS_LABELS[status]}`,
+      );
+    }
+  };
+
+  const handleDeleteTournament = (tournamentId: string) => {
+    if (!isAdmin) {
+      openLoginWithReason('Chỉ tài khoản Admin mới có quyền xóa giải đấu.');
+      return;
+    }
+    const target = appState.tournaments.find((t) => t.id === tournamentId);
+    if (!target) return;
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(
+        `Xóa giải đấu "${target.name}" cùng toàn bộ đội/VĐV, lịch trận và thông báo thuộc giải này?`,
+      )
+    ) {
+      return;
+    }
+
+    const remaining = appState.tournaments.filter((t) => t.id !== tournamentId);
+    updateStateAndSync((prev) => ({
+      ...prev,
+      tournaments: remaining,
+      registrations: prev.registrations.filter((r) => r.tournamentId !== tournamentId),
+      matches: prev.matches.filter((m) => m.tournamentId !== tournamentId),
+      notifications: prev.notifications.filter((n) => n.tournamentId !== tournamentId),
+    }));
+    if (selectedTournamentId === tournamentId) {
+      setSelectedTournamentId(remaining[0]?.id || '');
+    }
+    showToast('Đã xóa giải đấu', target.name);
+  };
+
   const handleAddDivision = (divisionName: string, compType: 'doubles' | 'team') => {
     if (!currentTournament) return;
     if (!isAdmin || !currentAccount) {
@@ -1237,27 +1290,213 @@ export default function App() {
 
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
 
-  const renderTournamentOverviewSection = () => {
-    if (!currentTournament) {
-      return (
-        <section className={`border rounded-2xl p-6 text-center space-y-3 ${surfaceCard}`}>
-          <p className={`text-sm ${mutedText}`}>Chưa có giải đấu nào đang hiển thị.</p>
-          {isAdmin && activeTab === 'admin' && (
+  const renderAllTournamentsManagerCard = () => {
+    if (!isAdmin || activeTab !== 'admin') return null;
+
+    return (
+      <section className={`border rounded-2xl p-3.5 sm:p-6 space-y-4 ${surfaceCard}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-orange-500">
+              QUẢN TRỊ HỆ THỐNG · ADMIN
+            </div>
+            <h2 className="font-display text-base sm:text-lg font-bold uppercase tracking-tight">
+              QUẢN LÝ TẤT CẢ GIẢI ĐẤU ({appState.tournaments.length})
+            </h2>
+            <p className={`text-xs ${mutedText}`}>
+              Chọn giải đang điều hành, đổi trạng thái, tạo giải mới hoặc xóa giải không còn sử dụng.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleOpenCreateTournament}
+            className="min-h-[38px] px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Tạo giải mới
+          </button>
+        </div>
+
+        {appState.tournaments.length === 0 ? (
+          <div
+            className={`p-6 rounded-xl border text-center space-y-2.5 ${
+              isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}
+          >
+            <p className={`text-xs ${mutedText}`}>
+              Hiện chưa có giải đấu nào trong hệ thống. Bấm nút bên dưới để khởi tạo giải mới.
+            </p>
             <button
               type="button"
               onClick={handleOpenCreateTournament}
-              className="min-h-[40px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-1.5"
+              className="min-h-[38px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
               Tạo giải đấu mới
             </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {appState.tournaments.map((t) => {
+              const isSelected = currentTournament?.id === t.id;
+              const regCount = appState.registrations.filter((r) => r.tournamentId === t.id).length;
+              const matchCount = appState.matches.filter((m) => m.tournamentId === t.id).length;
+
+              return (
+                <div
+                  key={t.id}
+                  className={`rounded-xl border p-4 flex flex-col justify-between gap-3 transition-colors ${
+                    isSelected
+                      ? isDark
+                        ? 'bg-slate-950 border-orange-500 ring-1 ring-orange-500/40'
+                        : 'bg-orange-50/40 border-orange-500 ring-1 ring-orange-500/25'
+                      : isDark
+                      ? 'bg-slate-950/60 border-slate-800'
+                      : 'bg-slate-50/70 border-slate-200'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                          isSelected
+                            ? 'bg-orange-600 text-white'
+                            : isDark
+                            ? 'bg-slate-800 text-slate-300'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {isSelected ? 'Đang chọn' : FORMAT_LABELS[t.format]}
+                      </span>
+
+                      <select
+                        value={t.status}
+                        onChange={(e) =>
+                          handleUpdateTournamentStatus(
+                            t.id,
+                            e.target.value as Tournament['status'],
+                          )
+                        }
+                        aria-label={`Trạng thái giải ${t.name}`}
+                        className={`min-h-[28px] px-2 py-0.5 text-[11px] font-semibold rounded-lg border focus:outline-none focus:ring-1 focus:ring-orange-500 ${
+                          isDark
+                            ? 'bg-slate-900 border-slate-700 text-slate-200'
+                            : 'bg-white border-slate-300 text-slate-800'
+                        }`}
+                      >
+                        {Object.entries(TOURNAMENT_STATUS_LABELS).map(([key, label]) => (
+                          <option key={key} value={key}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <h3 className="font-display text-sm sm:text-base font-bold leading-snug">
+                      {t.name}
+                    </h3>
+
+                    <div className={`text-[11px] space-y-0.5 ${mutedText}`}>
+                      <div className="truncate">📍 {t.location}</div>
+                      <div className="font-mono-num">
+                        🗓 {t.startDate} → {t.endDate} · {t.courtsCount} sân
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1.5 pt-1 text-center font-mono-num text-[11px]">
+                      <div
+                        className={`p-1.5 rounded-lg border ${
+                          isDark
+                            ? 'bg-slate-900 border-slate-800'
+                            : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        <div className={mutedText}>Nội dung</div>
+                        <div className="font-bold">{t.divisions.length}</div>
+                      </div>
+                      <div
+                        className={`p-1.5 rounded-lg border ${
+                          isDark
+                            ? 'bg-slate-900 border-slate-800'
+                            : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        <div className={mutedText}>Đội/VĐV</div>
+                        <div className="font-bold">{regCount}</div>
+                      </div>
+                      <div
+                        className={`p-1.5 rounded-lg border ${
+                          isDark
+                            ? 'bg-slate-900 border-slate-800'
+                            : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        <div className={mutedText}>Trận đấu</div>
+                        <div className="font-bold text-orange-500">{matchCount}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`pt-2.5 border-t flex items-center justify-between gap-2 ${
+                      isDark ? 'border-slate-800' : 'border-slate-200'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedTournamentId(t.id);
+                        showToast('Đã chuyển giải đấu', t.name);
+                      }}
+                      className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                        isSelected
+                          ? 'bg-orange-600 text-white'
+                          : isDark
+                          ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
+                          : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+                      }`}
+                    >
+                      {isSelected ? '✓ Đang điều hành' : 'Chọn giải'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTournament(t.id)}
+                      className="min-h-[34px] px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-500 hover:bg-rose-500/10 inline-flex items-center gap-1 transition-colors"
+                      title={`Xóa giải ${t.name}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    );
+  };
+
+  const renderTournamentOverviewSection = () => {
+    if (!currentTournament) {
+      return (
+        <div className="space-y-4 sm:space-y-5">
+          {renderAllTournamentsManagerCard()}
+          {!(isAdmin && activeTab === 'admin') && (
+            <section className={`border rounded-2xl p-6 text-center space-y-3 ${surfaceCard}`}>
+              <p className={`text-sm ${mutedText}`}>Chưa có giải đấu nào đang hiển thị.</p>
+            </section>
           )}
-        </section>
+        </div>
       );
     }
 
     return (
       <div className="space-y-4 sm:space-y-5">
+        {renderAllTournamentsManagerCard()}
+
         <section
           className={`border rounded-2xl p-3.5 sm:p-6 lg:p-7 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-stretch ${surfaceCard}`}
         >
