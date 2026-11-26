@@ -204,33 +204,31 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   };
 
   return (
-    <div className="space-y-4 overflow-y-auto pb-2">
+    <div className="space-y-4 pb-2">
       {/* Thanh chọn trận & điều phối sân */}
       <section className={`border rounded-2xl p-3.5 sm:p-4 space-y-3 ${cardSurface}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-orange-500">
-            <Gavel className="w-4 h-4" />
-            <span>BÀN ĐIỀU HÀNH TRỌNG TÀI · {tournament.name}</span>
+            <Gavel className="w-4 h-4 shrink-0" />
+            <span className="truncate">BÀN ĐIỀU HÀNH TRỌNG TÀI · {tournament.name}</span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
-            <span
-              className={`px-2.5 py-1 rounded-lg font-bold border ${
-                isDark
-                  ? 'bg-slate-950 border-slate-800 text-slate-300'
-                  : 'bg-slate-100 border-slate-200 text-slate-700'
-              }`}
-            >
-              {currentAccount?.displayName || 'Trọng tài'}
-            </span>
-          </div>
+          <span
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold border shrink-0 ${
+              isDark
+                ? 'bg-slate-950 border-slate-800 text-slate-300'
+                : 'bg-slate-100 border-slate-200 text-slate-700'
+            }`}
+          >
+            {currentAccount?.displayName || 'Trọng tài'}
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
           <select
             value={activeMatch.id}
             onChange={(e) => onSelectMatch(e.target.value)}
-            className={`min-h-[38px] flex-1 min-w-[220px] px-3 py-1.5 text-xs font-bold border rounded-xl ${inputSurface}`}
+            className={`min-h-[38px] flex-1 min-w-0 px-3 py-1.5 text-xs font-bold border rounded-xl ${inputSurface}`}
           >
             {matches.map((m) => (
               <option key={m.id} value={m.id}>
@@ -240,44 +238,46 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             ))}
           </select>
 
-          <button
-            type="button"
-            onClick={() => onAnnounceCourtCall(activeMatch)}
-            className="min-h-[38px] px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5"
-          >
-            <Megaphone className="w-3.5 h-3.5" />
-            <span>Gọi VĐV vào sân</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => onAnnounceCourtCall(activeMatch)}
+              className="flex-1 sm:flex-initial min-h-[38px] px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+            >
+              <Megaphone className="w-3.5 h-3.5 shrink-0" />
+              <span>Gọi VĐV vào sân</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => onAnnounceCourtAvailable(activeMatch)}
-            className={`min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-bold inline-flex items-center gap-1.5 ${
-              isDark
-                ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-emerald-400'
-                : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
-            }`}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Báo sân trống</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => onAnnounceCourtAvailable(activeMatch)}
+              className={`flex-1 sm:flex-initial min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                isDark
+                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-emerald-400'
+                  : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Báo sân trống</span>
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Bảng điểm chính */}
-      <section className={`border rounded-2xl p-4 sm:p-6 space-y-4 ${cardSurface}`}>
+      <section className={`border rounded-2xl p-4 sm:p-5 space-y-4 ${cardSurface}`}>
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="flex flex-wrap items-center gap-2 font-mono-num">
-            <span className="px-2.5 py-1 rounded-lg bg-orange-500/15 text-orange-500 font-extrabold">
+          <div className="flex flex-wrap items-center gap-2 font-mono-num min-w-0">
+            <span className="px-2.5 py-1 rounded-lg bg-orange-500/15 text-orange-500 font-extrabold shrink-0">
               SÂN {activeMatch.courtNumber} · TRẬN #{activeMatch.matchNumber}
             </span>
-            <span className={mutedText}>
+            <span className={`truncate ${mutedText}`}>
               {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]} ·{' '}
               {activeMatch.teamSubCategory || activeMatch.division}
             </span>
           </div>
 
-          <div className="flex items-center gap-3 font-mono-num">
+          <div className="flex flex-wrap items-center gap-3 font-mono-num shrink-0">
             <span className="text-emerald-500 font-bold">
               Hô điểm: {formatScoreCallout(activeMatch)}
             </span>
@@ -285,15 +285,15 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-11 gap-4 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-11 gap-3 sm:gap-4 items-center">
           {/* Đội A */}
-          <div className={`md:col-span-5 border rounded-2xl p-4 space-y-3 ${subSurface}`}>
+          <div className={`lg:col-span-5 border rounded-2xl p-3.5 sm:p-4 space-y-3 min-w-0 ${subSurface}`}>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-orange-500">
                 ĐỘI A ({activeMatch.courtSideA === 'left' ? 'BÊN TRÁI' : 'BÊN PHẢI'})
               </span>
               {activeMatch.servingTeam === 'A' && (
-                <span className="px-2 py-0.5 rounded-md bg-orange-600 text-white text-[10px] font-bold">
+                <span className="px-2 py-0.5 rounded-md bg-orange-600 text-white text-[10px] font-bold whitespace-nowrap">
                   ● GIAO BÓNG (NGƯỜI {activeMatch.serverNumber})
                 </span>
               )}
@@ -308,34 +308,34 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between gap-3 pt-2">
               <div className="font-mono-num text-4xl sm:text-5xl font-extrabold">
                 {activeMatch.scoreA}
               </div>
               <button
                 type="button"
                 onClick={() => handleScorePoint('A')}
-                className="min-h-[48px] px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white text-sm font-extrabold inline-flex items-center gap-1.5 shadow-sm transition-all"
+                className="min-h-[46px] px-4 sm:px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white text-sm font-extrabold inline-flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-5 h-5 shrink-0" />
                 <span>+1 ĐIỂM A</span>
               </button>
             </div>
           </div>
 
           {/* Tỉ số trung tâm */}
-          <div className="md:col-span-1 text-center font-mono-num text-xl sm:text-2xl font-extrabold">
+          <div className="lg:col-span-1 text-center font-mono-num text-xl sm:text-2xl font-extrabold py-0.5">
             {activeMatch.scoreA} : {activeMatch.scoreB}
           </div>
 
           {/* Đội B */}
-          <div className={`md:col-span-5 border rounded-2xl p-4 space-y-3 ${subSurface}`}>
+          <div className={`lg:col-span-5 border rounded-2xl p-3.5 sm:p-4 space-y-3 min-w-0 ${subSurface}`}>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-sky-500">
                 ĐỘI B ({activeMatch.courtSideA === 'left' ? 'BÊN PHẢI' : 'BÊN TRÁI'})
               </span>
               {activeMatch.servingTeam === 'B' && (
-                <span className="px-2 py-0.5 rounded-md bg-sky-600 text-white text-[10px] font-bold">
+                <span className="px-2 py-0.5 rounded-md bg-sky-600 text-white text-[10px] font-bold whitespace-nowrap">
                   ● GIAO BÓNG (NGƯỜI {activeMatch.serverNumber})
                 </span>
               )}
@@ -350,16 +350,16 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between gap-3 pt-2">
               <div className="font-mono-num text-4xl sm:text-5xl font-extrabold">
                 {activeMatch.scoreB}
               </div>
               <button
                 type="button"
                 onClick={() => handleScorePoint('B')}
-                className="min-h-[48px] px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] text-white text-sm font-extrabold inline-flex items-center gap-1.5 shadow-sm transition-all"
+                className="min-h-[46px] px-4 sm:px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] text-white text-sm font-extrabold inline-flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-5 h-5 shrink-0" />
                 <span>+1 ĐIỂM B</span>
               </button>
             </div>
@@ -368,7 +368,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
         {/* Thanh điều khiển phụ: Đổi lượt giao, Hoàn tác, Đổi sân, Kết thúc trận */}
         <div
-          className={`pt-3 border-t flex flex-wrap items-center justify-between gap-2 ${
+          className={`pt-3 border-t flex flex-wrap items-center justify-between gap-2.5 ${
             isDark ? 'border-slate-800' : 'border-slate-200'
           }`}
         >
@@ -376,26 +376,26 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             <button
               type="button"
               onClick={handleRotateServer}
-              className={`min-h-[38px] px-3.5 py-2 rounded-xl border text-xs font-bold inline-flex items-center gap-1.5 ${
+              className={`min-h-[38px] px-3 py-2 rounded-xl border text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
               }`}
             >
-              <Clock className="w-3.5 h-3.5 text-orange-500" />
+              <Clock className="w-3.5 h-3.5 text-orange-500 shrink-0" />
               <span>Đổi lượt giao bóng</span>
             </button>
 
             <button
               type="button"
               onClick={handleUndoPoint}
-              className={`min-h-[38px] px-3.5 py-2 rounded-xl border text-xs font-bold inline-flex items-center gap-1.5 ${
+              className={`min-h-[38px] px-3 py-2 rounded-xl border text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
               }`}
             >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-500" />
+              <RotateCcw className="w-3.5 h-3.5 text-amber-500 shrink-0" />
               <span>Hoàn tác điểm</span>
             </button>
 
@@ -407,7 +407,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   sideSwitched: !activeMatch.sideSwitched,
                 })
               }
-              className={`min-h-[38px] px-3.5 py-2 rounded-xl border text-xs font-bold ${
+              className={`min-h-[38px] px-3 py-2 rounded-xl border text-xs font-bold whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
@@ -421,18 +421,18 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             <button
               type="button"
               onClick={() => onCompleteMatch(activeMatch, 'A')}
-              className="min-h-[38px] px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5"
+              className="min-h-[38px] px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap"
             >
-              <Flag className="w-3.5 h-3.5" />
+              <Flag className="w-3.5 h-3.5 shrink-0" />
               <span>Đội A thắng</span>
             </button>
 
             <button
               type="button"
               onClick={() => onCompleteMatch(activeMatch, 'B')}
-              className="min-h-[38px] px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5"
+              className="min-h-[38px] px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap"
             >
-              <Flag className="w-3.5 h-3.5" />
+              <Flag className="w-3.5 h-3.5 shrink-0" />
               <span>Đội B thắng</span>
             </button>
 
@@ -440,7 +440,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <button
                 type="button"
                 onClick={() => onCompleteMatch(activeMatch, '')}
-                className={`min-h-[38px] px-3 py-2 rounded-xl border text-xs font-bold ${
+                className={`min-h-[38px] px-3 py-2 rounded-xl border text-xs font-bold whitespace-nowrap ${
                   isDark
                     ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                     : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
