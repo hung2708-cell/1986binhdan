@@ -40,7 +40,6 @@ interface RefereeConsoleViewProps {
   selectedMatchId: string | null;
   currentAccount: StaffAccount | null;
   themeMode?: ThemeMode;
-  activeTab?: string;
   onRequestLogin?: (reason: string) => void;
   onSelectMatch: (matchId: string) => void;
   onUpdateMatch: (matchId: string, patch: Partial<Match>) => void;
@@ -112,10 +111,10 @@ const Player3DToken: React.FC<Player3DTokenProps> = ({
   align,
 }) => {
   const shortName = shortenPlayerName(name);
-  const badgeBg = isServing
+  const pillStyle = isServing
     ? 'bg-amber-400 text-slate-950 ring-2 ring-white shadow-md'
     : isReceiver
-    ? 'bg-cyan-300 text-slate-950 ring-1 ring-white/90 shadow-sm'
+    ? 'bg-cyan-300 text-slate-950 ring-2 ring-white/90 shadow-md'
     : 'bg-slate-950/80 text-white border border-white/25';
 
   return (
@@ -125,13 +124,13 @@ const Player3DToken: React.FC<Player3DTokenProps> = ({
         align === 'right' ? 'flex-row-reverse text-right' : 'flex-row text-left'
       }`}
     >
-      {/* Icon người 3D đơn giản */}
+      {/* Icon người 3D đơn giản có chiều sâu */}
       <svg
         viewBox="0 0 28 32"
-        className="w-5 h-6 sm:w-6 sm:h-7 shrink-0 drop-shadow-[0_3px_3px_rgba(0,0,0,0.65)]"
+        className="w-5 h-6 sm:w-6 sm:h-7 shrink-0 drop-shadow-[0_4px_3px_rgba(0,0,0,0.7)]"
         aria-hidden="true"
       >
-        <ellipse cx="14" cy="29.5" rx="9" ry="2.2" fill="rgba(0,0,0,0.42)" />
+        <ellipse cx="14" cy="29.5" rx="9.5" ry="2.2" fill="rgba(2,6,23,0.5)" />
         <circle
           cx="14"
           cy="8.5"
@@ -150,7 +149,7 @@ const Player3DToken: React.FC<Player3DTokenProps> = ({
       </svg>
 
       <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate max-w-[115px] sm:max-w-[140px] ${badgeBg}`}
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate max-w-[115px] sm:max-w-[138px] ${pillStyle}`}
       >
         <span className="truncate">{shortName}</span>
         {isServing && (
@@ -184,7 +183,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   onAddRosterAthlete,
 }) => {
   const isDark = themeMode === 'dark';
-  const isStaff = Boolean(currentAccount && (currentAccount.role === 'admin' || currentAccount.role === 'referee'));
+  const isStaff = Boolean(
+    currentAccount && (currentAccount.role === 'admin' || currentAccount.role === 'referee'),
+  );
   const isAdmin = currentAccount?.role === 'admin';
 
   const courtNumbers = useMemo(
@@ -648,6 +649,11 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     );
   }
 
+  // Luật giao bóng chéo sân chuẩn Pickleball:
+  // Điểm của bên ĐANG GIAO BÓNG (servingScore) chẵn -> đứng ô bên phải (nhìn từ vạch cuối sân hướng về lưới).
+  // Điểm chẵn/lẻ được tính theo điểm của bên đang phát:
+  // - Với nửa sân trái (nhìn sang phải): ô trên là bên trái của người phát (LẺ), ô dưới là bên phải của người phát (CHẴN).
+  // - Với nửa sân phải (nhìn sang trái): ô trên là bên phải của người phát (CHẴN), ô dưới là bên trái của người phát (LẺ).
   const leftSideIsA = activeMatch.courtSideA !== 'right';
   const leftTeamLabel = leftSideIsA ? 'ĐỘI A · TRÁI' : 'ĐỘI B · TRÁI';
   const rightTeamLabel = leftSideIsA ? 'ĐỘI B · PHẢI' : 'ĐỘI A · PHẢI';
@@ -669,129 +675,129 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
   const servingSide = activeMatch.servingTeam;
   const serverNum = activeMatch.serverNumber || 2;
-  const isOddScore = (activeMatch.scoreA + activeMatch.scoreB) % 2 !== 0;
+  const servingScore = servingSide === 'A' ? activeMatch.scoreA : activeMatch.scoreB;
+  const isServingScoreOdd = servingScore % 2 !== 0;
 
   const leftIsServing =
     (leftSideIsA && servingSide === 'A') || (!leftSideIsA && servingSide === 'B');
   const rightIsServing = !leftIsServing;
 
-  const leftTopServing = leftIsServing && (serverNum === 1 ? !isOddScore : isOddScore);
-  const leftBottomServing = leftIsServing && !leftTopServing;
-  const rightTopServing = rightIsServing && (serverNum === 1 ? isOddScore : !isOddScore);
-  const rightBottomServing = rightIsServing && !rightTopServing;
+  // Vị trí ô giao bóng trên 2 nửa sân theo điểm của bên đang phát
+  const leftTopServing = leftIsServing && isServingScoreOdd;
+  const leftBottomServing = leftIsServing && !isServingScoreOdd;
+  const rightTopServing = rightIsServing && !isServingScoreOdd;
+  const rightBottomServing = rightIsServing && isServingScoreOdd;
 
-  // Người đỡ giao bóng đứng chéo ô với người phát bóng
+  // Người đỡ giao bóng đứng đúng ô giao chéo với người phát bóng
   const leftTopReceiver = rightIsServing && rightBottomServing;
   const leftBottomReceiver = rightIsServing && rightTopServing;
   const rightTopReceiver = leftIsServing && leftBottomServing;
   const rightBottomReceiver = leftIsServing && leftTopServing;
 
-  const serverDisplayName = shortenPlayerName(
-    servingSide === 'A'
-      ? activeMatch.teamAPlayer1 || activeMatch.teamAName
-      : activeMatch.teamBPlayer1 || activeMatch.teamBName,
-  );
-  const receiverDisplayName = shortenPlayerName(
-    servingSide === 'A'
-      ? activeMatch.teamBPlayer1 || activeMatch.teamBName
-      : activeMatch.teamAPlayer1 || activeMatch.teamAName,
-  );
+  const serverFullName = leftIsServing
+    ? leftTopServing
+      ? pLeftTop
+      : pLeftBottom
+    : rightTopServing
+    ? pRightTop
+    : pRightBottom;
 
-  // Tọa độ đường giao chéo chuẩn theo phối cảnh sân 3D (viewBox 640x280)
+  const receiverFullName = rightIsServing
+    ? rightTopReceiver
+      ? pRightTop
+      : pRightBottom
+    : leftTopReceiver
+    ? pLeftTop
+    : pLeftBottom;
+
+  const serverDisplayName = shortenPlayerName(serverFullName);
+  const receiverDisplayName = shortenPlayerName(receiverFullName);
+
+  // Mũi tên ngắn gọn ở vùng giữa sân, bám đúng đường chéo ô phát -> ô đỡ
   const arrowLine = leftIsServing
-    ? {
-        x1: 112,
-        y1: leftTopServing ? 92 : 212,
-        x2: 528,
-        y2: leftTopServing ? 212 : 92,
-      }
-    : {
-        x1: 528,
-        y1: rightTopServing ? 92 : 212,
-        x2: 112,
-        y2: rightTopServing ? 212 : 92,
-      };
+    ? leftTopServing
+      ? { x1: 186, y1: 104, x2: 454, y2: 176 }
+      : { x1: 186, y1: 176, x2: 454, y2: 104 }
+    : rightTopServing
+    ? { x1: 454, y1: 104, x2: 186, y2: 176 }
+    : { x1: 454, y1: 176, x2: 186, y2: 104 };
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {/* Court Switcher & Staff Badge */}
-      <section className={`border rounded-2xl p-3 sm:p-4 ${surfaceCard}`}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full">
-            {courtNumbers.map((cNum) => {
-              const isSelected = cNum === selectedCourt;
-              const courtLive = matches.some((m) => m.courtNumber === cNum && m.status === 'live');
-              return (
-                <button
-                  key={cNum}
-                  type="button"
-                  onClick={() => {
-                    setSelectedCourt(cNum);
-                    const firstOnCourt = matches.find((m) => m.courtNumber === cNum);
-                    if (firstOnCourt) onSelectMatch(firstOnCourt.id);
-                  }}
-                  className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
-                    isSelected
-                      ? 'bg-orange-600 text-white'
-                      : isDark
-                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  <span>Sân {cNum}</span>
-                  {courtLive && (
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        isSelected ? 'bg-white' : 'bg-emerald-500'
-                      }`}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-2 text-xs shrink-0">
-            {isStaff && currentAccount ? (
-              <span
-                className={`px-2.5 py-1 rounded-lg font-semibold border ${
-                  isDark
-                    ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
-                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                }`}
-              >
-                {isAdmin ? 'BTC' : 'Trọng tài'}: {currentAccount.displayName}
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  onRequestLogin?.(
-                    'Đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để điều khiển tỷ số và gọi sân.',
-                  )
-                }
-                className="min-h-[34px] px-3 py-1 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs"
-              >
-                Đăng nhập điều hành
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Main Console Layout */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
-        {/* LEFT: MATCH PICKER + SELECT TRẬN NHỎ ĐỒNG ĐỘI + 4 ACTIONS + 3D COURT */}
+        {/* LEFT: GỘP CHỌN SÂN + CHỌN TRẬN + SELECT TRẬN NHỎ + 4 NÚT + SÂN 3D */}
         <div className="lg:col-span-6 space-y-3.5">
           <div className={`border rounded-2xl p-3 sm:p-4 space-y-3 ${surfaceCard}`}>
+            {/* Thanh chọn sân gọn ngay trong khung điều khiển */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 overflow-x-auto max-w-full">
+                {courtNumbers.map((cNum) => {
+                  const isSelected = cNum === activeMatch.courtNumber;
+                  const courtLive = matches.some(
+                    (m) => m.courtNumber === cNum && m.status === 'live',
+                  );
+                  return (
+                    <button
+                      key={cNum}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCourt(cNum);
+                        const firstOnCourt =
+                          matches.find((m) => m.courtNumber === cNum && m.status === 'live') ||
+                          matches.find((m) => m.courtNumber === cNum);
+                        if (firstOnCourt) onSelectMatch(firstOnCourt.id);
+                      }}
+                      className={`min-h-[32px] px-2.5 py-1 rounded-xl text-xs font-bold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                        isSelected
+                          ? 'bg-orange-600 text-white'
+                          : isDark
+                          ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>Sân {cNum}</span>
+                      {courtLive && (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isSelected ? 'bg-white' : 'bg-emerald-500'
+                          }`}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-1.5 text-xs shrink-0">
+                <span className={`font-mono-num text-[11px] ${mutedText}`}>
+                  {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]}
+                </span>
+                {!isStaff && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRequestLogin?.(
+                        'Đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để điều khiển tỷ số và gọi sân.',
+                      )
+                    }
+                    className="min-h-[30px] px-2.5 py-0.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold text-[11px]"
+                  >
+                    Đăng nhập
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-1.5 font-bold text-orange-500">
                 <Gavel className="w-3.5 h-3.5 shrink-0" />
                 <span>SÂN {activeMatch.courtNumber}</span>
               </div>
-              <span className={`font-mono-num text-[11px] ${mutedText}`}>
-                {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]}
-              </span>
+              {isStaff && currentAccount && (
+                <span className={`text-[11px] truncate ${mutedText}`}>
+                  {isAdmin ? 'BTC' : 'Trọng tài'}: {currentAccount.displayName}
+                </span>
+              )}
             </div>
 
             <select
@@ -1077,12 +1083,13 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             )}
           </div>
 
-          {/* SÂN THI ĐẤU 3D + ICON NGƯỜI 3D ĐƠN GIẢN */}
+          {/* SÂN THI ĐẤU 3D ĐẸP HƠN + MŨI TÊN NGẮN + PHÁT/ĐỠ ĐÚNG LUẬT */}
           <div className={`border rounded-2xl p-3 sm:p-4 space-y-2.5 ${surfaceCard}`}>
             <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-mono-num font-extrabold uppercase">
-                  SÂN 3D #{activeMatch.courtNumber} · {isOddScore ? 'LẺ' : 'CHẴN'} · N{serverNum}
+                  SÂN 3D #{activeMatch.courtNumber} · {isServingScoreOdd ? 'LẺ' : 'CHẴN'} (
+                  {servingScore}đ) · N{serverNum}
                 </span>
                 <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-extrabold">
                   Phát
@@ -1102,28 +1109,63 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
             </div>
 
-            {/* Khung sân phối cảnh 3D */}
+            {/* Khung sân phối cảnh 3D có chiều sâu */}
             <div
-              className="rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-2 sm:p-3 border border-slate-800 overflow-hidden"
-              style={{ perspective: '900px' }}
+              className="rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-2.5 sm:p-3.5 border border-slate-800 overflow-hidden"
+              style={{ perspective: '820px' }}
             >
               <div
-                style={{ transform: 'rotateX(16deg)', transformOrigin: 'center center' }}
-                className="relative w-full max-h-[34vh] sm:max-h-[245px] aspect-[20/9] mx-auto rounded-xl bg-gradient-to-b from-[#16a34a] via-[#15803d] to-[#14532d] border-2 border-white shadow-[0_10px_0_#052e16,0_18px_28px_rgba(0,0,0,0.65)] overflow-hidden select-none"
+                style={{ transform: 'rotateX(20deg) scale(0.98)', transformOrigin: 'center center' }}
+                className="relative w-full max-h-[34vh] sm:max-h-[250px] aspect-[20/9] mx-auto rounded-xl bg-gradient-to-b from-[#22c55e] via-[#16a34a] to-[#15803d] border-[3px] border-white shadow-[0_12px_0_#052e16,0_22px_34px_rgba(0,0,0,0.75)] overflow-hidden select-none"
               >
-                {/* Vạch sân chuẩn Pickleball (2 nửa sân trái - phải, 2 ô giao mỗi bên, khu NVZ 7ft ở giữa, lưới dọc chính giữa) */}
+                {/* Ánh đèn & bóng đổ 3D trên mặt sân */}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      'radial-gradient(circle at 50% 35%, rgba(255,255,255,0.18), rgba(2,6,23,0.28) 85%)',
+                  }}
+                />
+
+                {/* Vạch sân chuẩn Pickleball + lưới 3D + mũi tên giao chéo ngắn */}
                 <svg
                   viewBox="0 0 640 280"
                   className="pointer-events-none absolute inset-0 w-full h-full z-10"
                   preserveAspectRatio="none"
                 >
+                  <defs>
+                    <pattern
+                      id="netMesh3D"
+                      width="8"
+                      height="8"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <path
+                        d="M 8 0 L 0 0 0 8"
+                        fill="none"
+                        stroke="rgba(255,255,255,0.45)"
+                        strokeWidth="1"
+                      />
+                    </pattern>
+                    <marker
+                      id="shortServeArrow3D"
+                      markerWidth="7"
+                      markerHeight="7"
+                      refX="5.5"
+                      refY="3.5"
+                      orient="auto"
+                    >
+                      <polygon points="0 0, 7 3.5, 0 7" fill="#FDE047" />
+                    </marker>
+                  </defs>
+
                   {/* Đường biên ngoài sân */}
                   <rect
-                    x="14"
-                    y="14"
-                    width="612"
-                    height="252"
-                    rx="4"
+                    x="16"
+                    y="16"
+                    width="608"
+                    height="248"
+                    rx="5"
                     fill="none"
                     stroke="#FFFFFF"
                     strokeWidth="3.5"
@@ -1132,26 +1174,26 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   {/* Khu vực bếp / NVZ 7ft hai bên lưới */}
                   <rect
                     x="228"
-                    y="14"
+                    y="16"
                     width="92"
-                    height="252"
-                    fill="rgba(6, 78, 59, 0.36)"
+                    height="248"
+                    fill="rgba(4, 120, 87, 0.34)"
                     stroke="#FFFFFF"
                     strokeWidth="3"
                   />
                   <rect
                     x="320"
-                    y="14"
+                    y="16"
                     width="92"
-                    height="252"
-                    fill="rgba(6, 78, 59, 0.36)"
+                    height="248"
+                    fill="rgba(4, 120, 87, 0.34)"
                     stroke="#FFFFFF"
                     strokeWidth="3"
                   />
 
-                  {/* Đường chia ô giao bóng trái & phải (chỉ chạy từ đường biên cuối sân tới đường NVZ) */}
+                  {/* Đường chia ô giao bóng trái & phải (từ đường biên cuối tới đường NVZ) */}
                   <line
-                    x1="14"
+                    x1="16"
                     y1="140"
                     x2="228"
                     y2="140"
@@ -1161,35 +1203,47 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   <line
                     x1="412"
                     y1="140"
-                    x2="626"
+                    x2="624"
                     y2="140"
                     stroke="#FFFFFF"
                     strokeWidth="2.8"
                   />
 
-                  {/* Bóng lưới đổ xuống mặt sân */}
-                  <rect x="314" y="10" width="12" height="260" fill="rgba(2, 6, 23, 0.32)" />
+                  {/* Bóng lưới đổ nghiêng 3D xuống mặt sân */}
+                  <polygon
+                    points="316,12 336,16 336,268 316,268"
+                    fill="rgba(2, 6, 23, 0.34)"
+                  />
 
-                  {/* Đường lưới chính giữa */}
+                  {/* Dải lưới có mắt lưới 3D */}
+                  <rect
+                    x="315"
+                    y="8"
+                    width="10"
+                    height="264"
+                    fill="url(#netMesh3D)"
+                    stroke="#FFFFFF"
+                    strokeWidth="2"
+                  />
                   <line
                     x1="320"
-                    y1="6"
+                    y1="8"
                     x2="320"
-                    y2="274"
+                    y2="272"
                     stroke="#FFFFFF"
-                    strokeWidth="4.5"
+                    strokeWidth="3.5"
                   />
 
                   {/* Cột lưới 3D hai đầu */}
-                  <circle cx="320" cy="14" r="5" fill="#F8FAFC" stroke="#0F172A" strokeWidth="2" />
-                  <circle cx="320" cy="266" r="5" fill="#F8FAFC" stroke="#0F172A" strokeWidth="2" />
+                  <circle cx="320" cy="14" r="5.5" fill="#F8FAFC" stroke="#0F172A" strokeWidth="2" />
+                  <circle cx="320" cy="266" r="5.5" fill="#F8FAFC" stroke="#0F172A" strokeWidth="2" />
 
                   {/* Nhãn NVZ */}
                   <text
                     x="274"
                     y="144"
                     textAnchor="middle"
-                    fill="rgba(255,255,255,0.78)"
+                    fill="rgba(255,255,255,0.82)"
                     fontSize="11"
                     fontWeight="800"
                     letterSpacing="2"
@@ -1200,7 +1254,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     x="366"
                     y="144"
                     textAnchor="middle"
-                    fill="rgba(255,255,255,0.78)"
+                    fill="rgba(255,255,255,0.82)"
                     fontSize="11"
                     fontWeight="800"
                     letterSpacing="2"
@@ -1208,26 +1262,14 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     NVZ
                   </text>
 
-                  {/* Mũi tên quỹ đạo giao bóng chéo sân */}
-                  <defs>
-                    <marker
-                      id="serveArrow3D"
-                      markerWidth="8"
-                      markerHeight="8"
-                      refX="6"
-                      refY="4"
-                      orient="auto"
-                    >
-                      <polygon points="0 0, 8 4, 0 8" fill="#FACC15" />
-                    </marker>
-                  </defs>
+                  {/* Mũi tên giao bóng chéo sân ngắn gọn */}
                   <line
                     x1={arrowLine.x1}
                     y1={arrowLine.y1}
                     x2={arrowLine.x2}
                     y2={arrowLine.y2}
                     stroke="#020617"
-                    strokeWidth="5"
+                    strokeWidth="4.5"
                     strokeOpacity="0.45"
                   />
                   <line
@@ -1235,10 +1277,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     y1={arrowLine.y1}
                     x2={arrowLine.x2}
                     y2={arrowLine.y2}
-                    stroke="#FACC15"
+                    stroke="#FDE047"
                     strokeWidth="3"
-                    strokeDasharray="7 5"
-                    markerEnd="url(#serveArrow3D)"
+                    strokeDasharray="6 4"
+                    markerEnd="url(#shortServeArrow3D)"
                   />
                 </svg>
 
@@ -1248,7 +1290,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   <div className="col-span-4 grid grid-rows-2 py-2 px-2">
                     <div
                       className={`flex items-center justify-start rounded-lg px-1 ${
-                        leftTopServing ? 'bg-amber-400/20' : ''
+                        leftTopServing ? 'bg-amber-400/20' : leftTopReceiver ? 'bg-cyan-300/15' : ''
                       }`}
                     >
                       <Player3DToken
@@ -1260,7 +1302,11 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     </div>
                     <div
                       className={`flex items-center justify-start rounded-lg px-1 ${
-                        leftBottomServing ? 'bg-amber-400/20' : ''
+                        leftBottomServing
+                          ? 'bg-amber-400/20'
+                          : leftBottomReceiver
+                          ? 'bg-cyan-300/15'
+                          : ''
                       }`}
                     >
                       <Player3DToken
@@ -1274,7 +1320,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
                   {/* Khu giữa (NVZ + Lưới) */}
                   <div className="col-span-4 flex items-center justify-center">
-                    <span className="px-2 py-0.5 rounded bg-slate-950/85 text-white text-[9px] sm:text-[10px] font-extrabold tracking-wider border border-white/30">
+                    <span className="px-2 py-0.5 rounded bg-slate-950/85 text-white text-[9px] sm:text-[10px] font-extrabold tracking-wider border border-white/30 shadow-sm">
                       LƯỚI
                     </span>
                   </div>
@@ -1283,7 +1329,11 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   <div className="col-span-4 grid grid-rows-2 py-2 px-2">
                     <div
                       className={`flex items-center justify-end rounded-lg px-1 ${
-                        rightTopServing ? 'bg-amber-400/20' : ''
+                        rightTopServing
+                          ? 'bg-amber-400/20'
+                          : rightTopReceiver
+                          ? 'bg-cyan-300/15'
+                          : ''
                       }`}
                     >
                       <Player3DToken
@@ -1295,7 +1345,11 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     </div>
                     <div
                       className={`flex items-center justify-end rounded-lg px-1 ${
-                        rightBottomServing ? 'bg-amber-400/20' : ''
+                        rightBottomServing
+                          ? 'bg-amber-400/20'
+                          : rightBottomReceiver
+                          ? 'bg-cyan-300/15'
+                          : ''
                       }`}
                     >
                       <Player3DToken
