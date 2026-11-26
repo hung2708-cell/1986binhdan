@@ -1947,7 +1947,9 @@ export default function App() {
     <div
       className={
         activeTab === 'referee' && isStaff
-          ? 'h-[100dvh] flex flex-col bg-slate-950 text-white overflow-hidden pb-11 sm:pb-12 lg:pb-0'
+          ? isDark
+            ? 'h-[100dvh] flex flex-col bg-slate-950 text-white overflow-hidden pb-11 sm:pb-12 lg:pb-0'
+            : 'h-[100dvh] flex flex-col bg-[#F8FAFC] text-slate-900 overflow-hidden pb-11 sm:pb-12 lg:pb-0'
           : isDark
           ? 'min-h-screen flex flex-col bg-slate-950 text-slate-100 pb-16 lg:pb-0'
           : 'min-h-screen flex flex-col bg-[#F8FAFC] text-[#0F172A] pb-16 lg:pb-0'
@@ -1985,28 +1987,31 @@ export default function App() {
         </a>
 
         <nav
-          className={`hidden lg:flex items-center gap-5 xl:gap-6 text-sm font-medium ${
-            isDark ? 'text-slate-300' : 'text-slate-600'
+          className={`hidden lg:flex items-center gap-2 xl:gap-3 text-sm font-medium px-2 py-1 rounded-xl ${
+            isDark ? 'bg-slate-900 text-slate-300' : 'bg-white text-slate-600'
           }`}
         >
-          {visibleNavItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setActiveTab(item.id)}
-              className={`py-1 transition-colors whitespace-nowrap shrink-0 border-b-2 ${
-                activeTab === item.id
-                  ? isDark
-                    ? 'border-orange-500 text-white font-semibold'
-                    : 'border-orange-600 text-slate-900 font-semibold'
-                  : isDark
-                  ? 'border-transparent hover:text-white'
-                  : 'border-transparent hover:text-slate-900'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+          {visibleNavItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveTab(item.id)}
+                className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap shrink-0 border-b-2 ${
+                  isActive
+                    ? isDark
+                      ? 'bg-slate-800 border-orange-500 text-white font-semibold'
+                      : 'bg-orange-50 border-orange-600 text-slate-900 font-semibold'
+                    : isDark
+                    ? 'bg-transparent border-transparent text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                    : 'bg-white border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -2517,6 +2522,7 @@ export default function App() {
                 tournament={currentTournament}
                 registrations={tournamentRegistrations}
                 currentAccount={currentAccount}
+                themeMode={themeMode}
                 onRequestLogin={(reason) => openLoginWithReason(reason)}
                 onAddDivision={handleAddDivision}
                 onAddRegistration={handleAddRegistration}
@@ -2728,7 +2734,7 @@ export default function App() {
       {/* FIXED BOTTOM THUMB-ZONE TAB BAR FOR MOBILE PHONES */}
       <nav
         className={`no-print lg:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md border-t flex items-center justify-around h-11 sm:h-12 px-1 compact-on-mobile-landscape ${
-          isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200'
+          isDark ? 'bg-slate-900/95 border-slate-800 text-slate-300' : 'bg-white/95 border-slate-200 text-slate-600'
         }`}
       >
         {visibleNavItems.map((item) => {
@@ -2740,10 +2746,12 @@ export default function App() {
               onClick={() => setActiveTab(item.id)}
               className={`min-h-[40px] sm:min-h-[44px] flex-1 min-w-0 flex flex-col items-center justify-center rounded-lg transition-colors ${
                 isActive
-                  ? 'text-orange-500 font-bold'
+                  ? isDark
+                    ? 'bg-slate-800 text-orange-400 font-bold'
+                    : 'bg-orange-50 text-orange-600 font-bold'
                   : isDark
-                  ? 'text-slate-400 hover:text-white'
-                  : 'text-slate-500 hover:text-slate-900'
+                  ? 'bg-slate-900 text-slate-400 hover:text-white'
+                  : 'bg-white text-slate-500 hover:text-slate-900'
               }`}
             >
               {item.icon}
