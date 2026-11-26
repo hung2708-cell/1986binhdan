@@ -8,15 +8,16 @@ import {
   ArrowLeftRight,
   Award,
   CheckCircle2,
+  ChevronDown,
   Clock,
   Flag,
-  Gavel,
   Megaphone,
   Minus,
   Plus,
   RefreshCw,
   RotateCcw,
   Shuffle,
+  User,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -629,6 +630,12 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const rightTopServing = rightIsServing && (serverNum === 1 ? isOddScore : !isOddScore);
   const rightBottomServing = rightIsServing && !rightTopServing;
 
+  // Người đỡ chéo sân tương ứng với người phát
+  const rightTopReceiving = leftIsServing && leftBottomServing;
+  const rightBottomReceiving = leftIsServing && leftTopServing;
+  const leftTopReceiving = rightIsServing && rightBottomServing;
+  const leftBottomReceiving = rightIsServing && rightTopServing;
+
   const serverDisplayName =
     servingSide === 'A'
       ? activeMatch.teamAPlayer1 || activeMatch.teamAName
@@ -638,19 +645,45 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       ? activeMatch.teamBPlayer1 || activeMatch.teamBName
       : activeMatch.teamAPlayer1 || activeMatch.teamAName;
 
-  const arrowLine = leftIsServing
+  // Mũi tên ngắn gọn nằm gọn giữa phần sân phát và phần sân đỡ, không đè lên tên VĐV
+  const shortArrow = leftIsServing
     ? {
-        x1: 120,
-        y1: leftTopServing ? 62 : 178,
-        x2: 480,
-        y2: leftTopServing ? 178 : 62,
+        x1: 215,
+        y1: leftTopServing ? 74 : 166,
+        x2: 385,
+        y2: leftTopServing ? 166 : 74,
       }
     : {
-        x1: 480,
-        y1: rightTopServing ? 62 : 178,
-        x2: 120,
-        y2: rightTopServing ? 178 : 62,
+        x1: 385,
+        y1: rightTopServing ? 74 : 166,
+        x2: 215,
+        y2: rightTopServing ? 166 : 74,
       };
+
+  const renderPlayerChip = (
+    name: string,
+    isServing: boolean,
+    isReceiving: boolean,
+    alignRight = false,
+  ) => (
+    <span
+      style={{ fontSize: 'clamp(9.5px, 2.2vw, 11.5px)' }}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold leading-tight truncate max-w-full transition-all ${
+        alignRight ? 'flex-row-reverse' : 'flex-row'
+      } ${
+        isServing
+          ? 'bg-amber-400 text-slate-950 ring-2 ring-white animate-pulse shadow-md'
+          : isReceiving
+          ? 'bg-cyan-400 text-slate-950 ring-1 ring-cyan-100 animate-pulse shadow-sm'
+          : 'bg-slate-950/75 text-white'
+      }`}
+    >
+      <User className="w-3 h-3 shrink-0" />
+      <span className="truncate">{name}</span>
+      {isServing && <span className="text-[9px] font-black shrink-0">PHÁT</span>}
+      {isReceiving && <span className="text-[9px] font-black shrink-0">ĐỠ</span>}
+    </span>
+  );
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -764,44 +797,49 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
       {/* Main Console Layout */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
-        {/* LEFT: MATCH PICKER + 4 COURT ACTIONS + 3D COURT */}
+        {/* LEFT: COURT LABEL + MATCH DROPDOWN + 4 ACTIONS + 3D COURT */}
         <div className="lg:col-span-6 space-y-3.5">
           <div className={`border rounded-2xl p-3 sm:p-4 space-y-3 ${surfaceCard}`}>
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-1.5 font-bold text-orange-500">
-                <Gavel className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  SÂN {activeMatch.courtNumber} · {tournament.name}
-                </span>
-              </div>
-              <span
-                className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold border truncate max-w-[190px] sm:max-w-none ${
-                  isDark
-                    ? 'bg-slate-800 text-slate-300 border-slate-700'
-                    : 'bg-slate-100 text-slate-700 border-slate-200'
-                }`}
-              >
-                {tournament.location}
+            {/* Chỉ hiển thị Sân đang chọn (bỏ trùng tên giải / địa điểm) */}
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="px-2.5 py-1 rounded-lg bg-orange-500/15 text-orange-500 font-extrabold uppercase">
+                SÂN {activeMatch.courtNumber}
+              </span>
+              <span className={`text-[11px] font-semibold ${mutedText}`}>
+                Chọn trận đấu:
               </span>
             </div>
 
-            <select
-              value={activeMatch.id}
-              onChange={(e) => onSelectMatch(e.target.value)}
-              aria-label="Chọn trận đấu trên sân"
-              className={`w-full min-h-[38px] px-3 py-2 text-xs sm:text-sm font-bold border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                isDark
-                  ? 'bg-slate-950 border-slate-700 text-white'
-                  : 'bg-slate-50 border-slate-300 text-slate-900'
-              }`}
-            >
-              {matches.map((m) => (
-                <option key={m.id} value={m.id}>
-                  Trận #{m.matchNumber} (Sân {m.courtNumber}) — {m.teamAName} vs {m.teamBName} [
-                  {m.groupName || MATCH_STAGE_LABELS[m.stage]}]
-                </option>
-              ))}
-            </select>
+            {/* Dropdown sổ xuống các trận tiếp theo */}
+            <div className="relative">
+              <select
+                value={activeMatch.id}
+                onChange={(e) => onSelectMatch(e.target.value)}
+                aria-label="Chọn trận đấu"
+                className={`w-full appearance-none min-h-[40px] pl-3 pr-9 py-2 text-xs sm:text-sm font-bold border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                  isDark
+                    ? 'bg-slate-950 border-slate-700 text-white'
+                    : 'bg-slate-50 border-slate-300 text-slate-900'
+                }`}
+              >
+                {courtMatches.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    Trận #{m.matchNumber} — {m.teamAName} vs {m.teamBName} (
+                    {m.status === 'live' ? 'Đang đấu' : m.status === 'completed' ? 'Xong' : 'Sắp đấu'})
+                  </option>
+                ))}
+                {matches
+                  .filter((m) => m.courtNumber !== activeMatch.courtNumber)
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      Sân {m.courtNumber} · Trận #{m.matchNumber} — {m.teamAName} vs {m.teamBName}
+                    </option>
+                  ))}
+              </select>
+              <ChevronDown
+                className={`pointer-events-none w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 ${mutedText}`}
+              />
+            </div>
 
             {/* 4 Core Court Buttons: 2x2 on Portrait Mobile, 4-Col Row on Tablet/Desktop/Landscape */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -1040,163 +1078,87 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             )}
           </div>
 
-          {/* 3D PICKLEBALL COURT CARD (CLEAN, CRISP, MOBILE-FIT) */}
-          <div className={`border rounded-2xl p-3 sm:p-4 space-y-2.5 ${surfaceCard}`}>
-            {/* Top Status Strip */}
+          {/* 3D PICKLEBALL COURT: SINGLE COLOR, BLINKING SERVE/RECEIVE WITH USER ICON, SHORT ARROW */}
+          <div className={`border rounded-2xl p-3 sm:p-4 space-y-2 ${surfaceCard}`}>
             <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-mono-num font-extrabold uppercase">
                   SÂN 3D #{activeMatch.courtNumber} · {isOddScore ? 'LẺ' : 'CHẴN'} · N{serverNum}
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-extrabold">
+                <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-extrabold animate-pulse">
                   Phát
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[10px] font-extrabold">
+                <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[10px] font-extrabold animate-pulse">
                   Đỡ
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5 font-semibold">
-                <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 truncate max-w-[105px]">
+                <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 truncate max-w-[100px]">
                   T: {serverDisplayName}
                 </span>
-                <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-500 truncate max-w-[105px]">
+                <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-500 truncate max-w-[100px]">
                   P: {receiverDisplayName}
                 </span>
               </div>
             </div>
 
-            {/* Layered 3D Apron & Court */}
-            <div className="rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-2 sm:p-3 border border-slate-800">
-              {/* 3D Base Slab */}
-              <div className="relative w-full max-h-[32vh] sm:max-h-[235px] aspect-[22/10] mx-auto rounded-xl bg-gradient-to-b from-[#16a34a] via-[#15803d] to-[#166534] border-2 border-white/95 shadow-[0_8px_0_#052e16,0_14px_24px_rgba(0,0,0,0.55)] overflow-hidden select-none">
-                {/* Subtle Top Highlight for 3D Surface */}
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-5 bg-gradient-to-b from-white/15 to-transparent z-10" />
-
-                {/* 12-Col Standard Pickleball Court Grid */}
+            <div className="rounded-2xl bg-slate-950 p-2 sm:p-2.5 border border-slate-800">
+              {/* Sân 1 màu đồng nhất (#15803d) có độ sâu 3D */}
+              <div className="relative w-full max-h-[30vh] sm:max-h-[225px] aspect-[22/10] mx-auto rounded-xl bg-[#15803d] border-2 border-white/95 shadow-[0_7px_0_#064e3b,0_12px_20px_rgba(0,0,0,0.5)] overflow-hidden select-none">
                 <div className="w-full h-full grid grid-cols-12 relative z-10">
                   {/* LEFT SERVICE COURTS */}
                   <div className="col-span-3 grid grid-rows-2 border-r-2 border-white/95">
-                    <div
-                      className={`px-1.5 py-1 border-b border-white/90 flex items-center ${
-                        leftTopServing ? 'bg-amber-400/25' : ''
-                      }`}
-                    >
-                      <span
-                        style={{ fontSize: 'clamp(9.5px, 2.2vw, 11.5px)' }}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold truncate max-w-full ${
-                          leftTopServing
-                            ? 'bg-amber-400 text-slate-950 shadow-sm ring-1 ring-white'
-                            : leftIsServing
-                            ? 'bg-cyan-400 text-slate-950'
-                            : 'bg-slate-950/75 text-white'
-                        }`}
-                      >
-                        <span className="truncate">{pLeftTop}</span>
-                        {leftTopServing && <span className="text-[9px] font-black shrink-0">PHÁT</span>}
-                      </span>
+                    <div className="px-1.5 py-1 border-b border-white/90 flex items-center">
+                      {renderPlayerChip(pLeftTop, leftTopServing, leftTopReceiving, false)}
                     </div>
-
-                    <div
-                      className={`px-1.5 py-1 flex items-center ${
-                        leftBottomServing ? 'bg-amber-400/25' : ''
-                      }`}
-                    >
-                      <span
-                        style={{ fontSize: 'clamp(9.5px, 2.2vw, 11.5px)' }}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold truncate max-w-full ${
-                          leftBottomServing
-                            ? 'bg-amber-400 text-slate-950 shadow-sm ring-1 ring-white'
-                            : leftIsServing
-                            ? 'bg-cyan-400 text-slate-950'
-                            : 'bg-slate-950/75 text-white'
-                        }`}
-                      >
-                        <span className="truncate">{pLeftBottom}</span>
-                        {leftBottomServing && (
-                          <span className="text-[9px] font-black shrink-0">PHÁT</span>
-                        )}
-                      </span>
+                    <div className="px-1.5 py-1 flex items-center">
+                      {renderPlayerChip(pLeftBottom, leftBottomServing, leftBottomReceiving, false)}
                     </div>
                   </div>
 
-                  {/* LEFT NVZ (KITCHEN 7FT) */}
-                  <div className="col-span-2 border-r-2 border-white/95 bg-emerald-900/35 flex items-center justify-center">
-                    <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-white/85 -rotate-90 whitespace-nowrap">
+                  {/* LEFT NVZ */}
+                  <div className="col-span-2 border-r-2 border-white/95 flex items-center justify-center">
+                    <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-white/80 -rotate-90 whitespace-nowrap">
                       NVZ 7FT
                     </span>
                   </div>
 
-                  {/* CENTER 3D NET & POSTS */}
+                  {/* CENTER 3D NET */}
                   <div className="col-span-2 relative flex items-center justify-center">
-                    {/* Net Shadow on Court */}
-                    <div className="w-2.5 h-full bg-black/25 blur-[2px]" />
-                    {/* White Top Net Tape */}
-                    <div className="absolute inset-y-0 w-[3px] bg-white shadow-[0_0_10px_rgba(255,255,255,0.65)]" />
-                    {/* Top & Bottom Posts */}
-                    <span className="absolute top-1 w-2.5 h-2.5 rounded-full bg-slate-100 border border-slate-950 shadow" />
-                    <span className="absolute bottom-1 w-2.5 h-2.5 rounded-full bg-slate-100 border border-slate-950 shadow" />
-                    <span className="relative z-20 px-1.5 py-0.5 rounded bg-slate-950/90 text-white text-[8px] sm:text-[9px] font-extrabold tracking-wider border border-white/35 whitespace-nowrap">
-                      LƯỚI 3D
+                    <div className="w-2 h-full bg-black/20" />
+                    <div className="absolute inset-y-0 w-[3px] bg-white" />
+                    <span className="absolute top-1 w-2 h-2 rounded-full bg-white border border-slate-900" />
+                    <span className="absolute bottom-1 w-2 h-2 rounded-full bg-white border border-slate-900" />
+                    <span className="relative z-20 px-1.5 py-0.5 rounded bg-slate-950/90 text-white text-[8px] sm:text-[9px] font-extrabold border border-white/30 whitespace-nowrap">
+                      LƯỚI
                     </span>
                   </div>
 
-                  {/* RIGHT NVZ (KITCHEN 7FT) */}
-                  <div className="col-span-2 border-l-2 border-white/95 bg-emerald-900/35 flex items-center justify-center">
-                    <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-white/85 rotate-90 whitespace-nowrap">
+                  {/* RIGHT NVZ */}
+                  <div className="col-span-2 border-l-2 border-white/95 flex items-center justify-center">
+                    <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-white/80 rotate-90 whitespace-nowrap">
                       NVZ 7FT
                     </span>
                   </div>
 
                   {/* RIGHT SERVICE COURTS */}
                   <div className="col-span-3 grid grid-rows-2 border-l-2 border-white/95">
-                    <div
-                      className={`px-1.5 py-1 border-b border-white/90 flex items-center justify-end ${
-                        rightTopServing ? 'bg-amber-400/25' : ''
-                      }`}
-                    >
-                      <span
-                        style={{ fontSize: 'clamp(9.5px, 2.2vw, 11.5px)' }}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold truncate max-w-full ${
-                          rightTopServing
-                            ? 'bg-amber-400 text-slate-950 shadow-sm ring-1 ring-white'
-                            : rightIsServing
-                            ? 'bg-cyan-400 text-slate-950'
-                            : 'bg-slate-950/75 text-white'
-                        }`}
-                      >
-                        <span className="truncate">{pRightTop}</span>
-                        {rightTopServing && (
-                          <span className="text-[9px] font-black shrink-0">PHÁT</span>
-                        )}
-                      </span>
+                    <div className="px-1.5 py-1 border-b border-white/90 flex items-center justify-end">
+                      {renderPlayerChip(pRightTop, rightTopServing, rightTopReceiving, true)}
                     </div>
-
-                    <div
-                      className={`px-1.5 py-1 flex items-center justify-end ${
-                        rightBottomServing ? 'bg-amber-400/25' : ''
-                      }`}
-                    >
-                      <span
-                        style={{ fontSize: 'clamp(9.5px, 2.2vw, 11.5px)' }}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold truncate max-w-full ${
-                          rightBottomServing
-                            ? 'bg-amber-400 text-slate-950 shadow-sm ring-1 ring-white'
-                            : rightIsServing
-                            ? 'bg-cyan-400 text-slate-950'
-                            : 'bg-slate-950/75 text-white'
-                        }`}
-                      >
-                        <span className="truncate">{pRightBottom}</span>
-                        {rightBottomServing && (
-                          <span className="text-[9px] font-black shrink-0">PHÁT</span>
-                        )}
-                      </span>
+                    <div className="px-1.5 py-1 flex items-center justify-end">
+                      {renderPlayerChip(
+                        pRightBottom,
+                        rightBottomServing,
+                        rightBottomReceiving,
+                        true,
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Diagonal Serve Trajectory SVG */}
+                {/* Mũi tên ngắn gọn từ Phát sang Đỡ, nằm giữa khu vực sân */}
                 <svg
                   viewBox="0 0 600 240"
                   className="pointer-events-none absolute inset-0 w-full h-full z-20"
@@ -1204,42 +1166,41 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 >
                   <defs>
                     <marker
-                      id="serveTrajectoryArrow"
-                      markerWidth="8"
-                      markerHeight="8"
-                      refX="6"
-                      refY="4"
+                      id="shortServeArrow"
+                      markerWidth="7"
+                      markerHeight="7"
+                      refX="5"
+                      refY="3.5"
                       orient="auto"
                     >
-                      <polygon points="0 0, 8 4, 0 8" fill="#FACC15" />
+                      <polygon points="0 0, 7 3.5, 0 7" fill="#FACC15" />
                     </marker>
                   </defs>
                   <line
-                    x1={arrowLine.x1}
-                    y1={arrowLine.y1}
-                    x2={arrowLine.x2}
-                    y2={arrowLine.y2}
+                    x1={shortArrow.x1}
+                    y1={shortArrow.y1}
+                    x2={shortArrow.x2}
+                    y2={shortArrow.y2}
                     stroke="#020617"
-                    strokeWidth="5"
-                    strokeOpacity="0.45"
+                    strokeWidth="4.5"
+                    strokeOpacity="0.4"
                   />
                   <line
-                    x1={arrowLine.x1}
-                    y1={arrowLine.y1}
-                    x2={arrowLine.x2}
-                    y2={arrowLine.y2}
+                    x1={shortArrow.x1}
+                    y1={shortArrow.y1}
+                    x2={shortArrow.x2}
+                    y2={shortArrow.y2}
                     stroke="#FACC15"
-                    strokeWidth="3"
-                    strokeDasharray="7 5"
-                    markerEnd="url(#serveTrajectoryArrow)"
+                    strokeWidth="2.75"
+                    strokeDasharray="6 4"
+                    markerEnd="url(#shortServeArrow)"
                   />
                 </svg>
               </div>
 
-              {/* Compact Bottom Legend */}
-              <div className="mt-2.5 flex items-center justify-between gap-2 text-[10px] text-slate-300 px-1">
+              <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-slate-300 px-1">
                 <span className="truncate font-bold text-amber-300">{leftTeamName}</span>
-                <span className="text-slate-400 shrink-0">Quỹ đạo giao chéo</span>
+                <span className="text-slate-400 shrink-0">Phát → Đỡ</span>
                 <span className="truncate font-bold text-cyan-300 text-right">{rightTeamName}</span>
               </div>
             </div>
