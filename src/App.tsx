@@ -251,9 +251,10 @@ function compressImageFileToDataUrl(
 }
 
 export default function App() {
-  const [appState, setAppState] = useState<PersistedAppState>(() => loadInitialState());
+  const [initialBootState] = useState<PersistedAppState>(() => loadInitialState());
+  const [appState, setAppState] = useState<PersistedAppState>(initialBootState);
   const [currentAccount, setCurrentAccount] = useState<StaffAccount | null>(() =>
-    loadSavedAuthAccount(loadInitialState().staffAccounts),
+    loadSavedAuthAccount(initialBootState.staffAccounts),
   );
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadSavedTheme());
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -264,7 +265,7 @@ export default function App() {
   const [expandedPostIds, setExpandedPostIds] = useState<Record<string, boolean>>({});
 
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(
-    () => loadInitialState().tournaments[0]?.id || '',
+    () => initialBootState.tournaments[0]?.id || '',
   );
   const [selectedRefereeMatchId, setSelectedRefereeMatchId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -1550,23 +1551,6 @@ export default function App() {
                   {currentTournament.courtsCount} sân
                 </span>
               </div>
-
-              {currentTournament.divisions.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-2">
-                  {currentTournament.divisions.map((div) => (
-                    <span
-                      key={div}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${
-                        isDark
-                          ? 'bg-slate-800 text-orange-300 border-slate-700'
-                          : 'bg-orange-50 text-orange-800 border-orange-200'
-                      }`}
-                    >
-                      {div}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className="grid grid-cols-1 sm:flex flex-wrap items-center gap-2 pt-1">
@@ -2621,7 +2605,6 @@ export default function App() {
                 selectedMatchId={selectedRefereeMatchId}
                 currentAccount={currentAccount}
                 themeMode={themeMode}
-                activeTab={activeTab}
                 onRequestLogin={(reason) => openLoginWithReason(reason)}
                 onSelectMatch={(matchId) => setSelectedRefereeMatchId(matchId)}
                 onUpdateMatch={handleUpdateMatch}
