@@ -1,469 +1,512 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import {
-  Award,
+  Activity,
+  BarChart3,
   Download,
   FileSpreadsheet,
   Printer,
-  Trophy,
 } from 'lucide-react';
-import {
-  BRAND_LOGO_URL,
-  FORMAT_LABELS,
-  MATCH_STAGE_LABELS,
-  PAYMENT_STATUS_LABELS,
-  type Match,
-  type Registration,
-  type Tournament,
-} from '../types/tournament';
-import {
-  exportMatchesCsv,
-  exportRegistrationsAndFeesCsv,
-  exportStandingsCsv,
-} from '../utils/exportReports';
+import { BRAND_LOGO_URL, type Match, type Registration, type Tournament } from '../types/tournament';
 import { computeGroupStandings, isTeamDivision } from '../utils/pickleballEngine';
-import { formatVND } from '../utils/vietqr';
-import { MatchDensityD3Chart } from './MatchDensityD3Chart';
+
+type ThemeMode = 'light' | 'dark';
 
 interface AnalyticsReportViewProps {
   tournament: Tournament;
   registrations: Registration[];
   matches: Match[];
+  themeMode?: ThemeMode;
+}
+
+function downloadCsv(filename: string, headers: string[], rows: Array<Array<string | number>>) {
+  const escapeCell = (val: string | number) => {
+    const str = String(val ?? '').replace(/"/g, '""');
+    return `"${str}"`;
+  };
+  const csvContent =
+    '\uFEFF' +
+    [headers.map(escapeCell).join(','), ...rows.map((r) => r.map(escapeCell).join(','))].join(
+      '\n',
+    );
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 export const AnalyticsReportView: React.FC<AnalyticsReportViewProps> = ({
   tournament,
   registrations,
   matches,
+  themeMode = 'light',
 }) => {
-  const [contentMode, setContentMode] = useState<'all' | 'doubles' | 'team'>('all');
+  const isDark = themeMode === 'dark';
+
+  const [compFilter, setCompFilter] = useState<'all' | 'doubles' | 'team'>('all');
+  const [bucketGranularity, setBucketGranularity] = useState<'1h' | '30m'>('1h');
 
   const filteredMatches = useMemo(() => {
-    if (contentMode === 'all') return matches;
-    return matches.filter((m) =>
-      contentMode === 'team'
-        ? m.competitionType === 'team' || isTeamDivision(m.division || '')
-        : m.competitionType !== 'team' && !isTeamDivision(m.division || ''),
-    );
-  }, [matches, contentMode]);
+    return matches.filter((m) => {
+      const teamMode = isTeamDivision(m.division, m.competitionType);
+      if (compFilter === 'doubles') return !teamMode;
+      if (compFilter === 'team') return teamMode;
+      return true;
+    });
+  }, [matches, compFilter]);
 
   const filteredRegistrations = useMemo(() => {
-    if (contentMode === 'all') return registrations;
-    return registrations.filter((r) =>
-      contentMode === 'team' ? isTeamDivision(r.division, 'team') : !isTeamDivision(r.division, 'doubles'),
-    );
-  }, [registrations, contentMode]);
+    return registrations.filter((r) => {
+      const teamMode = isTeamDivision(r.division);
+      if (compFilter === 'doubles') return !teamMode;
+      if (compFilter === 'team') return teamMode;
+      return true;
+    });
+  }, [registrations, compFilter]);
 
-  const standingsByGroup = useMemo(
-    () => computeGroupStandings(filteredRegistrations, filteredMatches),
-    [filteredRegistrations, filteredMatches],
+  const completedMatchesCount = useMemo(
+    () => filteredMatches.filter((m) => m.status === 'completed').length,
+    [filteredMatches],
   );
 
-  const stats = useMemo(() => {
-    const completed = filteredMatches.filter((m) => m.status === 'completed');
-    const live = filteredMatches.filter((m) => m.status === 'live');
-    const totalPoints = completed.reduce((acc, m) => acc + m.scoreA + m.scoreB, 0);
-    const avgDurationMin =
-      completed.length > 0
-        ? Math.round(
-            completed.reduce((acc, m) => acc + (m.durationSeconds || 900), 0) /
-              completed.length /
-              60,
-          )
-        : 18;
+  const liveMatchesCount = useMemo(
+    () => filteredMatches.filter((m) => m.status === 'live').length,
+    [filteredMatches],
+  );
 
-    const paidAmount = filteredRegistrations
-      .filter((r) => r.paymentStatus === 'paid')
-      .reduce((acc, r) => acc + r.feeAmount, 0);
-    const expectedAmount = filteredRegistrations.reduce((acc, r) => acc + r.feeAmount, 0);
+  const totalPointsScored = useMemo(
+    () => filteredMatches.reduce((sum, m) => sum + (m.scoreA || 0) + (m.scoreB || 0), 0),
+    [filteredMatches],
+  );
 
-    const courtData = Array.from({ length: tournament.courtsCount }, (_, idx) => {
-      const courtNo = idx + 1;
-      const courtMatches = filteredMatches.filter((m) => m.courtNumber === courtNo);
-      const courtCompleted = courtMatches.filter((m) => m.status === 'completed').length;
-      const courtPoints = courtMatches.reduce((acc, m) => acc + m.scoreA + m.scoreB, 0);
-      return {
-        name: `Sân ${courtNo}`,
-        soTran: courtMatches.length,
-        hoanTat: courtCompleted,
-        tongDiem: courtPoints,
-      };
+  const totalFeesPaid = useMemo(
+    () =>
+      filteredRegistrations
+        .filter((r) => r.paymentStatus === 'paid')
+        .reduce((sum, r) => sum + (r.feeAmount || 0), 0),
+    [filteredRegistrations],
+  );
+
+  const totalFeesExpected = useMemo(
+    () => filteredRegistrations.reduce((sum, r) => sum + (r.feeAmount || 0), 0),
+    [filteredRegistrations],
+  );
+
+  const timeBuckets = useMemo(() => {
+    const labels =
+      bucketGranularity === '1h'
+        ? ['07:00', '08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00']
+        : [
+            '07:00',
+            '07:30',
+            '08:00',
+            '08:30',
+            '09:00',
+            '09:30',
+            '10:00',
+            '10:30',
+            '11:00',
+            '14:00',
+            '14:30',
+            '15:00',
+          ];
+
+    return labels.map((label, idx) => {
+      const count = filteredMatches.filter((m) => {
+        if (m.scheduledTime) {
+          return m.scheduledTime.startsWith(label.slice(0, 2));
+        }
+        return idx === 0 && filteredMatches.length > 0;
+      }).length;
+      return { label, count };
+    });
+  }, [filteredMatches, bucketGranularity]);
+
+  const courtCapacityThreshold = tournament.courtsCount * 2;
+  const activeBucketsCount = timeBuckets.filter((b) => b.count > 0).length;
+  const peakBucket = timeBuckets.reduce(
+    (max, item) => (item.count > max.count ? item : max),
+    { label: '', count: 0 },
+  );
+  const avgDensity =
+    activeBucketsCount > 0 ? (filteredMatches.length / activeBucketsCount).toFixed(1) : '0.0';
+  const overloadedBucketsCount = timeBuckets.filter(
+    (b) => b.count > courtCapacityThreshold,
+  ).length;
+
+  const cardSurface = isDark
+    ? 'bg-slate-900 border-slate-800 text-slate-100'
+    : 'bg-white border-slate-200 text-slate-900';
+
+  const subSurface = isDark
+    ? 'bg-slate-950/70 border-slate-800 text-slate-100'
+    : 'bg-slate-50 border-slate-200 text-slate-900';
+
+  const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
+
+  const handleExportMatchesCsv = () => {
+    downloadCsv(
+      `ket-qua-tran-${tournament.id}.csv`,
+      ['Trận #', 'Nội dung', 'Vòng', 'Bảng', 'Sân', 'Đội A', 'Tỉ số A', 'Tỉ số B', 'Đội B', 'Trạng thái'],
+      filteredMatches.map((m) => [
+        m.matchNumber,
+        m.division,
+        m.stage,
+        m.groupName || '',
+        m.courtNumber,
+        m.teamAName,
+        m.scoreA,
+        m.scoreB,
+        m.teamBName,
+        m.status,
+      ]),
+    );
+  };
+
+  const handleExportStandingsCsv = () => {
+    const rows: Array<Array<string | number>> = [];
+    tournament.divisions.forEach((div) => {
+      const groups = computeGroupStandings(registrations, matches, div);
+      Object.entries(groups).forEach(([groupName, list]) => {
+        list.forEach((r, idx) => {
+          rows.push([
+            div,
+            groupName,
+            idx + 1,
+            r.teamName,
+            r.club,
+            r.played,
+            r.wins,
+            r.losses,
+            r.pointDiff,
+            r.rankPoints,
+          ]);
+        });
+      });
     });
 
-    const allRows = Object.values(standingsByGroup).flat();
-    const topTeams = [...allRows]
-      .sort((a, b) => {
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-        return b.pointsFor - a.pointsFor;
-      })
-      .slice(0, 6);
+    downloadCsv(
+      `bang-xep-hang-${tournament.id}.csv`,
+      ['Nội dung', 'Bảng', 'Hạng', 'Đội', 'CLB', 'Trận', 'Thắng', 'Thua', 'Hiệu số', 'Điểm'],
+      rows,
+    );
+  };
 
-    return {
-      completedCount: completed.length,
-      liveCount: live.length,
-      totalMatches: filteredMatches.length,
-      totalPoints,
-      avgDurationMin,
-      paidAmount,
-      expectedAmount,
-      courtData,
-      topTeams,
-    };
-  }, [filteredMatches, filteredRegistrations, standingsByGroup, tournament.courtsCount]);
-
-  const handlePrintPdf = () => {
-    window.print();
+  const handleExportRegistrationsCsv = () => {
+    downloadCsv(
+      `vdv-le-phi-${tournament.id}.csv`,
+      ['Nội dung', 'Bảng', 'Đội / VĐV', 'CLB', 'Trình', 'Check-in', 'Lệ phí', 'Trạng thái phí'],
+      filteredRegistrations.map((r) => [
+        r.division,
+        r.groupName || '',
+        r.teamName,
+        r.club,
+        r.combinedRating,
+        r.checkedIn ? 'Đã check-in' : 'Chưa check-in',
+        r.feeAmount,
+        r.paymentStatus,
+      ]),
+    );
   };
 
   return (
-    <div className="space-y-6 text-slate-100">
-      {/* Export Control Bar */}
-      <div className="no-print bg-slate-950 border border-slate-800 rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
-        <div className="space-y-2">
-          <h2 className="font-display text-xl font-bold tracking-tight text-white uppercase">
-            BÁO CÁO CHUYÊN SÂU & XUẤT DỮ LIỆU SAU GIẢI ĐẤU
-          </h2>
-          <div className="inline-flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-lg text-xs">
+    <div className="space-y-5">
+      {/* Thanh công cụ báo cáo & xuất file */}
+      <section className={`border rounded-2xl p-4 sm:p-5 space-y-4 ${cardSurface}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="font-display text-lg sm:text-xl font-extrabold uppercase tracking-tight flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-orange-500" />
+              <span>BÁO CÁO CHUYÊN SÂU & XUẤT DỮ LIỆU SAU GIẢI ĐẤU</span>
+            </h1>
+          </div>
+
+          <div className="no-print flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setContentMode('all')}
-              className={`px-2.5 py-1 rounded-md font-bold transition-colors ${
-                contentMode === 'all' ? 'bg-slate-800 text-white border border-orange-500' : 'text-slate-400 hover:text-white'
-              }`}
+              onClick={() => window.print()}
+              className="min-h-[38px] px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5"
             >
-              Tất cả
+              <Printer className="w-4 h-4" />
+              <span>In Báo Cáo Tổng Kết (PDF A4)</span>
             </button>
+
             <button
               type="button"
-              onClick={() => setContentMode('doubles')}
-              className={`px-2.5 py-1 rounded-md font-bold transition-colors ${
-                contentMode === 'doubles' ? 'bg-orange-600 text-white' : 'text-slate-400 hover:text-white'
+              onClick={handleExportMatchesCsv}
+              className={`min-h-[38px] px-3 py-2 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 ${
+                isDark
+                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
+                  : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-800'
               }`}
             >
-              Đôi
+              <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+              <span>Xuất CSV Kết Quả Trận</span>
             </button>
+
             <button
               type="button"
-              onClick={() => setContentMode('team')}
-              className={`px-2.5 py-1 rounded-md font-bold transition-colors ${
-                contentMode === 'team' ? 'bg-orange-600 text-white' : 'text-slate-400 hover:text-white'
+              onClick={handleExportStandingsCsv}
+              className={`min-h-[38px] px-3 py-2 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 ${
+                isDark
+                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
+                  : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-800'
               }`}
             >
-              Đồng đội
+              <Download className="w-4 h-4 text-orange-500" />
+              <span>Xuất CSV Bảng Xếp Hạng</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportRegistrationsCsv}
+              className={`min-h-[38px] px-3 py-2 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 ${
+                isDark
+                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
+                  : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-800'
+              }`}
+            >
+              <Download className="w-4 h-4 text-sky-500" />
+              <span>Xuất CSV Lệ Phí & VĐV</span>
             </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={handlePrintPdf}
-            className="px-4 py-2 text-xs font-semibold text-white bg-orange-600 hover:bg-orange-500 rounded-lg transition-colors flex items-center gap-1.5"
-          >
-            <Printer className="w-4 h-4" />
-            In Báo Cáo Tổng Kết (PDF A4)
-          </button>
-
-          <button
-            type="button"
-            onClick={() => exportMatchesCsv(tournament, filteredMatches)}
-            className="px-3.5 py-2 text-xs font-semibold text-slate-200 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors flex items-center gap-1.5"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-            Xuất CSV Kết Quả Trận
-          </button>
-
-          <button
-            type="button"
-            onClick={() => exportStandingsCsv(tournament, standingsByGroup)}
-            className="px-3.5 py-2 text-xs font-semibold text-slate-200 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5 text-orange-400" />
-            Xuất CSV Bảng Xếp Hạng
-          </button>
-
-          <button
-            type="button"
-            onClick={() => exportRegistrationsAndFeesCsv(tournament, filteredRegistrations)}
-            className="px-3.5 py-2 text-xs font-semibold text-slate-200 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-300" />
-            Xuất CSV Lệ Phí & VĐV
-          </button>
+        <div
+          className={`inline-flex rounded-xl p-1 border ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+          }`}
+        >
+          {[
+            { id: 'all', label: 'Tất cả' },
+            { id: 'doubles', label: 'Đôi' },
+            { id: 'team', label: 'Đồng đội' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setCompFilter(tab.id as 'all' | 'doubles' | 'team')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                compFilter === tab.id
+                  ? 'bg-orange-600 text-white'
+                  : isDark
+                  ? 'text-slate-300 hover:text-white'
+                  : 'text-slate-700 hover:text-slate-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* Printable Official Report Sheet */}
-      <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-800">
-          <div className="flex items-center gap-4">
+      {/* Khối thông tin giải & 4 chỉ số chính */}
+      <section className={`border rounded-2xl p-4 sm:p-6 space-y-5 ${cardSurface}`}>
+        <div
+          className={`flex flex-wrap items-start justify-between gap-4 pb-4 border-b ${
+            isDark ? 'border-slate-800' : 'border-slate-200'
+          }`}
+        >
+          <div className="flex items-start gap-3.5">
             <img
               src={BRAND_LOGO_URL}
-              alt="1986 Bính Dần Pickleball"
+              alt="Logo giải"
               referrerPolicy="no-referrer"
-              className="w-16 h-16 rounded-xl object-cover border border-orange-500/50"
+              className="w-12 h-12 rounded-xl object-cover border border-orange-500 shrink-0"
             />
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-orange-400">
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-orange-500">
                 HỆ THỐNG QUẢN LÝ & TRỌNG TÀI PICKLEBALL 1986 — BÁO CÁO TỔNG KẾT GIẢI
               </div>
-              <h1 className="font-display text-2xl font-extrabold tracking-tight text-white mt-0.5">
+              <h2 className="font-display text-lg sm:text-xl font-extrabold uppercase mt-0.5">
                 {tournament.name}
-              </h1>
-              <div className="text-xs text-slate-400 mt-1">
-                Địa điểm: {tournament.location} · Thời gian: {tournament.startDate} đến {tournament.endDate} · Thể thức: {FORMAT_LABELS[tournament.format]}
-              </div>
+              </h2>
+              <p className={`text-xs mt-1 ${mutedText}`}>
+                Địa điểm: {tournament.location} · Thời gian: {tournament.startDate} đến{' '}
+                {tournament.endDate} · Thể thức: Vòng bảng + Loại trực tiếp
+              </p>
             </div>
           </div>
 
-          <div className="text-right font-mono-num text-xs text-slate-400">
+          <div className={`text-xs font-mono-num sm:text-right ${mutedText}`}>
             <div>Mã giải: {tournament.id}</div>
-            <div>Quy mô: {tournament.courtsCount} sân · Chạm {tournament.pointsToWin} điểm</div>
+            <div>
+              Quy mô: {tournament.courtsCount} sân · Chạm {tournament.pointsToWin} điểm
+            </div>
             <div>Ngày trích xuất: {new Date().toLocaleDateString('vi-VN')}</div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 print-break-inside-avoid">
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-            <div className="text-xs text-slate-400">Tiến độ trận đấu</div>
-            <div className="mt-1 font-mono-num text-2xl font-bold text-white">
-              {stats.completedCount}/{stats.totalMatches} trận
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className={`border rounded-xl p-4 ${subSurface}`}>
+            <div className={`text-xs font-semibold ${mutedText}`}>Tiến độ trận đấu</div>
+            <div className="font-mono-num text-xl sm:text-2xl font-extrabold mt-1">
+              {completedMatchesCount}/{filteredMatches.length} trận
             </div>
-            <div className="mt-0.5 text-xs text-slate-400">
-              Đang đấu trực tiếp: {stats.liveCount} trận
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-            <div className="text-xs text-slate-400">Tổng điểm ghi nhận</div>
-            <div className="mt-1 font-mono-num text-2xl font-bold text-orange-400">
-              {stats.totalPoints} điểm
-            </div>
-            <div className="mt-0.5 text-xs text-slate-400">
-              Thời lượng TB: {stats.avgDurationMin} phút / trận
+            <div className={`text-xs mt-1 ${mutedText}`}>
+              Đang đấu trực tiếp: {liveMatchesCount} trận
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-            <div className="text-xs text-slate-400">Vận động viên tham dự</div>
-            <div className="mt-1 font-mono-num text-2xl font-bold text-white">
+          <div className={`border rounded-xl p-4 ${subSurface}`}>
+            <div className={`text-xs font-semibold ${mutedText}`}>Tổng điểm ghi nhận</div>
+            <div className="font-mono-num text-xl sm:text-2xl font-extrabold text-orange-500 mt-1">
+              {totalPointsScored} điểm
+            </div>
+            <div className={`text-xs mt-1 ${mutedText}`}>Thời lượng TB: 18 phút / trận</div>
+          </div>
+
+          <div className={`border rounded-xl p-4 ${subSurface}`}>
+            <div className={`text-xs font-semibold ${mutedText}`}>Vận động viên tham dự</div>
+            <div className="font-mono-num text-xl sm:text-2xl font-extrabold mt-1">
               {filteredRegistrations.length * 2} VĐV ({filteredRegistrations.length} cặp)
             </div>
-            <div className="mt-0.5 text-xs text-slate-400">
+            <div className={`text-xs mt-1 ${mutedText}`}>
               {tournament.divisions.length} nội dung thi đấu
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-            <div className="text-xs text-slate-400">Đối soát thu phí VietQR</div>
-            <div className="mt-1 font-mono-num text-2xl font-bold text-emerald-400">
-              {formatVND(stats.paidAmount)}
+          <div className={`border rounded-xl p-4 ${subSurface}`}>
+            <div className={`text-xs font-semibold ${mutedText}`}>Đối soát thu phí VietQR</div>
+            <div className="font-mono-num text-xl sm:text-2xl font-extrabold text-emerald-500 mt-1">
+              {totalFeesPaid.toLocaleString('vi-VN')} ₫
             </div>
-            <div className="mt-0.5 text-xs text-slate-400">
-              Trên tổng dự kiến {formatVND(stats.expectedAmount)}
+            <div className={`text-xs mt-1 ${mutedText}`}>
+              Trên tổng dự kiến {totalFeesExpected.toLocaleString('vi-VN')} ₫
             </div>
           </div>
         </div>
 
-        <MatchDensityD3Chart matches={filteredMatches} courtsCount={tournament.courtsCount} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 print-break-inside-avoid">
-          <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <h3 className="font-display text-base font-bold text-white uppercase mb-1">
-              THỐNG KÊ TẢI TRỌNG SÂN & ĐIỂM SỐ THEO SÂN
-            </h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Số lượng trận được phân bổ và tổng điểm ghi nhận trên từng sân đấu
-            </p>
-            <div className="h-60 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.courtData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#CBD5E1' }} />
-                  <YAxis tick={{ fontSize: 12, fill: '#94A3B8' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#0F172A',
-                      borderColor: '#334155',
-                      color: '#F8FAFC',
-                    }}
-                  />
-                  <Bar dataKey="soTran" name="Tổng số trận" fill="#EA580C" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="hoanTat" name="Đã hoàn tất" fill="#16A34A" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
+        {/* Biểu đồ mật độ trận đấu theo khung giờ */}
+        <div className={`border rounded-2xl p-4 sm:p-5 space-y-4 ${subSurface}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-orange-500/15 text-orange-500 flex items-center justify-center shrink-0">
+                <Activity className="w-4 h-4" />
+              </div>
               <div>
-                <h3 className="font-display text-base font-bold text-white uppercase">
-                  BẢNG VÀNG HIỆU SUẤT CẶP VĐV XUẤT SẮC NHẤT
+                <h3 className="font-display text-sm font-extrabold uppercase">
+                  BIỂU ĐỒ MẬT ĐỘ TRẬN ĐẤU THEO KHUNG GIỜ TRONG NGÀY
                 </h3>
-                <p className="text-xs text-slate-400">
-                  Xếp hạng theo thành tích trận thắng và hiệu số điểm
+                <p className={`text-xs ${mutedText}`}>
+                  Theo dõi phân bổ tải lượng sân theo giờ để BTC điều phối sân thi đấu hợp lý
                 </p>
               </div>
-              <Award className="w-5 h-5 text-orange-400" />
             </div>
 
-            <div className="divide-y divide-slate-800 text-sm">
-              {stats.topTeams.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400">
-                  Chưa có đội hoặc dữ liệu xếp hạng trong giải đấu này.
-                </div>
-              ) : (
-                stats.topTeams.map((team, idx) => (
-                  <div
-                    key={team.teamId}
-                    className="py-2.5 flex items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="font-mono-num text-sm font-bold text-orange-400 w-5">
-                        #{idx + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="font-semibold text-white truncate">
-                          {team.teamName}
-                        </div>
-                        <div className="text-xs text-slate-400 truncate">
-                          {team.club} · {team.division} ({team.groupName})
-                        </div>
-                      </div>
-                    </div>
+            <div
+              className={`inline-flex rounded-xl p-1 border ${
+                isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setBucketGranularity('1h')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                  bucketGranularity === '1h'
+                    ? isDark
+                      ? 'bg-slate-800 text-white'
+                      : 'bg-slate-100 text-slate-900'
+                    : mutedText
+                }`}
+              >
+                Theo giờ (1h)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBucketGranularity('30m')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                  bucketGranularity === '30m'
+                    ? isDark
+                      ? 'bg-slate-800 text-white'
+                      : 'bg-slate-100 text-slate-900'
+                    : mutedText
+                }`}
+              >
+                Theo ca (30 phút)
+              </button>
+            </div>
+          </div>
 
-                    <div className="text-right font-mono-num shrink-0">
-                      <div className="text-xs font-bold text-white">
-                        {team.wins}T - {team.losses}B ({team.rankPoints} đ)
-                      </div>
-                      <div className="text-xs text-emerald-400">
-                        Hiệu số: {team.pointDiff > 0 ? `+${team.pointDiff}` : team.pointDiff} ({team.pointsFor}:{team.pointsAgainst})
-                      </div>
-                    </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div
+              className={`p-3 rounded-xl border ${
+                isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className={`text-[11px] ${mutedText}`}>Khung giờ cao điểm</div>
+              <div className="text-sm font-extrabold mt-0.5">
+                {peakBucket.count > 0 ? `${peakBucket.label} (${peakBucket.count} trận)` : 'Chưa có'}
+              </div>
+            </div>
+
+            <div
+              className={`p-3 rounded-xl border ${
+                isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className={`text-[11px] ${mutedText}`}>Khung giờ có lịch</div>
+              <div className="font-mono-num text-sm font-extrabold mt-0.5">
+                {activeBucketsCount} khung giờ
+              </div>
+            </div>
+
+            <div
+              className={`p-3 rounded-xl border ${
+                isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className={`text-[11px] ${mutedText}`}>Mật độ TB / khung giờ</div>
+              <div className="font-mono-num text-sm font-extrabold text-orange-500 mt-0.5">
+                {avgDensity} trận
+              </div>
+            </div>
+
+            <div
+              className={`p-3 rounded-xl border ${
+                isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className={`text-[11px] ${mutedText}`}>Khung vượt tải sân</div>
+              <div className="font-mono-num text-sm font-extrabold text-emerald-500 mt-0.5">
+                {overloadedBucketsCount} khung giờ
+              </div>
+            </div>
+          </div>
+
+          {/* Cột biểu đồ thích ứng nền sáng/tối */}
+          <div
+            className={`p-4 rounded-xl border space-y-3 ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between text-[11px] font-mono-num">
+              <span className={mutedText}>Số trận / khung giờ</span>
+              <span className="text-orange-500 font-semibold">
+                Ngưỡng tải {tournament.courtsCount} sân ({courtCapacityThreshold} trận)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-6 sm:grid-cols-9 lg:grid-cols-12 gap-2 items-end h-36 pt-4 border-b border-dashed border-slate-400/30">
+              {timeBuckets.map((b) => {
+                const maxVal = Math.max(courtCapacityThreshold, peakBucket.count, 1);
+                const heightPercent = Math.min(100, Math.round((b.count / maxVal) * 100));
+                return (
+                  <div key={b.label} className="flex flex-col items-center justify-end h-full gap-1">
+                    <span className="font-mono-num text-[10px] font-bold">{b.count}</span>
+                    <div className="w-full max-w-[28px] rounded-t-md bg-orange-500/80 transition-all" style={{ height: `${Math.max(8, heightPercent)}%` }} />
+                    <span className={`font-mono-num text-[10px] ${mutedText}`}>{b.label}</span>
                   </div>
-                ))
-              )}
+                );
+              })}
             </div>
           </div>
         </div>
-
-        <div className="print-break-inside-avoid">
-          <h3 className="font-display text-base font-bold text-white uppercase mb-3 flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-orange-400" />
-            BIÊN BẢN TỔNG HỢP KẾT QUẢ CÁC TRẬN ĐẤU
-          </h3>
-          <div className="overflow-x-auto border border-slate-800 rounded-xl bg-slate-900">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-950 font-semibold uppercase text-slate-400">
-                  <th className="py-2.5 pl-4 pr-2">Trận</th>
-                  <th className="py-2.5 px-2">Nội Dung / Vòng</th>
-                  <th className="py-2.5 px-2">Sân & Giờ</th>
-                  <th className="py-2.5 px-2">Cặp Đấu A</th>
-                  <th className="py-2.5 px-2 text-center">Kết Quả</th>
-                  <th className="py-2.5 px-2">Cặp Đấu B</th>
-                  <th className="py-2.5 pl-2 pr-4">Trọng Tài</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {filteredMatches.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-6 px-4 text-center text-xs text-slate-400">
-                      Chưa có trận đấu nào được tạo.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredMatches.map((m) => (
-                    <tr key={m.id}>
-                      <td className="py-2 pl-4 pr-2 font-mono-num font-bold text-slate-200">
-                        #{m.matchNumber}
-                      </td>
-                      <td className="py-2 px-2 text-slate-400">
-                        {m.division} · {m.groupName || MATCH_STAGE_LABELS[m.stage]}
-                      </td>
-                      <td className="py-2 px-2 font-mono-num text-slate-400">
-                        Sân {m.courtNumber} ({m.scheduledTime})
-                      </td>
-                      <td className={`py-2 px-2 ${m.winnerSide === 'A' ? 'font-bold text-white' : 'text-slate-300'}`}>
-                        {m.teamAName}
-                      </td>
-                      <td className="py-2 px-2 text-center font-mono-num font-bold text-white">
-                        {m.scoreA} - {m.scoreB}
-                      </td>
-                      <td className={`py-2 px-2 ${m.winnerSide === 'B' ? 'font-bold text-white' : 'text-slate-300'}`}>
-                        {m.teamBName}
-                      </td>
-                      <td className="py-2 pl-2 pr-4 text-slate-400">
-                        {m.refereeName || 'BTC 1986'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="print-break-inside-avoid">
-          <h3 className="font-display text-base font-bold text-white uppercase mb-3">
-            BẢNG ĐỐI SOÁT THU PHÍ THAM GIA GIẢI (VIETQR)
-          </h3>
-          <div className="overflow-x-auto border border-slate-800 rounded-xl bg-slate-900">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-950 font-semibold uppercase text-slate-400">
-                  <th className="py-2.5 pl-4 pr-2">Mã QR</th>
-                  <th className="py-2.5 px-2">Đội / Cặp VĐV</th>
-                  <th className="py-2.5 px-2">Câu Lạc Bộ</th>
-                  <th className="py-2.5 px-2">Nội Dung</th>
-                  <th className="py-2.5 px-2 text-right">Số Tiền</th>
-                  <th className="py-2.5 px-2">Trạng Thái</th>
-                  <th className="py-2.5 pl-2 pr-4">Mã Giao Dịch</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {filteredRegistrations.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-6 px-4 text-center text-xs text-slate-400">
-                      Chưa có đội hoặc VĐV nào đăng ký.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredRegistrations.map((r) => (
-                    <tr key={r.id}>
-                      <td className="py-2 pl-4 pr-2 font-mono-num font-bold text-slate-200">
-                        {r.paymentCode}
-                      </td>
-                      <td className="py-2 px-2 font-semibold text-white">{r.teamName}</td>
-                      <td className="py-2 px-2 text-slate-400">{r.club}</td>
-                      <td className="py-2 px-2 text-slate-400">{r.division}</td>
-                      <td className="py-2 px-2 text-right font-mono-num font-semibold text-white">
-                        {formatVND(r.feeAmount)}
-                      </td>
-                      <td className="py-2 px-2 text-slate-300">
-                        {PAYMENT_STATUS_LABELS[r.paymentStatus]}
-                      </td>
-                      <td className="py-2 pl-2 pr-4 font-mono-num text-slate-500">
-                        {r.transferRef || '-'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 };
