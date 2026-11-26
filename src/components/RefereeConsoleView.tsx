@@ -27,7 +27,7 @@ import {
   type TeamLineupSlot,
   type Tournament,
 } from '../types/tournament';
-import { formatScoreCallout, isTeamDivision } from '../utils/pickleballEngine';
+import { formatScoreCallout } from '../utils/pickleballEngine';
 
 type ThemeMode = 'light' | 'dark';
 type GenderType = 'male' | 'female' | 'unknown';
@@ -298,7 +298,7 @@ const Player3DToken: React.FC<Player3DTokenProps> = ({
       </svg>
 
       <span
-        className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-bold truncate max-w-[74px] sm:max-w-[128px] landscape:max-w-[76px] ${pillStyle}`}
+        className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-bold truncate max-w-[76px] sm:max-w-[128px] landscape:max-w-[78px] ${pillStyle}`}
       >
         <span className="truncate">{shortName}</span>
         {isServing && (
@@ -1125,16 +1125,16 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const coinLoserName = coinLoserSide === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden overscroll-none pt-1.5 sm:pt-2 landscape:pt-1 pb-2 sm:pb-3 landscape:pb-2 px-0.5 sm:px-0">
-      <section className="grid grid-cols-1 lg:grid-cols-12 landscape:grid-cols-12 gap-3 sm:gap-4 landscape:gap-2.5 items-stretch">
+    <div className="w-full max-w-full overflow-x-hidden overscroll-none pt-2 sm:pt-3 landscape:pt-1.5 pb-4 sm:pb-6 landscape:pb-2 px-0.5 sm:px-0">
+      <section className="grid grid-cols-1 lg:grid-cols-12 landscape:grid-cols-12 gap-3 sm:gap-4 landscape:gap-2 items-start">
         {/* CỘT TRÁI: CHỌN SÂN + NỘI DUNG + 4 NÚT + SÂN 3D */}
-        <div className="lg:col-span-6 landscape:col-span-6 min-w-0 flex flex-col gap-3 sm:gap-3.5 landscape:gap-2">
+        <div className="lg:col-span-6 landscape:col-span-6 min-w-0 space-y-3 sm:space-y-3.5 landscape:space-y-1.5">
           <div
-            className={`border rounded-2xl p-3 sm:p-4 landscape:p-2.5 space-y-2.5 sm:space-y-3 landscape:space-y-2 ${surfaceCard}`}
+            className={`border rounded-2xl p-3 sm:p-4 landscape:p-2 space-y-2.5 sm:space-y-3 landscape:space-y-1.5 ${surfaceCard}`}
           >
             {/* Chọn sân */}
             <div className="flex items-center justify-between gap-2 min-w-0">
-              <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-0.5">
+              <div className="flex items-center gap-1.5 overflow-x-auto max-w-full">
                 {courtNumbers.map((cNum) => {
                   const isSelected = cNum === activeMatch.courtNumber;
                   const courtLive = matches.some(
@@ -1151,7 +1151,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                           matches.find((m) => m.courtNumber === cNum);
                         if (firstOnCourt) onSelectMatch(firstOnCourt.id);
                       }}
-                      className={`min-h-[30px] sm:min-h-[34px] landscape:min-h-[26px] px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                      className={`min-h-[30px] sm:min-h-[34px] landscape:min-h-[24px] px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                         isSelected
                           ? 'bg-orange-600 text-white'
                           : isDark
@@ -1197,7 +1197,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowSubmatchModal(true)}
-                className={`flex-1 min-w-0 min-h-[36px] sm:min-h-[40px] landscape:min-h-[30px] px-3 py-1.5 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors ${
+                className={`flex-1 min-w-0 min-h-[36px] sm:min-h-[40px] landscape:min-h-[28px] px-3 py-1.5 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors ${
                   isDark
                     ? 'bg-slate-950/80 hover:bg-slate-800 border-slate-700 text-slate-100'
                     : 'bg-slate-50 hover:bg-orange-50/60 border-slate-200 text-slate-900'
@@ -1226,7 +1226,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     },
                   )
                 }
-                className="min-h-[36px] sm:min-h-[40px] landscape:min-h-[30px] px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shrink-0 transition-colors"
+                className="min-h-[36px] sm:min-h-[40px] landscape:min-h-[28px] px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shrink-0 transition-colors"
               >
                 <UserCheck className="w-4 h-4 shrink-0" />
                 <span>Chọn VĐV</span>
@@ -1312,7 +1312,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
           {/* SÂN THI ĐẤU 3D */}
           <div
-            className={`border rounded-2xl p-3 sm:p-4 landscape:p-2 flex-1 flex flex-col justify-between gap-2 ${surfaceCard}`}
+            className={`border rounded-2xl p-3 sm:p-4 landscape:p-2 space-y-2.5 landscape:space-y-1 ${surfaceCard}`}
           >
             <div className="flex items-center justify-between gap-2 text-[10px] sm:text-xs min-w-0">
               <div className="flex items-center gap-1.5 min-w-0">
@@ -1339,12 +1339,12 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
 
             <div
-              className="rounded-xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-2 sm:p-3 landscape:p-1.5 border border-slate-800 overflow-hidden my-auto"
+              className="rounded-xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-2 sm:p-3 landscape:p-1 border border-slate-800 overflow-hidden"
               style={{ perspective: '760px' }}
             >
               <div
                 style={{ transform: 'rotateX(15deg) scale(0.99)', transformOrigin: 'center center' }}
-                className="relative w-full max-h-[24vh] sm:max-h-[250px] landscape:max-h-[28vh] aspect-[20/9] mx-auto rounded-xl bg-gradient-to-b from-[#22c55e] via-[#16a34a] to-[#15803d] border-[2px] sm:border-[3px] border-white shadow-[0_8px_0_#052e16,0_14px_24px_rgba(0,0,0,0.75)] overflow-hidden select-none"
+                className="relative w-full h-[185px] sm:h-[235px] landscape:h-[135px] mx-auto rounded-xl bg-gradient-to-b from-[#22c55e] via-[#16a34a] to-[#15803d] border-[2px] sm:border-[3px] border-white shadow-[0_8px_0_#052e16,0_14px_24px_rgba(0,0,0,0.75)] overflow-hidden select-none"
               >
                 <div
                   className="pointer-events-none absolute inset-0"
@@ -1473,7 +1473,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 </svg>
 
                 <div className="relative z-20 w-full h-full grid grid-cols-12">
-                  <div className="col-span-4 grid grid-rows-2 py-1 px-1.5 sm:py-2 sm:px-2">
+                  <div className="col-span-4 grid grid-rows-2 py-1.5 px-1.5 sm:py-2 sm:px-2">
                     <div
                       className={`flex items-center justify-start rounded-lg px-0.5 ${
                         leftTopServing ? 'bg-amber-400/20' : leftTopReceiver ? 'bg-cyan-300/15' : ''
@@ -1512,7 +1512,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     </span>
                   </div>
 
-                  <div className="col-span-4 grid grid-rows-2 py-1 px-1.5 sm:py-2 sm:px-2">
+                  <div className="col-span-4 grid grid-rows-2 py-1.5 px-1.5 sm:py-2 sm:px-2">
                     <div
                       className={`flex items-center justify-end rounded-lg px-0.5 ${
                         rightTopServing
@@ -1562,7 +1562,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
         {/* CỘT PHẢI: BẢNG ĐIỂM LIVE + ĐỔI GIAO / ĐỔI SÂN */}
         <div
-          className={`lg:col-span-6 landscape:col-span-6 min-w-0 border rounded-2xl p-3 sm:p-4 landscape:p-2.5 flex flex-col justify-between gap-3 sm:gap-3.5 landscape:gap-2 ${surfaceCard}`}
+          className={`lg:col-span-6 landscape:col-span-6 min-w-0 border rounded-2xl p-3 sm:p-4 landscape:p-2 space-y-3 sm:space-y-3.5 landscape:space-y-1.5 ${surfaceCard}`}
         >
           <div className="flex items-center justify-between gap-2 text-xs min-w-0">
             <div className="flex items-center gap-2 font-mono-num font-bold min-w-0">
@@ -1579,10 +1579,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 landscape:gap-2 my-auto">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 landscape:gap-2">
             {/* BÊN TRÁI */}
             <div
-              className={`rounded-xl border p-2.5 sm:p-3.5 landscape:p-2 space-y-2 sm:space-y-2.5 landscape:space-y-1.5 min-w-0 transition-colors ${
+              className={`rounded-xl border p-3 sm:p-4 landscape:p-2 space-y-2.5 sm:space-y-3 landscape:space-y-1 min-w-0 transition-colors ${
                 leftIsServing
                   ? isDark
                     ? 'border-sky-500 bg-sky-950/20'
@@ -1624,7 +1624,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 {leftTeamName}
               </div>
 
-              <div className="flex items-center justify-between gap-1.5 pt-0.5">
+              <div className="flex items-center justify-between gap-1.5 pt-1">
                 <span className="font-mono-num text-2xl sm:text-4xl landscape:text-2xl font-extrabold leading-none">
                   {leftSideIsA ? activeMatch.scoreA : activeMatch.scoreB}
                 </span>
@@ -1662,7 +1662,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
             {/* BÊN PHẢI */}
             <div
-              className={`rounded-xl border p-2.5 sm:p-3.5 landscape:p-2 space-y-2 sm:space-y-2.5 landscape:space-y-1.5 min-w-0 transition-colors ${
+              className={`rounded-xl border p-3 sm:p-4 landscape:p-2 space-y-2.5 sm:space-y-3 landscape:space-y-1 min-w-0 transition-colors ${
                 rightIsServing
                   ? isDark
                     ? 'border-sky-500 bg-sky-950/20'
@@ -1704,7 +1704,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 {rightTeamName}
               </div>
 
-              <div className="flex items-center justify-between gap-1.5 pt-0.5">
+              <div className="flex items-center justify-between gap-1.5 pt-1">
                 <span className="font-mono-num text-2xl sm:text-4xl landscape:text-2xl font-extrabold leading-none">
                   {leftSideIsA ? activeMatch.scoreB : activeMatch.scoreA}
                 </span>
@@ -1745,7 +1745,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             <button
               type="button"
               onClick={handleToggleServe}
-              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[30px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
+              className={`min-h-[38px] sm:min-h-[42px] landscape:min-h-[28px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
                 isDark
                   ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
@@ -1758,7 +1758,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             <button
               type="button"
               onClick={handleSwitchCourtEnds}
-              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[30px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
+              className={`min-h-[38px] sm:min-h-[42px] landscape:min-h-[28px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
                 isDark
                   ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
