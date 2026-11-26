@@ -164,16 +164,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const [tossCourtSideA, setTossCourtSideA] = useState<'left' | 'right'>('left');
 
   useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
-    if (window.innerWidth < 1024) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, []);
-
-  useEffect(() => {
     if (!timeoutModal || !timeoutModal.running) return;
     if (timeoutModal.remainingSec <= 0) {
       setTimeoutModal((prev) => (prev ? { ...prev, running: false } : null));
@@ -191,7 +181,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     return () => window.clearInterval(timer);
   }, [timeoutModal]);
 
-  // Trọng tài sân nào chỉ hiển thị đúng trận của sân đó
+  // Trọng tài sân nào chỉ hiển thị đúng trận đấu của sân đó
   const courtOnlyMatches = useMemo(() => {
     if (!assignedCourt) return matches;
     return matches.filter((m) => m.courtNumber === assignedCourt);
@@ -230,18 +220,21 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
 
+  const popupBackdrop = 'fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] p-4 flex items-center justify-center';
+  const popupCard = `border rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-4 shadow-2xl ${cardSurface}`;
+
   if (!activeMatch) {
     return (
-      <section className={`border rounded-2xl p-3 text-center space-y-1 ${cardSurface}`}>
-        <div className="font-display text-sm font-bold">
+      <section className={`border rounded-2xl p-4 text-center space-y-1.5 ${cardSurface}`}>
+        <div className="font-display text-sm sm:text-base font-bold">
           {assignedCourt
             ? `Sân ${assignedCourt} hiện chưa có trận đấu nào.`
             : 'Chưa có trận đấu nào trong giải này.'}
         </div>
         <p className={`text-xs ${mutedText}`}>
           {assignedCourt
-            ? `Bạn đang đăng nhập trọng tài Sân ${assignedCourt}, chỉ hiển thị trận thuộc Sân ${assignedCourt}.`
-            : 'Vui lòng vào mục Lịch & Nhánh đấu để kiểm tra lịch thi đấu.'}
+            ? `Trọng tài Sân ${assignedCourt} chỉ hiển thị các trận thuộc Sân ${assignedCourt}.`
+            : 'Vui lòng kiểm tra lịch thi đấu tại mục Lịch & Nhánh đấu.'}
         </p>
       </section>
     );
@@ -335,7 +328,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       return;
     }
 
-    // delta === -1: sửa điểm khi bấm nhầm cho bên đang giao
     const nextScoreA = side === 'A' ? Math.max(0, activeMatch.scoreA - 1) : activeMatch.scoreA;
     const nextScoreB = side === 'B' ? Math.max(0, activeMatch.scoreB - 1) : activeMatch.scoreB;
 
@@ -467,9 +459,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  /**
-   * Nhân vật VĐV 3D mini trực tiếp trên mặt sân 3D
-   */
   const render3DPlayerNode = (
     side: 'left' | 'right',
     row: 0 | 1,
@@ -514,16 +503,13 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             />
           )}
           <svg viewBox="0 0 32 32" className="w-5 h-5 sm:w-6 sm:h-6 drop-shadow-md">
-            {/* Bóng đổ 3D */}
             <ellipse cx="16" cy="28.5" rx="8" ry="2.5" fill="rgba(0,0,0,0.42)" />
-            {/* Thân 3D */}
             <path
               d="M9 26.5 C9.5 20.5, 12.5 18, 16 18 C19.5 18, 22.5 20.5, 23 26.5 Z"
               fill={jerseyFill}
               stroke="#ffffff"
               strokeWidth="1.5"
             />
-            {/* Đầu 3D */}
             <circle
               cx="16"
               cy="11.5"
@@ -532,7 +518,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               stroke="#ffffff"
               strokeWidth="1.5"
             />
-            {/* Vệt sáng 3D trên đầu */}
             <circle cx="14.2" cy="9.6" r="1.6" fill="#ffffff" opacity="0.8" />
           </svg>
         </span>
@@ -548,20 +533,20 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   };
 
   return (
-    <div className="h-[calc(100dvh-146px)] landscape:h-[calc(100dvh-82px)] lg:h-auto overflow-hidden flex flex-col landscape:grid landscape:grid-cols-12 lg:flex lg:flex-col justify-start gap-1 sm:gap-2">
+    <div className="flex flex-col landscape:grid landscape:grid-cols-12 lg:flex lg:flex-col justify-start gap-1.5 sm:gap-2.5">
       {/* CỘT TRÁI (điện thoại ngang) / KHỐI TRÊN (điện thoại dọc) */}
-      <div className="landscape:col-span-6 flex flex-col justify-start gap-1 sm:gap-2 min-w-0 shrink-0">
+      <div className="landscape:col-span-6 flex flex-col justify-start gap-1.5 sm:gap-2.5 min-w-0">
         {/* 1. Thanh chọn trận của đúng sân & điều phối */}
-        <section className={`border rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 space-y-1 shrink-0 ${cardSurface}`}>
+        <section className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 space-y-1.5 ${cardSurface}`}>
           <div className="flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-orange-500 min-w-0">
-              <Gavel className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <Gavel className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">
                 SÂN {activeMatch.courtNumber} · {tournament.name}
               </span>
             </div>
             <span
-              className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold border truncate max-w-[155px] ${
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border truncate max-w-[160px] ${
                 isDark
                   ? 'bg-slate-950 border-slate-800 text-slate-300'
                   : 'bg-slate-100 border-slate-200 text-slate-700'
@@ -574,7 +559,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           <select
             value={activeMatch.id}
             onChange={(e) => onSelectMatch(e.target.value)}
-            className={`w-full min-h-[26px] sm:min-h-[32px] px-2 py-0.5 text-[10px] sm:text-xs font-bold border rounded-lg sm:rounded-xl ${inputSurface}`}
+            className={`w-full min-h-[32px] sm:min-h-[36px] px-2.5 py-1 text-[11px] sm:text-xs font-bold border rounded-xl ${inputSurface}`}
           >
             {courtOnlyMatches.map((m) => (
               <option key={m.id} value={m.id}>
@@ -584,58 +569,58 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             ))}
           </select>
 
-          <div className="grid grid-cols-4 gap-1 sm:gap-1.5">
+          <div className="grid grid-cols-4 gap-1.5">
             <button
               type="button"
               onClick={handleOpenCoinToss}
-              className="min-h-[26px] sm:min-h-[32px] px-1 py-0.5 rounded-lg sm:rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+              className="min-h-[32px] sm:min-h-[36px] px-1.5 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
             >
-              <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <Coins className="w-3.5 h-3.5 shrink-0" />
               <span>Bốc thăm</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleOpenSubstitute('A', 1)}
-              className={`min-h-[26px] sm:min-h-[32px] px-1 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
+              className={`min-h-[32px] sm:min-h-[36px] px-1.5 py-1 rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-100'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
               }`}
             >
-              <UserCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-500 shrink-0" />
+              <UserCheck className="w-3.5 h-3.5 text-orange-500 shrink-0" />
               <span>Thay VĐV</span>
             </button>
 
             <button
               type="button"
               onClick={() => onAnnounceCourtCall(activeMatch)}
-              className="min-h-[26px] sm:min-h-[32px] px-1 py-0.5 rounded-lg sm:rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+              className="min-h-[32px] sm:min-h-[36px] px-1.5 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
             >
-              <Megaphone className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <Megaphone className="w-3.5 h-3.5 shrink-0" />
               <span>Gọi sân</span>
             </button>
 
             <button
               type="button"
               onClick={() => onAnnounceCourtAvailable(activeMatch)}
-              className={`min-h-[26px] sm:min-h-[32px] px-1 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
+              className={`min-h-[32px] sm:min-h-[36px] px-1.5 py-1 rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-emerald-400'
                   : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
               }`}
             >
-              <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
               <span>Sân trống</span>
             </button>
           </div>
         </section>
 
         {/* 2. Sân Pickleball 3D & VĐV 3D */}
-        <section className={`border rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 space-y-1 shrink-0 ${cardSurface}`}>
+        <section className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 space-y-1.5 ${cardSurface}`}>
           <div className="flex items-center justify-between gap-1">
             <div className="flex items-center gap-1 min-w-0">
-              <h2 className="font-display text-[10px] sm:text-sm font-extrabold uppercase tracking-tight truncate">
+              <h2 className="font-display text-[11px] sm:text-sm font-extrabold uppercase tracking-tight truncate">
                 SÂN 3D #{activeMatch.courtNumber} · {serverScore % 2 === 0 ? 'CHẴN' : 'LẺ'} · N
                 {currentServerNum}
               </h2>
@@ -660,7 +645,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           </div>
 
           <div
-            className={`rounded-lg sm:rounded-xl border p-1 sm:p-1.5 ${
+            className={`rounded-xl border p-1.5 ${
               isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
             }`}
           >
@@ -670,9 +655,8 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   transform: 'rotateX(14deg)',
                   transformStyle: 'preserve-3d',
                 }}
-                className="relative w-full max-h-[16svh] landscape:max-h-[34svh] sm:max-h-[26svh] aspect-[22/10] mx-auto rounded-lg sm:rounded-xl border-2 border-white shadow-[0_10px_22px_rgba(6,78,59,0.45)] bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-800 overflow-hidden select-none"
+                className="relative w-full max-h-[17svh] landscape:max-h-[34svh] sm:max-h-[26svh] aspect-[22/10] mx-auto rounded-xl border-2 border-white shadow-[0_10px_22px_rgba(6,78,59,0.45)] bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-800 overflow-hidden select-none"
               >
-                {/* Viền 3D độ dày mép sân */}
                 <div className="absolute inset-x-0 bottom-0 h-1.5 bg-emerald-950/60 pointer-events-none" />
 
                 <div className="w-full h-full flex relative z-10">
@@ -706,7 +690,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Cột & Lưới 3D ở giữa sân */}
                   <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1.5 bg-gradient-to-r from-white/75 via-white to-white/75 shadow-[0_0_8px_rgba(0,0,0,0.45)] pointer-events-none flex flex-col items-center justify-between py-0.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-slate-900 border border-white -mt-0.5" />
                     <span className="px-1 py-0.5 rounded bg-slate-950/85 text-[7px] sm:text-[9px] font-extrabold text-white uppercase leading-none">
@@ -716,7 +699,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   </div>
                 </div>
 
-                {/* Mũi tên quỹ đạo phát -> đỡ ngắn gọn */}
                 <svg
                   viewBox="0 0 440 200"
                   className="absolute inset-0 w-full h-full pointer-events-none z-20"
@@ -751,9 +733,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         </section>
       </div>
 
-      {/* CỘT PHẢI (điện thoại ngang) / KHỐI DƯỚI (điện thoại dọc) */}
-      <div className="landscape:col-span-6 flex flex-col justify-start min-w-0 shrink-0">
-        <section className={`border rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 space-y-1 shrink-0 ${cardSurface}`}>
+      {/* CỘT PHẢI (điện thoại ngang) / KHỐI DƯỚI (điện thoại dọc): Bảng điểm to dễ bấm */}
+      <div className="landscape:col-span-6 flex flex-col justify-start min-w-0">
+        <section className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 space-y-2 ${cardSurface}`}>
           <div className="flex items-center justify-between gap-1 text-[10px] sm:text-xs font-mono-num">
             <div className="flex items-center gap-1 min-w-0">
               <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 font-extrabold shrink-0">
@@ -772,24 +754,24 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-            {/* Đội A */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Đội A — nút ghi điểm to dễ bấm */}
             <div
-              className={`border rounded-lg sm:rounded-xl p-1.5 sm:p-2 space-y-1 min-w-0 ${
-                servingTeam === 'A' ? 'ring-1 ring-orange-500/60' : 'opacity-90'
+              className={`border rounded-xl p-2 sm:p-2.5 space-y-2 min-w-0 ${
+                servingTeam === 'A' ? 'ring-2 ring-orange-500/70' : 'opacity-85'
               } ${subSurface}`}
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-orange-500 truncate">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-500 truncate">
                   ĐỘI A · {courtSideA === 'left' ? 'TRÁI' : 'PHẢI'}
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
                   {servingTeam === 'A' ? (
-                    <span className="px-1 py-0.5 rounded bg-orange-600 text-white text-[9px] font-bold leading-none">
+                    <span className="px-1.5 py-0.5 rounded bg-orange-600 text-white text-[9px] font-bold leading-none">
                       PHÁT N{currentServerNum}
                     </span>
                   ) : (
-                    <span className="px-1 py-0.5 rounded bg-slate-500/20 text-slate-500 text-[9px] font-bold leading-none inline-flex items-center gap-0.5">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-500 text-[9px] font-bold leading-none inline-flex items-center gap-0.5">
                       <Lock className="w-2.5 h-2.5" />
                       <span>ĐỠ</span>
                     </span>
@@ -797,69 +779,69 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleStartTimeout('A')}
-                    className={`min-h-[20px] sm:min-h-[22px] px-1.5 py-0.5 rounded border text-[9px] sm:text-[10px] font-bold inline-flex items-center gap-0.5 ${
+                    className={`min-h-[24px] px-1.5 py-0.5 rounded border text-[10px] font-bold inline-flex items-center gap-0.5 ${
                       isDark
                         ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
                         : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
                     }`}
                   >
-                    <Timer className="w-2.5 h-2.5 shrink-0" />
+                    <Timer className="w-3 h-3 shrink-0" />
                     <span>TO ({activeMatch.timeoutsA || 0})</span>
                   </button>
                 </div>
               </div>
 
               <div
-                className="font-display text-[10px] sm:text-xs font-extrabold leading-tight truncate"
+                className="font-display text-xs sm:text-sm font-extrabold leading-tight truncate"
                 title={activeMatch.teamAName}
               >
                 {activeMatch.teamAName}
               </div>
 
-              <div className="flex items-center justify-between gap-1">
-                <div className="font-mono-num text-xl sm:text-2xl font-extrabold leading-none">
+              <div className="flex items-center justify-between gap-2 pt-0.5">
+                <div className="font-mono-num text-2xl sm:text-3xl font-black leading-none">
                   {activeMatch.scoreA}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     disabled={!canSubA}
                     onClick={() => handleAdjustScore('A', -1)}
-                    className="min-h-[28px] sm:min-h-[34px] w-7 sm:w-8 rounded-lg sm:rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
+                    className="min-h-[42px] sm:min-h-[46px] w-10 sm:w-11 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
                     title="Trừ 1 điểm Đội A"
                   >
-                    <Minus className="w-3.5 h-3.5" />
+                    <Minus className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
                     disabled={!canAddA}
                     onClick={() => handleAdjustScore('A', 1)}
-                    className="min-h-[28px] sm:min-h-[34px] px-2 sm:px-2.5 py-1 rounded-lg sm:rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed text-white text-[10px] sm:text-xs font-extrabold inline-flex items-center gap-0.5 whitespace-nowrap"
+                    className="min-h-[42px] sm:min-h-[46px] px-3 sm:px-3.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-black inline-flex items-center gap-1 whitespace-nowrap shadow-sm"
                   >
-                    <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                    <Plus className="w-4 h-4 shrink-0" />
                     <span>+1 A</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Đội B */}
+            {/* Đội B — nút ghi điểm to dễ bấm */}
             <div
-              className={`border rounded-lg sm:rounded-xl p-1.5 sm:p-2 space-y-1 min-w-0 ${
-                servingTeam === 'B' ? 'ring-1 ring-sky-500/60' : 'opacity-90'
+              className={`border rounded-xl p-2 sm:p-2.5 space-y-2 min-w-0 ${
+                servingTeam === 'B' ? 'ring-2 ring-sky-500/70' : 'opacity-85'
               } ${subSurface}`}
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-sky-500 truncate">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-500 truncate">
                   ĐỘI B · {courtSideA === 'left' ? 'PHẢI' : 'TRÁI'}
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
                   {servingTeam === 'B' ? (
-                    <span className="px-1 py-0.5 rounded bg-sky-600 text-white text-[9px] font-bold leading-none">
+                    <span className="px-1.5 py-0.5 rounded bg-sky-600 text-white text-[9px] font-bold leading-none">
                       PHÁT N{currentServerNum}
                     </span>
                   ) : (
-                    <span className="px-1 py-0.5 rounded bg-slate-500/20 text-slate-500 text-[9px] font-bold leading-none inline-flex items-center gap-0.5">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-500 text-[9px] font-bold leading-none inline-flex items-center gap-0.5">
                       <Lock className="w-2.5 h-2.5" />
                       <span>ĐỠ</span>
                     </span>
@@ -867,46 +849,46 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleStartTimeout('B')}
-                    className={`min-h-[20px] sm:min-h-[22px] px-1.5 py-0.5 rounded border text-[9px] sm:text-[10px] font-bold inline-flex items-center gap-0.5 ${
+                    className={`min-h-[24px] px-1.5 py-0.5 rounded border text-[10px] font-bold inline-flex items-center gap-0.5 ${
                       isDark
                         ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
                         : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
                     }`}
                   >
-                    <Timer className="w-2.5 h-2.5 shrink-0" />
+                    <Timer className="w-3 h-3 shrink-0" />
                     <span>TO ({activeMatch.timeoutsB || 0})</span>
                   </button>
                 </div>
               </div>
 
               <div
-                className="font-display text-[10px] sm:text-xs font-extrabold leading-tight truncate"
+                className="font-display text-xs sm:text-sm font-extrabold leading-tight truncate"
                 title={activeMatch.teamBName}
               >
                 {activeMatch.teamBName}
               </div>
 
-              <div className="flex items-center justify-between gap-1">
-                <div className="font-mono-num text-xl sm:text-2xl font-extrabold leading-none">
+              <div className="flex items-center justify-between gap-2 pt-0.5">
+                <div className="font-mono-num text-2xl sm:text-3xl font-black leading-none">
                   {activeMatch.scoreB}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     disabled={!canSubB}
                     onClick={() => handleAdjustScore('B', -1)}
-                    className="min-h-[28px] sm:min-h-[34px] w-7 sm:w-8 rounded-lg sm:rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
+                    className="min-h-[42px] sm:min-h-[46px] w-10 sm:w-11 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
                     title="Trừ 1 điểm Đội B"
                   >
-                    <Minus className="w-3.5 h-3.5" />
+                    <Minus className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
                     disabled={!canAddB}
                     onClick={() => handleAdjustScore('B', 1)}
-                    className="min-h-[28px] sm:min-h-[34px] px-2 sm:px-2.5 py-1 rounded-lg sm:rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed text-white text-[10px] sm:text-xs font-extrabold inline-flex items-center gap-0.5 whitespace-nowrap"
+                    className="min-h-[42px] sm:min-h-[46px] px-3 sm:px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-black inline-flex items-center gap-1 whitespace-nowrap shadow-sm"
                   >
-                    <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                    <Plus className="w-4 h-4 shrink-0" />
                     <span>+1 B</span>
                   </button>
                 </div>
@@ -914,25 +896,25 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
           </div>
 
-          {/* Hàng 1: Đổi giao / Đổi sân (đã bỏ nút Hoàn tác) */}
-          <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
+          {/* Hàng 1: Đổi giao / Đổi sân */}
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               type="button"
               onClick={handleFaultRotateServe}
-              className={`min-h-[26px] sm:min-h-[32px] px-2 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
+              className={`min-h-[34px] sm:min-h-[36px] px-2 py-1 rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
               }`}
             >
-              <Clock className="w-3 h-3 text-orange-500 shrink-0" />
+              <Clock className="w-3.5 h-3.5 text-orange-500 shrink-0" />
               <span>Đổi giao</span>
             </button>
 
             <button
               type="button"
               onClick={handleSwitchCourtSides}
-              className={`min-h-[26px] sm:min-h-[32px] px-2 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center whitespace-nowrap ${
+              className={`min-h-[34px] sm:min-h-[36px] px-2 py-1 rounded-xl border text-xs font-bold inline-flex items-center justify-center whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
@@ -943,22 +925,22 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           </div>
 
           {/* Hàng 2: Đội A thắng / Đội B thắng / Hòa 2-2 */}
-          <div className={`grid ${isTeam ? 'grid-cols-3' : 'grid-cols-2'} gap-1 sm:gap-1.5`}>
+          <div className={`grid ${isTeam ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5`}>
             <button
               type="button"
               onClick={() => onCompleteMatch(activeMatch, 'A')}
-              className="min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+              className="min-h-[34px] sm:min-h-[36px] px-2 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
             >
-              <Flag className="w-3 h-3 shrink-0" />
+              <Flag className="w-3.5 h-3.5 shrink-0" />
               <span>Đội A thắng</span>
             </button>
 
             <button
               type="button"
               onClick={() => onCompleteMatch(activeMatch, 'B')}
-              className="min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+              className="min-h-[34px] sm:min-h-[36px] px-2 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
             >
-              <Flag className="w-3 h-3 shrink-0" />
+              <Flag className="w-3.5 h-3.5 shrink-0" />
               <span>Đội B thắng</span>
             </button>
 
@@ -966,7 +948,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <button
                 type="button"
                 onClick={() => onCompleteMatch(activeMatch, '')}
-                className={`min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center whitespace-nowrap ${
+                className={`min-h-[34px] sm:min-h-[36px] px-2 py-1 rounded-xl border text-xs font-bold inline-flex items-center justify-center whitespace-nowrap ${
                   isDark
                     ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                     : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
@@ -979,22 +961,16 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         </section>
       </div>
 
-      {/* POPUP TIME OUT */}
+      {/* POPUP TIME OUT — đồng bộ kiểu popup toàn trang */}
       {timeoutModal && (
-        <div
-          onClick={() => setTimeoutModal(null)}
-          className="fixed inset-0 z-50 bg-slate-950/75 p-4 flex items-center justify-center"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className={`border rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl ${cardSurface}`}
-          >
-            <div className="flex items-start justify-between gap-2">
+        <div onClick={() => setTimeoutModal(null)} className={popupBackdrop}>
+          <div onClick={(e) => e.stopPropagation()} className={popupCard}>
+            <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
               <div>
                 <div className="text-[11px] font-extrabold uppercase tracking-wider text-amber-500">
                   HỘI Ý KỸ THUẬT · SÂN {activeMatch.courtNumber}
                 </div>
-                <h3 className="font-display text-lg font-bold mt-0.5">
+                <h3 className="font-display text-base sm:text-lg font-bold mt-0.5">
                   Time out —{' '}
                   {timeoutModal.team === 'A' ? activeMatch.teamAName : activeMatch.teamBName}
                 </h3>
@@ -1002,19 +978,19 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <button
                 type="button"
                 onClick={() => setTimeoutModal(null)}
-                className={`p-1.5 rounded-lg ${mutedText}`}
+                className={`p-1.5 rounded-xl border ${subSurface} ${mutedText}`}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className={`border rounded-2xl p-5 text-center space-y-2 ${subSurface}`}>
+            <div className={`border rounded-2xl p-4 text-center space-y-1.5 ${subSurface}`}>
               <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-500">
                 <Timer className="w-4 h-4" />
                 <span>Thời gian hội ý còn lại</span>
               </div>
               <div
-                className={`font-mono-num text-5xl sm:text-6xl font-extrabold tracking-tight ${
+                className={`font-mono-num text-5xl font-extrabold tracking-tight ${
                   timeoutModal.remainingSec <= 10 ? 'text-rose-500' : 'text-amber-500'
                 }`}
               >
@@ -1065,35 +1041,28 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 onClick={() => setTimeoutModal(null)}
                 className="min-h-[38px] px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-extrabold inline-flex items-center justify-center"
               >
-                Kết thúc
+                Đóng
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* POPUP THAY VĐV */}
+      {/* POPUP THAY VĐV — đồng bộ kiểu popup toàn trang */}
       {showSubstituteModal && (
-        <div
-          onClick={() => setShowSubstituteModal(false)}
-          className="fixed inset-0 z-50 bg-slate-950/75 p-4 flex items-center justify-center"
-        >
-          <form
-            onSubmit={handleConfirmSubstitute}
-            onClick={(e) => e.stopPropagation()}
-            className={`border rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl ${cardSurface}`}
-          >
-            <div className="flex items-start justify-between gap-2">
+        <div onClick={() => setShowSubstituteModal(false)} className={popupBackdrop}>
+          <form onSubmit={handleConfirmSubstitute} onClick={(e) => e.stopPropagation()} className={popupCard}>
+            <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
               <div>
                 <div className="text-[11px] font-extrabold uppercase tracking-wider text-orange-500">
                   ĐIỀU CHỈNH ĐỘI HÌNH SÂN {activeMatch.courtNumber}
                 </div>
-                <h3 className="font-display text-lg font-bold mt-0.5">Thay VĐV trên sân</h3>
+                <h3 className="font-display text-base sm:text-lg font-bold mt-0.5">Thay VĐV trên sân</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowSubstituteModal(false)}
-                className={`p-1.5 rounded-lg ${mutedText}`}
+                className={`p-1.5 rounded-xl border ${subSurface} ${mutedText}`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1197,7 +1166,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2 pt-1">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setShowSubstituteModal(false)}
@@ -1216,29 +1185,23 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         </div>
       )}
 
-      {/* POPUP BỐC THĂM */}
+      {/* POPUP BỐC THĂM — đồng bộ kiểu popup toàn trang */}
       {showCoinTossModal && (
-        <div
-          onClick={() => setShowCoinTossModal(false)}
-          className="fixed inset-0 z-50 bg-slate-950/75 p-4 flex items-center justify-center"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className={`border rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl ${cardSurface}`}
-          >
-            <div className="flex items-start justify-between gap-2">
+        <div onClick={() => setShowCoinTossModal(false)} className={popupBackdrop}>
+          <div onClick={(e) => e.stopPropagation()} className={popupCard}>
+            <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
               <div>
                 <div className="text-[11px] font-extrabold uppercase tracking-wider text-orange-500">
                   BỐC THĂM TRẬN #{activeMatch.matchNumber} · SÂN {activeMatch.courtNumber}
                 </div>
-                <h3 className="font-display text-lg font-bold mt-0.5">
+                <h3 className="font-display text-base sm:text-lg font-bold mt-0.5">
                   Tung đồng xu · Chọn bóng & Sân
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCoinTossModal(false)}
-                className={`p-1.5 rounded-lg ${mutedText}`}
+                className={`p-1.5 rounded-xl border ${subSurface} ${mutedText}`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1338,7 +1301,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-1">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setShowCoinTossModal(false)}
