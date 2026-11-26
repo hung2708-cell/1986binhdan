@@ -11,24 +11,23 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Compass,
   ExternalLink,
   Gavel,
   Home,
   ImagePlus,
   LogIn,
   MapPin,
+  Moon,
   Pencil,
   Plus,
   Radio,
   RotateCcw,
-  Route,
   ShieldCheck,
+  Sun,
   Trash2,
   Trophy,
   UserPlus,
   Users,
-  Utensils,
   X,
 } from 'lucide-react';
 import { AnalyticsReportView } from './components/AnalyticsReportView';
@@ -76,53 +75,19 @@ type ActiveTab =
   | 'members'
   | 'reports';
 
-type HomepageGuideTab = 'places' | 'cuisine' | 'guide';
+type ThemeMode = 'light' | 'dark';
 
-type LandmarkSceneKind =
-  | 'waterfall'
-  | 'cave'
-  | 'arch_mountain'
-  | 'stream'
-  | 'pass'
-  | 'stone_village'
-  | 'cloud_peak'
-  | 'lake';
-
-type CuisineSceneKind =
-  | 'banh_cuon'
-  | 'pho_chua'
-  | 'vit_quay'
-  | 'hat_de'
-  | 'banh_ap_chao'
-  | 'xoi_tram';
-
-interface LandmarkLink {
-  label: string;
-  url: string;
-}
-
-interface CaoBangLandmark {
+interface TournamentPost {
   id: string;
-  name: string;
-  area: string;
-  tag: string;
-  scene: LandmarkSceneKind;
+  tournamentId: string;
+  title: string;
+  badge: string;
   summary: string;
-  guideDetail?: string;
-  links: LandmarkLink[];
+  detail: string;
+  linkLabel?: string;
+  linkUrl?: string;
   images: string[];
-}
-
-interface CaoBangCuisineItem {
-  id: string;
-  name: string;
-  mealTime: string;
-  tag: string;
-  scene: CuisineSceneKind;
-  image: string;
-  description: string;
-  detailedGuide: string;
-  tip: string;
+  createdAt: string;
 }
 
 interface LightboxPreview {
@@ -130,576 +95,13 @@ interface LightboxPreview {
   subtitle: string;
   images: string[];
   imageIndex: number;
-  fallbackTitle: string;
-  fallbackTag: string;
-  fallbackAccent: string;
 }
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function createLandmarkArtwork(
-  title: string,
-  tag: string,
-  scene: LandmarkSceneKind = 'waterfall',
-  accentHex = '#0d9488',
-): string {
-  const t = escapeXml(title);
-  const g = escapeXml(tag);
-
-  let sceneLayers = '';
-  switch (scene) {
-    case 'waterfall':
-      sceneLayers = `
-        <path d="M0 240 L190 120 L380 230 L560 110 L800 220 L800 500 L0 500 Z" fill="#134e4a"/>
-        <path d="M0 290 L240 175 L520 275 L800 185 L800 500 L0 500 Z" fill="#115e59"/>
-        <path d="M430 165 Q475 265 445 390 L535 390 Q560 270 515 165 Z" fill="#e0f2fe" opacity="0.92"/>
-        <path d="M452 175 Q482 268 462 390 L482 390 Q502 270 476 175 Z" fill="#ffffff"/>
-        <ellipse cx="485" cy="395" rx="95" ry="20" fill="#bae6fd" opacity="0.85"/>
-        <path d="M0 390 Q400 372 800 395 L800 500 L0 500 Z" fill="#0f766e"/>
-      `;
-      break;
-    case 'cave':
-      sceneLayers = `
-        <rect width="800" height="500" fill="#090d16"/>
-        <path d="M0 0 L800 0 L800 140 Q620 90 400 120 Q180 90 0 140 Z" fill="#1e293b"/>
-        <polygon points="120,105 145,235 170,105" fill="#475569"/>
-        <polygon points="260,112 285,270 310,112" fill="#64748b"/>
-        <polygon points="510,112 538,260 565,112" fill="#64748b"/>
-        <polygon points="650,102 672,215 695,102" fill="#475569"/>
-        <polygon points="180,430 205,315 230,430" fill="#334155"/>
-        <polygon points="560,430 590,295 620,430" fill="#334155"/>
-        <circle cx="400" cy="240" r="110" fill="#38bdf8" opacity="0.14"/>
-        <path d="M0 415 Q400 395 800 418 L800 500 L0 500 Z" fill="#0f172a"/>
-      `;
-      break;
-    case 'arch_mountain':
-      sceneLayers = `
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0284c7"/>
-          <stop offset="60%" stop-color="#7dd3fc"/>
-          <stop offset="100%" stop-color="#dcfce7"/>
-        </linearGradient>
-        <rect width="800" height="500" fill="url(#sky)"/>
-        <path d="M120 355 Q400 70 680 355 Z" fill="#14532d"/>
-        <circle cx="400" cy="265" r="78" fill="#7dd3fc"/>
-        <path d="M0 345 Q220 310 400 345 T800 335 L800 500 L0 500 Z" fill="#16a34a"/>
-        <path d="M0 385 Q280 355 540 385 T800 375 L800 500 L0 500 Z" fill="#15803d"/>
-      `;
-      break;
-    case 'stream':
-      sceneLayers = `
-        <rect width="800" height="500" fill="#064e3b"/>
-        <path d="M0 150 L220 60 L460 155 L690 65 L800 130 L800 260 L0 260 Z" fill="#14532d"/>
-        <path d="M290 220 Q420 290 360 360 Q310 415 520 500 L190 500 Q170 400 250 320 Z" fill="#2dd4bf"/>
-        <path d="M315 235 Q400 292 350 355 Q305 408 460 500 L240 500 Q215 405 275 328 Z" fill="#5eead4" opacity="0.75"/>
-        <ellipse cx="140" cy="360" rx="65" ry="26" fill="#334155"/>
-        <ellipse cx="640" cy="340" rx="75" ry="28" fill="#334155"/>
-      `;
-      break;
-    case 'pass':
-      sceneLayers = `
-        <linearGradient id="pSky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0369a1"/>
-          <stop offset="100%" stop-color="#bae6fd"/>
-        </linearGradient>
-        <rect width="800" height="500" fill="url(#pSky)"/>
-        <path d="M0 230 L210 110 L420 230 L640 100 L800 190 L800 500 L0 500 Z" fill="#1e3a8a" opacity="0.35"/>
-        <path d="M0 280 L250 155 L520 275 L800 150 L800 500 L0 500 Z" fill="#166534"/>
-        <path d="M90 480 Q240 340 410 355 T680 215" fill="none" stroke="#f8fafc" stroke-width="14" stroke-linecap="round" opacity="0.92"/>
-        <path d="M90 480 Q240 340 410 355 T680 215" fill="none" stroke="#475569" stroke-width="5" stroke-dasharray="12 10"/>
-      `;
-      break;
-    case 'stone_village':
-      sceneLayers = `
-        <rect width="800" height="500" fill="#1e293b"/>
-        <path d="M0 190 L260 95 L540 195 L800 105 L800 320 L0 320 Z" fill="#14532d"/>
-        <rect x="130" y="235" width="160" height="85" rx="6" fill="#78716c"/>
-        <polygon points="115,235 210,185 305,235" fill="#92400e"/>
-        <rect x="330" y="245" width="175" height="85" rx="6" fill="#57534e"/>
-        <polygon points="315,245 417,192 520,245" fill="#78350f"/>
-        <rect x="545" y="230" width="150" height="85" rx="6" fill="#78716c"/>
-        <polygon points="532,230 620,182 708,230" fill="#92400e"/>
-        <path d="M0 320 L800 320 L800 500 L0 500 Z" fill="#1f2937"/>
-      `;
-      break;
-    case 'cloud_peak':
-      sceneLayers = `
-        <linearGradient id="cSky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0f172a"/>
-          <stop offset="55%" stop-color="#334155"/>
-          <stop offset="100%" stop-color="#e2e8f0"/>
-        </linearGradient>
-        <rect width="800" height="500" fill="url(#cSky)"/>
-        <path d="M0 240 L200 130 L420 235 L650 120 L800 200 L800 500 L0 500 Z" fill="#064e3b"/>
-        <circle cx="140" cy="310" r="85" fill="#f8fafc" opacity="0.88"/>
-        <circle cx="240" cy="325" r="95" fill="#ffffff" opacity="0.92"/>
-        <circle cx="360" cy="315" r="90" fill="#f1f5f9" opacity="0.9"/>
-        <circle cx="490" cy="325" r="95" fill="#ffffff" opacity="0.92"/>
-        <circle cx="620" cy="310" r="88" fill="#f8fafc" opacity="0.88"/>
-        <rect x="0" y="330" width="800" height="170" fill="#f8fafc" opacity="0.85"/>
-      `;
-      break;
-    case 'lake':
-    default:
-      sceneLayers = `
-        <linearGradient id="lSky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0284c7"/>
-          <stop offset="100%" stop-color="#a7f3d0"/>
-        </linearGradient>
-        <rect width="800" height="500" fill="url(#lSky)"/>
-        <path d="M0 215 L180 120 L380 210 L590 115 L800 205 L800 285 L0 285 Z" fill="#065f46"/>
-        <rect x="0" y="275" width="800" height="225" fill="#0f766e"/>
-        <ellipse cx="400" cy="355" rx="220" ry="38" fill="#5eead4" opacity="0.35"/>
-      `;
-      break;
-  }
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
-    <defs>
-      <linearGradient id="baseGrad" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#0f172a"/>
-        <stop offset="100%" stop-color="${accentHex}"/>
-      </linearGradient>
-    </defs>
-    <rect width="800" height="500" fill="url(#baseGrad)"/>
-    ${sceneLayers}
-    <rect x="0" y="325" width="800" height="175" fill="#020617" opacity="0.68"/>
-    <rect x="32" y="28" width="265" height="32" rx="16" fill="#020617" fill-opacity="0.72"/>
-    <text x="48" y="49" fill="#6ee7b7" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="800" letter-spacing="1">${g}</text>
-    <text x="32" y="416" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="30" font-weight="800">${t}</text>
-    <text x="32" y="452" fill="#e2e8f0" font-family="system-ui, -apple-system, sans-serif" font-size="15">Du lịch Cao Bằng · Công viên địa chất toàn cầu UNESCO</text>
-  </svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
-function createCuisineArtwork(
-  title: string,
-  tag: string,
-  scene: CuisineSceneKind,
-  mealTime: string,
-): string {
-  const t = escapeXml(title);
-  const g = escapeXml(tag);
-  const m = escapeXml(mealTime);
-
-  let dishArt = '';
-  switch (scene) {
-    case 'banh_cuon':
-      dishArt = `
-        <ellipse cx="400" cy="245" rx="185" ry="72" fill="#fef3c7"/>
-        <ellipse cx="400" cy="238" rx="165" ry="56" fill="#fde68a"/>
-        <path d="M270 225 Q400 185 530 225 Q400 265 270 225 Z" fill="#fffbeb" stroke="#fcd34d" stroke-width="2"/>
-        <circle cx="350" cy="222" r="9" fill="#92400e"/>
-        <circle cx="420" cy="216" r="10" fill="#78350f"/>
-        <circle cx="465" cy="226" r="8" fill="#15803d"/>
-        <path d="M215 245 Q400 355 585 245 Q555 345 400 355 Q245 345 215 245 Z" fill="#f59e0b"/>
-      `;
-      break;
-    case 'pho_chua':
-      dishArt = `
-        <ellipse cx="400" cy="250" rx="180" ry="75" fill="#fff7ed"/>
-        <ellipse cx="400" cy="242" rx="158" ry="58" fill="#ffedd5"/>
-        <path d="M280 232 Q400 202 520 235" fill="none" stroke="#f8fafc" stroke-width="8" stroke-linecap="round"/>
-        <path d="M295 246 Q400 218 505 248" fill="none" stroke="#fef08a" stroke-width="7" stroke-linecap="round"/>
-        <rect x="330" y="210" width="54" height="22" rx="6" fill="#c2410c"/>
-        <rect x="405" y="214" width="52" height="20" rx="6" fill="#d97706"/>
-        <circle cx="385" cy="242" r="14" fill="#16a34a"/>
-        <path d="M220 250 Q400 355 580 250 Q550 342 400 352 Q250 342 220 250 Z" fill="#ea580c"/>
-      `;
-      break;
-    case 'vit_quay':
-      dishArt = `
-        <ellipse cx="400" cy="240" rx="190" ry="82" fill="#78350f"/>
-        <ellipse cx="395" cy="230" rx="145" ry="62" fill="#d97706"/>
-        <ellipse cx="395" cy="224" rx="115" ry="44" fill="#f59e0b"/>
-        <circle cx="330" cy="224" r="14" fill="#166534"/>
-        <circle cx="365" cy="218" r="12" fill="#15803d"/>
-        <circle cx="445" cy="226" r="14" fill="#991b1b"/>
-        <circle cx="475" cy="220" r="11" fill="#166534"/>
-      `;
-      break;
-    case 'hat_de':
-      dishArt = `
-        <ellipse cx="400" cy="245" rx="185" ry="74" fill="#451a03"/>
-        <ellipse cx="335" cy="235" rx="34" ry="24" transform="rotate(-15 335 235)" fill="#92400e"/>
-        <ellipse cx="405" cy="225" rx="36" ry="25" transform="rotate(10 405 225)" fill="#78350f"/>
-        <ellipse cx="475" cy="238" rx="34" ry="24" transform="rotate(-8 475 238)" fill="#92400e"/>
-        <ellipse cx="370" cy="256" rx="32" ry="22" transform="rotate(14 370 256)" fill="#b45309"/>
-        <ellipse cx="440" cy="255" rx="32" ry="22" transform="rotate(-12 440 255)" fill="#78350f"/>
-      `;
-      break;
-    case 'banh_ap_chao':
-      dishArt = `
-        <ellipse cx="400" cy="248" rx="180" ry="70" fill="#fef3c7"/>
-        <ellipse cx="340" cy="232" rx="46" ry="28" fill="#f59e0b" stroke="#b45309" stroke-width="3"/>
-        <ellipse cx="415" cy="225" rx="48" ry="30" fill="#fbbf24" stroke="#b45309" stroke-width="3"/>
-        <ellipse cx="475" cy="240" rx="44" ry="27" fill="#f59e0b" stroke="#92400e" stroke-width="3"/>
-        <circle cx="415" cy="225" r="11" fill="#7c2d12"/>
-      `;
-      break;
-    case 'xoi_tram':
-    default:
-      dishArt = `
-        <ellipse cx="400" cy="242" rx="185" ry="76" fill="#4c1d95"/>
-        <ellipse cx="400" cy="232" rx="145" ry="56" fill="#a21caf"/>
-        <ellipse cx="400" cy="226" rx="115" ry="42" fill="#c026d3"/>
-        <circle cx="355" cy="224" r="12" fill="#facc15"/>
-        <circle cx="405" cy="220" r="13" fill="#fef08a"/>
-        <circle cx="450" cy="228" r="12" fill="#facc15"/>
-      `;
-      break;
-  }
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
-    <defs>
-      <linearGradient id="foodBg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#1c1917"/>
-        <stop offset="55%" stop-color="#451a03"/>
-        <stop offset="100%" stop-color="#92400e"/>
-      </linearGradient>
-    </defs>
-    <rect width="800" height="500" fill="url(#foodBg)"/>
-    <circle cx="400" cy="240" r="175" fill="#fbbf24" opacity="0.12"/>
-    ${dishArt}
-    <rect x="0" y="325" width="800" height="175" fill="#09090b" opacity="0.72"/>
-    <rect x="32" y="28" width="250" height="32" rx="16" fill="#09090b" fill-opacity="0.72"/>
-    <text x="48" y="49" fill="#fcd34d" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="800" letter-spacing="1">${g}</text>
-    <text x="32" y="416" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="29" font-weight="800">${t}</text>
-    <text x="32" y="452" fill="#fde68a" font-family="system-ui, -apple-system, sans-serif" font-size="15">Ẩm thực Cao Bằng · ${m}</text>
-  </svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
-const CAO_BANG_CUISINE: CaoBangCuisineItem[] = [
-  {
-    id: 'banh_cuon_canh',
-    name: 'Bánh cuốn canh Cao Bằng',
-    mealTime: 'Ăn sáng · Chợ & phố trung tâm',
-    tag: 'Đặc sản ăn sáng',
-    scene: 'banh_cuon',
-    image: createCuisineArtwork(
-      'Bánh cuốn canh Cao Bằng',
-      'ĐẶC SẢN ĂN SÁNG',
-      'banh_cuon',
-      'Ăn sáng · Chợ & phố trung tâm',
-    ),
-    description:
-      'Bánh được tráng mỏng thủ công từ gạo nếp nương, nhân thịt băm mộc nhĩ, ăn cùng bát nước dùng ninh xương nóng hổi thay vì chấm nước mắm như miền xuôi.',
-    detailedGuide:
-      'Hướng dẫn thưởng thức: Khi bánh vừa tráng nóng bưng ra, thực khách thả bánh vào bát nước canh xương có sẵn giò lụa, thịt băm, hành lá; thêm vài lát măng ngâm ớt mắc mật để dậy vị chua cay hài hòa. Phục vụ phổ biến từ 6h00 – 9h30 sáng tại khu vực phường Hợp Giang, Thục Phán và các chợ phiên.',
-    tip: 'Nên ăn ngay tại bàn khi bánh vừa ra lò để cảm nhận độ dẻo thơm và nước dùng nóng.',
-  },
-  {
-    id: 'pho_chua',
-    name: 'Phở chua Cao Bằng',
-    mealTime: 'Ăn sáng / Xế trưa',
-    tag: 'Chua ngọt thanh mát',
-    scene: 'pho_chua',
-    image: createCuisineArtwork(
-      'Phở chua Cao Bằng',
-      'CHUA NGỌT THANH MÁT',
-      'pho_chua',
-      'Ăn sáng / Xế trưa',
-    ),
-    description:
-      'Sợi bánh phở mềm dai trộn đều với thịt vịt quay, ba chỉ rán giòn, khoai tàu thái sợi chiên vàng, lạc rang giã dập và nước sốt chua ngọt sánh mịn.',
-    detailedGuide:
-      'Hướng dẫn thưởng thức: Trước khi ăn cần trộn đều từ đáy bát để nước sốt chua ngọt quyện đều vào từng sợi phở, ăn kèm rau thơm, dưa chuột thái chỉ và một chén nước dùng nhỏ đi kèm. Rất hợp để đổi vị sau các buổi thi đấu thể thao hoặc tham quan buổi sáng.',
-    tip: 'Có thể gọi thêm thịt vịt quay hoặc trứng vịt rán ăn kèm cho đầy đặn.',
-  },
-  {
-    id: 'vit_quay_7_vi',
-    name: 'Vịt quay 7 vị & Lạp sườn mắc mật',
-    mealTime: 'Bữa trưa / Bữa tối · Quà biếu',
-    tag: 'Hương vị núi rừng',
-    scene: 'vit_quay',
-    image: createCuisineArtwork(
-      'Vịt quay 7 vị & Lạp sườn',
-      'HƯƠNG VỊ NÚI RỪNG',
-      'vit_quay',
-      'Bữa trưa / Bữa tối · Quà biếu',
-    ),
-    description:
-      'Vịt cỏ địa phương tẩm ướp 7 loại gia vị bí truyền cùng lá mắc mật, phết mật ong quay than hồng cho lớp da vàng óng giòn rụm, thịt bên trong mềm ngọt.',
-    detailedGuide:
-      'Hướng dẫn thưởng thức & mua quà: Vịt quay chặt miếng vừa ăn chấm nước sốt chiết từ bụng vịt. Lạp sườn hun khói mía hoặc củi quế có vị thơm đặc trưng của quả mắc mật, bảo quản ngăn đá mang về làm quà biếu bạn bè phương xa rất tiện lợi.',
-    tip: 'Đặt trước tại các lò quay uy tín buổi chiều để lấy vịt mới ra lò nóng giòn.',
-  },
-  {
-    id: 'hat_de_rau_da_hien',
-    name: 'Hạt dẻ Trùng Khánh & Rau dạ hiến',
-    mealTime: 'Theo mùa · Đặc sản vùng cao',
-    tag: 'Thủ phủ Trùng Khánh',
-    scene: 'hat_de',
-    image: createCuisineArtwork(
-      'Hạt dẻ Trùng Khánh',
-      'THỦ PHỦ TRÙNG KHÁNH',
-      'hat_de',
-      'Theo mùa · Đặc sản vùng cao',
-    ),
-    description:
-      'Hạt dẻ Trùng Khánh hạt to, vỏ nâu bóng, khi luộc hoặc rang chín có vị bùi béo và hương thơm đặc trưng hiếm nơi nào sánh bằng.',
-    detailedGuide:
-      'Hướng dẫn chọn mua & thưởng thức: Mùa hạt dẻ rộ nhất vào khoảng tháng 9 – tháng 11 dương lịch. Khi đi cung đường Thác Bản Giốc – Trùng Khánh, du khách có thể thưởng thức hạt dẻ rang nóng tại chỗ, chân giò hầm hạt dẻ và đĩa rau dạ hiến (rau bồ khai) xào tỏi xanh giòn.',
-    tip: 'Nên chọn hạt dẻ tươi chắc mẩy, không bị sâu mọt và bảo quản nơi thoáng mát.',
-  },
-  {
-    id: 'banh_ap_chao',
-    name: 'Bánh áp chao Cao Bằng',
-    mealTime: 'Ăn vặt chiều · Mùa thu đông',
-    tag: 'Quà chiều ấm nóng',
-    scene: 'banh_ap_chao',
-    image: createCuisineArtwork(
-      'Bánh áp chao Cao Bằng',
-      'QUÀ CHIỀU ẤM NÓNG',
-      'banh_ap_chao',
-      'Ăn vặt chiều · Mùa thu đông',
-    ),
-    description:
-      'Chiếc bánh làm từ bột gạo nếp pha gạo tẻ bọc nhân thịt vịt tẩm gia vị, thả chảo dầu sôi chiên vàng phồng, bên ngoài giòn tan bên trong mềm dẻo.',
-    detailedGuide:
-      'Hướng dẫn thưởng thức: Bánh áp chao ngon nhất vào những buổi chiều se lạnh từ tháng 10 đến tháng 3 năm sau. Bánh cắt miếng nhỏ, chấm nước mắm chua ngọt pha đu đủ xanh bào sợi và rau sống tươi.',
-    tip: 'Thưởng thức vào tầm 15h00 – 18h00 tại các hàng quán vỉa hè khu trung tâm.',
-  },
-  {
-    id: 'xoi_tram_banh_khao',
-    name: 'Xôi trám đen & Bánh khảo',
-    mealTime: 'Lễ Tết · Quà đặc sản',
-    tag: 'Tinh hoa ẩm thực Tày',
-    scene: 'xoi_tram',
-    image: createCuisineArtwork(
-      'Xôi trám đen & Bánh khảo',
-      'TINH HOA ẨM THỰC TÀY',
-      'xoi_tram',
-      'Lễ Tết · Quà đặc sản',
-    ),
-    description:
-      'Xôi nếp nương đồ cùng thịt quả trám đen tạo sắc tím hồng bắt mắt, vị dẻo thơm bùi ngậy; bánh khảo làm từ gạo nếp rang xay mịn nhân đường phên, lạc vừng.',
-    detailedGuide:
-      'Hướng dẫn thưởng thức & làm quà: Xôi trám thường ăn kèm muối vừng hoặc lạp sườn nướng. Bánh khảo đóng phong giấy truyền thống gọn nhẹ, để được nhiều ngày, rất hợp làm quà tặng bạn bè phương xa.',
-    tip: 'Bánh khảo ăn kèm trà xanh nóng sẽ tôn lên vị ngọt thanh và hương nếp rang.',
-  },
-];
-
-const CAO_BANG_TRAVEL_GUIDE = [
-  {
-    title: '1. Đường đi & phương tiện di chuyển',
-    summary:
-      'Từ Hà Nội lên Cao Bằng khoảng 280 km (5 – 6 giờ di chuyển), đường đẹp và thuận tiện cho cả ô tô cá nhân lẫn xe giường nằm.',
-    points: [
-      'Cung đường phổ biến: Cao tốc Hà Nội – Thái Nguyên – Chợ Mới, sau đó theo Quốc lộ 3 qua Bắc Kạn lên thành phố Cao Bằng (hoặc đi hướng cao tốc Hà Nội – Lạng Sơn rồi rẽ QL4A).',
-      'Di chuyển nội tỉnh: Các điểm du lịch chia thành 3 tuyến chính (Tuyến Đông Bắc đi Bản Giốc – Ngườm Ngao; Tuyến phía Bắc đi Pác Bó; Tuyến phía Tây đi Phia Oắc – Phia Đén).',
-      'Lưu ý lái xe: Đường đèo như Đèo Mã Phục, Đèo Khau Cốc Chà hay đường lên Phia Oắc có nhiều khúc cua tay áo, nên đi ban ngày và giữ tốc độ ổn định.',
-    ],
-  },
-  {
-    title: '2. Thời điểm đẹp & chuẩn bị hành lý',
-    summary:
-      'Mỗi mùa Cao Bằng mang một vẻ đẹp riêng: mùa nước thác đổ trắng xóa, mùa hoa tam giác mạch – dã quỳ hay mùa săn mây.',
-    points: [
-      'Tháng 8 – 10: Thác Bản Giốc đầy nước, trong xanh, ruộng bậc thang vào mùa lúa chín vàng rực rỡ.',
-      'Tháng 11 – 12 & Mùa xuân (tháng 2 – 3): Trời se lạnh, có hoa dã quỳ, hoa tam giác mạch, hoa mận – hoa lê nở trắng bản làng.',
-      'Trang phục gợi ý: Giày thể thao hoặc giày leo núi đế bám tốt (để đi bộ trong Động Ngườm Ngao, leo Núi Mắt Thần), áo khoác gió nhẹ vì nhiệt độ buổi tối vùng cao giảm nhanh.',
-    ],
-  },
-  {
-    title: '3. Gợi ý lịch trình 3 ngày 2 đêm chi tiết',
-    summary:
-      'Lịch trình cân đối giữa tham quan kỳ quan thiên nhiên, di tích lịch sử và trải nghiệm trọn vẹn ẩm thực địa phương.',
-    points: [
-      'Ngày 1 (Trung tâm & ẩm thực): Có mặt tại Cao Bằng, nhận phòng nghỉ ngơi. Chiều dạo phố đi bộ Kim Đồng, thưởng thức bánh áp chao, phở chua, vịt quay 7 vị.',
-      'Ngày 2 (Cung Đông Bắc kỳ vĩ): Sáng vượt Đèo Mã Phục, khám phá Động Ngườm Ngao và Làng đá cổ Khuổi Ky. Trưa ăn đặc sản Trùng Khánh (hạt dẻ, rau dạ hiến). Chiều tham quan Thác Bản Giốc, Chùa Phật Tích Trúc Lâm và check-in Núi Mắt Thần / Hồ Thang Hen.',
-      'Ngày 3 (Về nguồn Pác Bó): Tham quan Khu di tích Quốc gia đặc biệt Pác Bó (Suối Lê-nin, núi Các Mác, hang Cốc Bó). Trưa thưởng thức bánh cuốn canh, mua lạp sườn – bánh khảo làm quà trước khi về.',
-    ],
-  },
-];
-
-const DEFAULT_CAO_BANG_LANDMARKS: CaoBangLandmark[] = [
-  {
-    id: 'ban_gioc',
-    name: 'Thác Bản Giốc',
-    area: 'Đàm Thủy · Trùng Khánh · Cao Bằng',
-    tag: 'Kỳ quan thác nước',
-    scene: 'waterfall',
-    summary:
-      'Một trong những thác nước tự nhiên hùng vĩ bậc nhất Đông Nam Á, tầng tầng bọt trắng đổ xuống giữa núi non biên cương xanh mát.',
-    guideDetail:
-      'Cách trung tâm Cao Bằng khoảng 85 km. Bạn có thể đi bè tre tiến sát chân thác để cảm nhận làn hơi nước mát lạnh, sau đó ghé Chùa Phật Tích Trúc Lâm Bản Giốc ngay sườn núi bên cạnh để ngắm toàn cảnh thung lũng biên giới.',
-    links: [
-      {
-        label: 'Bản đồ',
-        url: 'https://www.google.com/maps/search/?api=1&query=Thac+Ban+Gioc+Cao+Bang',
-      },
-      {
-        label: 'Cẩm nang',
-        url: 'https://ecotour.com.vn/dia-diem-du-lich-cao-bang-2',
-      },
-    ],
-    images: [
-      createLandmarkArtwork('Thác Bản Giốc', 'KỲ QUAN THÁC NƯỚC', 'waterfall', '#0d9488'),
-      createLandmarkArtwork('Thác Bản Giốc · Toàn cảnh', 'BIÊN CƯƠNG CAO BẰNG', 'lake', '#0284c7'),
-    ],
-  },
-  {
-    id: 'nguom_ngao',
-    name: 'Động Ngườm Ngao',
-    area: 'Đàm Thủy · Trùng Khánh · Cao Bằng',
-    tag: 'Hang động thạch nhũ',
-    scene: 'cave',
-    summary:
-      'Hang động đá vôi kỳ ảo dài hơn 2 km với hệ thống nhũ đá, măng đá lấp lánh nhiều hình thù độc đáo như đài sen ngược, cột chống trời.',
-    guideDetail:
-      'Nằm cách Thác Bản Giốc chỉ khoảng 3 km, rất thuận tiện kết hợp tham quan trong cùng một buổi. Nhiệt độ trong hang luôn mát mẻ quanh năm (18–25°C), lối đi có hệ thống đèn chiếu sáng nghệ thuật và cầu gỗ an toàn.',
-    links: [
-      {
-        label: 'Bản đồ',
-        url: 'https://www.google.com/maps/search/?api=1&query=Dong+Nguom+Ngao+Cao+Bang',
-      },
-      {
-        label: 'Khám phá',
-        url: 'https://www.dulichvtv.com/check-in-cao-bang/',
-      },
-    ],
-    images: [
-      createLandmarkArtwork('Động Ngườm Ngao', 'HANG ĐỘNG THẠCH NHŨ', 'cave', '#0284c7'),
-    ],
-  },
-  {
-    id: 'nui_mat_than',
-    name: 'Núi Mắt Thần (Núi Thủng)',
-    area: 'Quốc Toản · Quảng Hòa · Cao Bằng',
-    tag: 'Thảo nguyên & cắm trại',
-    scene: 'arch_mountain',
-    summary:
-      'Khối núi đá vôi có vòm thủng tròn khổng lồ xuyên qua lòng núi giữa thung lũng thảo nguyên xanh mướt, điểm dã ngoại và chụp ảnh nổi tiếng.',
-    guideDetail:
-      'Nằm trong quần thể hồ Thang Hen thuộc Công viên địa chất Non nước Cao Bằng. Mùa khô thung lũng biến thành bãi cỏ rộng mênh mông với đàn ngựa, đàn trâu thong dong; mùa mưa nước dâng tạo nên mặt hồ soi bóng vòm núi độc đáo.',
-    links: [
-      {
-        label: 'Bản đồ',
-        url: 'https://www.google.com/maps/search/?api=1&query=Nui+Mat+Than+Cao+Bang',
-      },
-      {
-        label: 'Check-in',
-        url: 'https://www.dulichvtv.com/check-in-cao-bang/',
-      },
-    ],
-    images: [
-      createLandmarkArtwork('Núi Mắt Thần', 'THẢO NGUYÊN & CHECK-IN', 'arch_mountain', '#059669'),
-    ],
-  },
-  {
-    id: 'pac_bo',
-    name: 'Khu di tích Quốc gia đặc biệt Pác Bó',
-    area: 'Trường Hà · Hà Quảng · Cao Bằng',
-    tag: 'Cội nguồn lịch sử',
-    scene: 'stream',
-    summary:
-      'Quần thể di tích gắn liền với dòng suối Lê-nin xanh ngọc bích, núi Các Mác hùng vĩ và hang Cốc Bó mang đậm dấu ấn lịch sử cách mạng.',
-    guideDetail:
-      'Cách trung tâm Cao Bằng khoảng 50 km về phía Bắc, đường đi thẳng và rất dễ di chuyển. Nước suối Lê-nin trong vắt nhìn rõ từng đàn cá suối bơi lội; du khách nên đi bộ dọc bờ suối để tận hưởng không khí trong lành và tìm hiểu lịch sử.',
-    links: [
-      {
-        label: 'Bản đồ',
-        url: 'https://www.google.com/maps/search/?api=1&query=Khu+di+tich+Pac+Bo+Cao+Bang',
-      },
-    ],
-    images: [
-      createLandmarkArtwork('Khu di tích Pác Bó', 'CỘI NGUỒN LỊCH SỬ', 'stream', '#15803d'),
-    ],
-  },
-  {
-    id: 'deo_ma_phuc',
-    name: 'Đèo Mã Phục',
-    area: 'Quốc lộ 3 · Quảng Hòa · Cao Bằng',
-    tag: 'Cung đèo ngoạn mục',
-    scene: 'pass',
-    summary:
-      'Con đèo nổi tiếng bậc nhất Cao Bằng với 7 tầng dốc uốn lượn mềm mại qua hai vách núi đá vôi dựng đứng như hai con ngựa phủ phục.',
-    guideDetail:
-      'Nằm trên trục đường từ trung tâm đi Trùng Khánh – Bản Giốc. Trên đỉnh đèo có điểm dừng chân ngắm cảnh, chụp ảnh toàn cảnh thung lũng bên dưới và thưởng thức các món ăn vặt nóng hổi của bà con bản địa.',
-    links: [
-      {
-        label: 'Bản đồ',
-        url: 'https://www.google.com/maps/search/?api=1&query=Deo+Ma+Phuc+Cao+Bang',
-      },
-    ],
-    images: [
-      createLandmarkArtwork('Đèo Mã Phục', 'CUNG ĐÈO NGOẠN MỤC', 'pass', '#0284c7'),
-    ],
-  },
-  {
-    id: 'khuoi_ky',
-    name: 'Làng đá cổ Khuổi Ky',
-    area: 'Đàm Thủy · Trùng Khánh · Cao Bằng',
-    tag: 'Bản sắc văn hóa Tày',
-    scene: 'stone_village',
-    summary:
-      'Ngôi làng cổ hơn 400 năm tuổi với những ngôi nhà sàn xây hoàn toàn bằng đá hộc của đồng bào Tày, lưu giữ nét kiến trúc và đời sống bản địa.',
-    guideDetail:
-      'Nằm ngay giữa cung đường nối Động Ngườm Ngao và Thác Bản Giốc. Du khách có thể nghỉ homestay nhà sàn đá, nghe hát Then đàn Tính vào buổi tối và thưởng thức mâm cơm đặc sản vùng biên.',
-    links: [
-      {
-        label: 'Bản đồ',
-        url: 'https://www.google.com/maps/search/?api=1&query=Lang+da+Khuoi+Ky+Cao+Bang',
-      },
-    ],
-    images: [
-      createLandmarkArtwork('Làng đá Khuổi Ky', 'BẢN SẮC VĂN HÓA TÀY', 'stone_village', '#b45309'),
-    ],
-  },
-  {
-    id: 'phia_oac',
-    name: 'Vườn quốc gia Phia Oắc – Phia Đén',
-    area: 'Thành Công · Nguyên Bình · Cao Bằng',
-    tag: 'Rừng rêu & săn mây',
-    scene: 'cloud_peak',
-    summary:
-      'Được ví như "nóc nhà phía Tây" của Cao Bằng với độ cao gần 2.000 m, khí hậu mát mẻ quanh năm, rừng rêu cổ thụ và biển mây bồng bềnh.',
-    guideDetail:
-      'Cách trung tâm Cao Bằng khoảng 70 km về phía Tây. Rất lý tưởng cho những ai yêu thiên nhiên hoang sơ, săn mây sáng sớm, ngắm băng tuyết vào mùa đông giá rét hoặc dạo bước giữa rừng trúc và đồi chè cổ thụ.',
-    links: [
-      {
-        label: 'Bản đồ',
-        url: 'https://www.google.com/maps/search/?api=1&query=Phia+Oac+Cao+Bang',
-      },
-    ],
-    images: [
-      createLandmarkArtwork('Phia Oắc – Phia Đén', 'RỪNG RÊU & SĂN MÂY', 'cloud_peak', '#047857'),
-    ],
-  },
-  {
-    id: 'thang_hen',
-    name: 'Hồ Thang Hen',
-    area: 'Quốc Toản · Quảng Hòa · Cao Bằng',
-    tag: 'Thắng cảnh cao nguyên',
-    scene: 'lake',
-    summary:
-      'Quần thể 36 hồ nước ngọt tự nhiên thông nhau qua các hang ngầm dưới lòng núi, mặt nước xanh biếc soi bóng rừng thông và vách đá.',
-    guideDetail:
-      'Chỉ cách trung tâm Cao Bằng khoảng 30 km, đường vào dễ đi. Du khách có thể chèo thuyền dạo quanh mặt hồ yên ả, đi bộ xuyên rừng hoặc kết hợp tham quan Núi Mắt Thần ngay liền kề.',
-    links: [
-      {
-        label: 'Bản đồ',
-        url: 'https://www.google.com/maps/search/?api=1&query=Ho+Thang+Hen+Cao+Bang',
-      },
-    ],
-    images: [
-      createLandmarkArtwork('Hồ Thang Hen', 'THẮNG CẢNH CAO NGUYÊN', 'lake', '#0d9488'),
-    ],
-  },
-];
 
 const STORAGE_KEY = 'pickleball_1986_state_v7';
 const AUTH_SESSION_KEY = 'pickleball_1986_auth_user_v1';
 const ACTIVE_TAB_KEY = 'pickleball_1986_active_tab_v1';
-const CAO_BANG_STORAGE_KEY = 'pickleball_1986_caobang_travel_v5';
+const THEME_STORAGE_KEY = 'pickleball_1986_theme_mode_v1';
+const POSTS_STORAGE_KEY = 'pickleball_1986_tournament_posts_v1';
 const SYNC_CHANNEL = 'pickleball_1986_realtime_channel';
 
 const VALID_TABS: ActiveTab[] = [
@@ -732,6 +134,18 @@ function normalizeExternalUrl(rawUrl: string): string {
   if (!trimmed) return '';
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
+}
+
+function loadSavedTheme(): ThemeMode {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
+    if (saved === 'dark' || saved === 'light') {
+      return saved;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return 'light';
 }
 
 function loadSavedActiveTab(): ActiveTab {
@@ -790,61 +204,37 @@ function loadSavedAuthAccount(accounts: StaffAccount[]): StaffAccount | null {
   }
 }
 
-function loadSavedCaoBangLandmarks(): CaoBangLandmark[] {
+function loadSavedTournamentPosts(): TournamentPost[] {
   try {
-    const raw = localStorage.getItem(CAO_BANG_STORAGE_KEY);
+    const raw = localStorage.getItem(POSTS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((item, idx) => {
-          const name = String(item.name || 'Địa danh Cao Bằng');
-          const tag = String(item.tag || 'Điểm đến nổi bật');
-          const scene = (item.scene as LandmarkSceneKind) || 'waterfall';
-          const imgs = Array.isArray(item.images)
-            ? item.images.filter(Boolean)
-            : item.imageUrl
-            ? [String(item.imageUrl)]
-            : [];
-          const normalizedLinks: LandmarkLink[] = Array.isArray(item.links)
-            ? item.links
-                .map((l: { label?: string; url?: string }) => ({
-                  label: String(l?.label || 'Xem liên kết').trim() || 'Xem liên kết',
-                  url: normalizeExternalUrl(String(l?.url || '')),
-                }))
-                .filter((l: LandmarkLink) => Boolean(l.url))
-            : item.linkUrl
-            ? [
-                {
-                  label: String(item.linkLabel || 'Xem chi tiết').trim() || 'Xem chi tiết',
-                  url: normalizeExternalUrl(String(item.linkUrl)),
-                },
-              ].filter((l) => Boolean(l.url))
-            : [];
-
-          return {
-            id: String(item.id || `spot_${idx}`),
-            name,
-            area: String(item.area || 'Cao Bằng'),
-            tag,
-            scene,
-            summary: String(item.summary || ''),
-            guideDetail: item.guideDetail ? String(item.guideDetail) : undefined,
-            links: normalizedLinks,
-            images:
-              imgs.length > 0
-                ? imgs
-                : [createLandmarkArtwork(name, tag.toUpperCase(), scene, '#059669')],
-          };
-        });
+      if (Array.isArray(parsed)) {
+        return parsed.map((p, idx) => ({
+          id: String(p.id || `post_${idx}`),
+          tournamentId: String(p.tournamentId || ''),
+          title: String(p.title || 'Thông báo giải đấu'),
+          badge: String(p.badge || 'Thông báo BTC'),
+          summary: String(p.summary || ''),
+          detail: String(p.detail || ''),
+          linkLabel: p.linkLabel ? String(p.linkLabel) : undefined,
+          linkUrl: p.linkUrl ? normalizeExternalUrl(String(p.linkUrl)) : undefined,
+          images: Array.isArray(p.images) ? p.images.filter(Boolean) : [],
+          createdAt: String(p.createdAt || ''),
+        }));
       }
     }
-    return DEFAULT_CAO_BANG_LANDMARKS;
   } catch {
-    return DEFAULT_CAO_BANG_LANDMARKS;
+    // ignore storage errors
   }
+  return [];
 }
 
-function compressImageFileToDataUrl(file: File, maxWidth = 1280, quality = 0.8): Promise<string> {
+function compressImageFileToDataUrl(
+  file: File,
+  maxWidth = 1280,
+  quality = 0.8,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Không thể đọc tệp ảnh'));
@@ -875,18 +265,13 @@ export default function App() {
   const [currentAccount, setCurrentAccount] = useState<StaffAccount | null>(() =>
     loadSavedAuthAccount(loadInitialState().staffAccounts),
   );
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadSavedTheme());
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'manage'>('login');
   const [authReasonMessage, setAuthReasonMessage] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => loadSavedActiveTab());
-  const [homepageGuideTab, setHomepageGuideTab] = useState<HomepageGuideTab>('places');
-  const [showAllPlaces, setShowAllPlaces] = useState(false);
-  const [showAllCuisine, setShowAllCuisine] = useState(false);
-  const [expandedCardIds, setExpandedCardIds] = useState<Record<string, boolean>>({});
-  const [expandedGuideBlocks, setExpandedGuideBlocks] = useState<Record<number, boolean>>({
-    0: true,
-  });
+  const [expandedPostIds, setExpandedPostIds] = useState<Record<string, boolean>>({});
 
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(
     () => loadInitialState().tournaments[0]?.id || '',
@@ -899,30 +284,45 @@ export default function App() {
     null,
   );
 
-  // Homepage-only Cao Bang travel showcase state (Admin adds/edits/deletes)
-  const [landmarks, setLandmarks] = useState<CaoBangLandmark[]>(() =>
-    loadSavedCaoBangLandmarks(),
-  );
-  const [editingLandmarkId, setEditingLandmarkId] = useState<string | null>(null);
-  const [showLandmarkForm, setShowLandmarkForm] = useState(false);
-  const [spotName, setSpotName] = useState('');
-  const [spotArea, setSpotArea] = useState('');
-  const [spotTag, setSpotTag] = useState('Điểm đến nổi bật');
-  const [spotSummary, setSpotSummary] = useState('');
-  const [spotGuideDetail, setSpotGuideDetail] = useState('');
-  const [spotLinks, setSpotLinks] = useState<LandmarkLink[]>([]);
-  const [newLinkLabel, setNewLinkLabel] = useState('');
-  const [newLinkUrl, setNewLinkUrl] = useState('');
-  const [spotUrlInput, setSpotUrlInput] = useState('');
-  const [spotDraftImages, setSpotDraftImages] = useState<string[]>([]);
+  // Modal xác nhận mật khẩu khi làm mới dữ liệu
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [resetPasswordInput, setResetPasswordInput] = useState('');
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
+
+  // Admin đăng / sửa / xóa thông tin & hình ảnh giải đấu trên trang chủ
+  const [posts, setPosts] = useState<TournamentPost[]>(() => loadSavedTournamentPosts());
+  const [showPostForm, setShowPostForm] = useState(false);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [postTitle, setPostTitle] = useState('');
+  const [postBadge, setPostBadge] = useState('Thông báo BTC');
+  const [postSummary, setPostSummary] = useState('');
+  const [postDetail, setPostDetail] = useState('');
+  const [postLinkLabel, setPostLinkLabel] = useState('');
+  const [postLinkUrl, setPostLinkUrl] = useState('');
+  const [postUrlInput, setPostUrlInput] = useState('');
+  const [postDraftImages, setPostDraftImages] = useState<string[]>([]);
 
   const [lightboxState, setLightboxState] = useState<LightboxPreview | null>(null);
 
+  const isDark = themeMode === 'dark';
   const isStaff = Boolean(currentAccount && isStaffRole(currentAccount.role));
   const isAdmin = currentAccount?.role === 'admin';
 
-  const toggleCardExpand = (id: string) => {
-    setExpandedCardIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+      if (themeMode === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [themeMode]);
+
+  const toggleThemeMode = () => {
+    setThemeMode((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
   useEffect(() => {
@@ -939,17 +339,17 @@ export default function App() {
     }
   }, [activeTab]);
 
-  const saveLandmarksAndSync = (nextSpots: CaoBangLandmark[]) => {
-    setLandmarks(nextSpots);
+  const savePostsAndSync = (nextPosts: TournamentPost[]) => {
+    setPosts(nextPosts);
     try {
-      localStorage.setItem(CAO_BANG_STORAGE_KEY, JSON.stringify(nextSpots));
+      localStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(nextPosts));
       if (typeof BroadcastChannel !== 'undefined') {
         const bc = new BroadcastChannel(SYNC_CHANNEL);
-        bc.postMessage({ type: 'caobang_sync', landmarks: nextSpots });
+        bc.postMessage({ type: 'posts_sync', posts: nextPosts });
         bc.close();
       }
     } catch (err) {
-      console.warn('Cao Bang storage warning:', err);
+      console.warn('Posts storage warning:', err);
     }
   };
 
@@ -980,8 +380,8 @@ export default function App() {
     if (typeof BroadcastChannel === 'undefined') return;
     const bc = new BroadcastChannel(SYNC_CHANNEL);
     bc.onmessage = (event) => {
-      if (event.data?.type === 'caobang_sync' && Array.isArray(event.data.landmarks)) {
-        setLandmarks(event.data.landmarks);
+      if (event.data?.type === 'posts_sync' && Array.isArray(event.data.posts)) {
+        setPosts(event.data.posts);
         return;
       }
       if (event.data?.state && Array.isArray(event.data.state.tournaments)) {
@@ -1030,75 +430,56 @@ export default function App() {
     }, 4200);
   };
 
-  const resetLandmarkForm = () => {
-    setEditingLandmarkId(null);
-    setSpotName('');
-    setSpotArea('');
-    setSpotTag('Điểm đến nổi bật');
-    setSpotSummary('');
-    setSpotGuideDetail('');
-    setSpotLinks([]);
-    setNewLinkLabel('');
-    setNewLinkUrl('');
-    setSpotUrlInput('');
-    setSpotDraftImages([]);
-    setShowLandmarkForm(false);
+  const resetPostForm = () => {
+    setEditingPostId(null);
+    setPostTitle('');
+    setPostBadge('Thông báo BTC');
+    setPostSummary('');
+    setPostDetail('');
+    setPostLinkLabel('');
+    setPostLinkUrl('');
+    setPostUrlInput('');
+    setPostDraftImages([]);
+    setShowPostForm(false);
   };
 
-  const handleStartAddLandmark = () => {
+  const handleStartAddPost = () => {
     if (!isAdmin) {
-      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để thêm địa danh Cao Bằng.');
+      openLoginWithReason(
+        'Vui lòng đăng nhập tài khoản Ban Tổ Chức (Admin) để đăng thông tin và hình ảnh giải đấu.',
+      );
       return;
     }
-    setHomepageGuideTab('places');
-    setEditingLandmarkId(null);
-    setSpotName('');
-    setSpotArea('Cao Bằng');
-    setSpotTag('Điểm đến nổi bật');
-    setSpotSummary('');
-    setSpotGuideDetail('');
-    setSpotLinks([]);
-    setNewLinkLabel('Bản đồ');
-    setNewLinkUrl('');
-    setSpotUrlInput('');
-    setSpotDraftImages([]);
-    setShowLandmarkForm(true);
+    setEditingPostId(null);
+    setPostTitle('');
+    setPostBadge('Thông báo BTC');
+    setPostSummary('');
+    setPostDetail('');
+    setPostLinkLabel('');
+    setPostLinkUrl('');
+    setPostUrlInput('');
+    setPostDraftImages([]);
+    setShowPostForm(true);
   };
 
-  const handleStartEditLandmark = (spot: CaoBangLandmark) => {
+  const handleStartEditPost = (post: TournamentPost) => {
     if (!isAdmin) {
-      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để chỉnh sửa nội dung Cao Bằng.');
+      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để sửa bài đăng giải đấu.');
       return;
     }
-    setHomepageGuideTab('places');
-    setEditingLandmarkId(spot.id);
-    setSpotName(spot.name);
-    setSpotArea(spot.area);
-    setSpotTag(spot.tag);
-    setSpotSummary(spot.summary);
-    setSpotGuideDetail(spot.guideDetail || '');
-    setSpotLinks(spot.links || []);
-    setNewLinkLabel('');
-    setNewLinkUrl('');
-    setSpotUrlInput('');
-    setSpotDraftImages(spot.images || []);
-    setShowLandmarkForm(true);
+    setEditingPostId(post.id);
+    setPostTitle(post.title);
+    setPostBadge(post.badge);
+    setPostSummary(post.summary);
+    setPostDetail(post.detail);
+    setPostLinkLabel(post.linkLabel || '');
+    setPostLinkUrl(post.linkUrl || '');
+    setPostUrlInput('');
+    setPostDraftImages(post.images || []);
+    setShowPostForm(true);
   };
 
-  const handleAddLinkToForm = () => {
-    const cleanUrl = normalizeExternalUrl(newLinkUrl);
-    if (!cleanUrl) return;
-    const cleanLabel = newLinkLabel.trim() || `Liên kết ${spotLinks.length + 1}`;
-    setSpotLinks((prev) => [...prev, { label: cleanLabel, url: cleanUrl }]);
-    setNewLinkLabel('');
-    setNewLinkUrl('');
-  };
-
-  const handleRemoveLinkFromForm = (idx: number) => {
-    setSpotLinks((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const handleSpotFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePostFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
@@ -1108,129 +489,103 @@ export default function App() {
         const dataUrl = await compressImageFileToDataUrl(file);
         compressed.push(dataUrl);
       }
-      setSpotDraftImages((prev) => [...prev, ...compressed]);
-      showToast(`Đã thêm ${compressed.length} ảnh`, 'Ảnh đã sẵn sàng trong bài quảng bá Cao Bằng.');
+      setPostDraftImages((prev) => [...prev, ...compressed]);
+      showToast(`Đã thêm ${compressed.length} ảnh`, 'Hình ảnh đã sẵn sàng cho bài đăng giải đấu.');
     } catch {
-      showToast('Không thể đọc ảnh', 'Vui lòng chọn ảnh khác hoặc dán đường dẫn URL ảnh.');
+      showToast('Không thể đọc ảnh', 'Vui lòng chọn tệp ảnh khác hoặc dán đường dẫn URL ảnh.');
     } finally {
       e.target.value = '';
     }
   };
 
-  const handleAddSpotUrlImage = () => {
-    const clean = spotUrlInput.trim();
+  const handleAddPostUrlImage = () => {
+    const clean = postUrlInput.trim();
     if (!clean) return;
-    setSpotDraftImages((prev) => [...prev, clean]);
-    setSpotUrlInput('');
+    setPostDraftImages((prev) => [...prev, clean]);
+    setPostUrlInput('');
   };
 
-  const handleRemoveSpotDraftImage = (idx: number) => {
-    setSpotDraftImages((prev) => prev.filter((_, i) => i !== idx));
+  const handleRemovePostDraftImage = (idx: number) => {
+    setPostDraftImages((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleSaveLandmark = (e: React.FormEvent) => {
+  const handleSavePost = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin || !currentAccount) {
-      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để lưu nội dung Cao Bằng.');
+      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để lưu thông tin giải đấu.');
       return;
     }
 
-    const cleanName = spotName.trim();
-    const cleanArea = spotArea.trim() || 'Cao Bằng';
-    const cleanTag = spotTag.trim() || 'Điểm đến nổi bật';
-    const cleanSummary = spotSummary.trim();
-    const cleanGuide = spotGuideDetail.trim();
-
-    if (!cleanName) {
-      showToast('Thiếu tên địa danh', 'Vui lòng nhập tên địa danh hoặc nội dung quảng bá.');
+    const cleanTitle = postTitle.trim();
+    if (!cleanTitle) {
+      showToast('Thiếu tiêu đề', 'Vui lòng nhập tiêu đề thông tin giải đấu.');
       return;
     }
 
-    const pendingLink = newLinkUrl.trim()
-      ? [
-          {
-            label: newLinkLabel.trim() || `Liên kết ${spotLinks.length + 1}`,
-            url: normalizeExternalUrl(newLinkUrl),
-          },
-        ]
-      : [];
+    const pendingUrl = postUrlInput.trim();
+    const finalImages = pendingUrl ? [...postDraftImages, pendingUrl] : [...postDraftImages];
+    const cleanLinkUrl = normalizeExternalUrl(postLinkUrl);
+    const cleanLinkLabel = cleanLinkUrl
+      ? postLinkLabel.trim() || 'Xem liên kết'
+      : undefined;
 
-    const finalLinks = [...spotLinks, ...pendingLink]
-      .map((l) => ({
-        label: l.label.trim() || 'Xem liên kết',
-        url: normalizeExternalUrl(l.url),
-      }))
-      .filter((l) => Boolean(l.url));
-
-    const pendingUrl = spotUrlInput.trim();
-    const combinedImages = pendingUrl ? [...spotDraftImages, pendingUrl] : [...spotDraftImages];
-    const finalImages =
-      combinedImages.length > 0
-        ? combinedImages
-        : [createLandmarkArtwork(cleanName, cleanTag.toUpperCase(), 'waterfall', '#059669')];
-
-    if (editingLandmarkId) {
-      const updated = landmarks.map((item) =>
-        item.id === editingLandmarkId
+    if (editingPostId) {
+      const updated = posts.map((p) =>
+        p.id === editingPostId
           ? {
-              ...item,
-              name: cleanName,
-              area: cleanArea,
-              tag: cleanTag,
-              summary: cleanSummary,
-              guideDetail: cleanGuide || undefined,
-              links: finalLinks,
+              ...p,
+              title: cleanTitle,
+              badge: postBadge.trim() || 'Thông báo BTC',
+              summary: postSummary.trim(),
+              detail: postDetail.trim(),
+              linkLabel: cleanLinkLabel,
+              linkUrl: cleanLinkUrl || undefined,
               images: finalImages,
             }
-          : item,
+          : p,
       );
-      saveLandmarksAndSync(updated);
-      showToast('Đã cập nhật địa danh', `"${cleanName}" đã được lưu thay đổi.`);
+      savePostsAndSync(updated);
+      showToast('Đã cập nhật bài đăng', `"${cleanTitle}" đã được cập nhật.`);
     } else {
-      const newSpot: CaoBangLandmark = {
-        id: `spot_${Date.now().toString(36)}`,
-        name: cleanName,
-        area: cleanArea,
-        tag: cleanTag,
-        scene: 'waterfall',
-        summary: cleanSummary,
-        guideDetail: cleanGuide || undefined,
-        links: finalLinks,
+      const nowLabel = new Date().toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+      const newPost: TournamentPost = {
+        id: `post_${Date.now().toString(36)}`,
+        tournamentId: currentTournament?.id || '',
+        title: cleanTitle,
+        badge: postBadge.trim() || 'Thông báo BTC',
+        summary: postSummary.trim(),
+        detail: postDetail.trim(),
+        linkLabel: cleanLinkLabel,
+        linkUrl: cleanLinkUrl || undefined,
         images: finalImages,
+        createdAt: nowLabel,
       };
-      saveLandmarksAndSync([newSpot, ...landmarks]);
-      showToast('Đã thêm địa danh Cao Bằng', `"${cleanName}" đã hiển thị ở mục du lịch.`);
+      savePostsAndSync([newPost, ...posts]);
+      showToast('Đã đăng thông tin giải đấu', `"${cleanTitle}" đã hiển thị trên trang chủ.`);
     }
 
-    resetLandmarkForm();
+    resetPostForm();
   };
 
-  const handleDeleteLandmark = (id: string) => {
+  const handleDeletePost = (id: string) => {
     if (!isAdmin) {
-      openLoginWithReason('Chỉ tài khoản Admin mới có quyền xóa địa danh.');
+      openLoginWithReason('Chỉ tài khoản Admin mới có quyền xóa bài đăng giải đấu.');
       return;
     }
-    const target = landmarks.find((item) => item.id === id);
-    saveLandmarksAndSync(landmarks.filter((item) => item.id !== id));
-    if (editingLandmarkId === id) {
-      resetLandmarkForm();
-    }
-    if (lightboxState && lightboxState.title === target?.name) {
-      setLightboxState(null);
+    const target = posts.find((p) => p.id === id);
+    savePostsAndSync(posts.filter((p) => p.id !== id));
+    if (editingPostId === id) {
+      resetPostForm();
     }
     if (target) {
-      showToast('Đã xóa địa danh', target.name);
+      showToast('Đã xóa bài đăng', target.title);
     }
-  };
-
-  const handleRestoreDefaultLandmarks = () => {
-    if (!isAdmin) {
-      openLoginWithReason('Chỉ tài khoản Admin mới có thể khôi phục danh sách địa danh mặc định.');
-      return;
-    }
-    saveLandmarksAndSync(DEFAULT_CAO_BANG_LANDMARKS);
-    resetLandmarkForm();
-    showToast('Đã khôi phục địa danh mặc định', 'Danh sách các điểm đến nổi bật Cao Bằng đã sẵn sàng.');
   };
 
   const handleLoginSuccess = (account: StaffAccount) => {
@@ -1362,8 +717,7 @@ export default function App() {
   );
 
   const unreadCount = useMemo(
-    () =>
-      tournamentNotifications.filter((n) => !readNotifIds.includes(n.id)).length,
+    () => tournamentNotifications.filter((n) => !readNotifIds.includes(n.id)).length,
     [tournamentNotifications, readNotifIds],
   );
 
@@ -1860,7 +1214,39 @@ export default function App() {
     );
   };
 
-  const handleResetDemoData = () => {
+  const handleRequestResetDemoData = () => {
+    if (!isAdmin) {
+      openLoginWithReason(
+        'Chỉ tài khoản Ban Tổ Chức (Admin) mới có quyền làm mới dữ liệu giải đấu.',
+      );
+      return;
+    }
+    setResetPasswordInput('');
+    setResetPasswordError(null);
+    setShowResetPasswordModal(true);
+  };
+
+  const handleConfirmResetDemoData = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin || !currentAccount) {
+      setShowResetPasswordModal(false);
+      openLoginWithReason(
+        'Vui lòng đăng nhập tài khoản Ban Tổ Chức (Admin) để xác thực làm mới dữ liệu.',
+      );
+      return;
+    }
+
+    const entered = resetPasswordInput.trim();
+    const matchedAdmin = appState.staffAccounts.find(
+      (acc) => acc.role === 'admin' && acc.password === entered,
+    );
+    const matchesCurrentAccount = currentAccount.password === entered;
+
+    if (!entered || (!matchesCurrentAccount && !matchedAdmin)) {
+      setResetPasswordError('Mật khẩu không chính xác. Đã hủy thao tác làm mới dữ liệu.');
+      return;
+    }
+
     localStorage.removeItem(STORAGE_KEY);
     const fresh: PersistedAppState = {
       tournaments: INITIAL_TOURNAMENTS,
@@ -1873,6 +1259,9 @@ export default function App() {
     setAppState(fresh);
     setSelectedTournamentId('');
     setActiveTab('overview');
+    setShowResetPasswordModal(false);
+    setResetPasswordInput('');
+    setResetPasswordError(null);
     showToast('Đã làm mới dữ liệu', 'Danh sách giải đấu đang trống. Admin có thể tạo giải mới.');
   };
 
@@ -1935,454 +1324,545 @@ export default function App() {
     [isStaff],
   );
 
-  const visibleLandmarks = showAllPlaces ? landmarks : landmarks.slice(0, 4);
-  const visibleCuisine = showAllCuisine ? CAO_BANG_CUISINE : CAO_BANG_CUISINE.slice(0, 4);
+  const visiblePosts = useMemo(() => {
+    if (!currentTournament) return posts;
+    const matched = posts.filter(
+      (p) => !p.tournamentId || p.tournamentId === currentTournament.id,
+    );
+    return matched.length > 0 ? matched : posts;
+  }, [posts, currentTournament]);
 
-  const renderCaoBangTravelSection = () => (
-    <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
-      {/* Travel Banner Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white px-5 py-6 sm:px-7 sm:py-7 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="space-y-2 max-w-2xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-            <Compass className="w-3.5 h-3.5" />
-            <span>Quê hương Cao Bằng · Chào đón bạn bè phương xa</span>
-          </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Du lịch & Ẩm thực Cao Bằng — Non nước hữu tình
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Giới thiệu những điểm đến kỳ vĩ, món ăn đặc sản trứ danh và hướng dẫn chi tiết cho bạn bè, du khách và VĐV khi ghé thăm miền non nước Cao Bằng.
-          </p>
-        </div>
+  const surfaceCard = isDark
+    ? 'bg-slate-900 border-slate-800 text-slate-100'
+    : 'bg-white border-slate-200 text-slate-900';
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+  const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
+
+  const renderTournamentOverviewSection = () => {
+    if (!currentTournament) {
+      return (
+        <section className={`border rounded-2xl p-6 text-center space-y-3 ${surfaceCard}`}>
+          <p className={`text-sm ${mutedText}`}>Chưa có giải đấu nào đang hiển thị.</p>
           {isAdmin && (
-            <>
+            <button
+              type="button"
+              onClick={handleOpenCreateTournament}
+              className="min-h-[40px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              Tạo giải đấu mới
+            </button>
+          )}
+        </section>
+      );
+    }
+
+    return (
+      <div className="space-y-5">
+        {/* Khối thông tin chính của giải đấu */}
+        <section
+          className={`border rounded-2xl p-4 sm:p-6 lg:p-7 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch ${surfaceCard}`}
+        >
+          <div className="lg:col-span-8 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className={`flex flex-wrap items-center gap-1.5 text-xs ${mutedText}`}>
+                <span className="font-semibold text-orange-500 uppercase tracking-wider">
+                  THÔNG TIN GIẢI ĐẤU · PICKLEBALL 1986
+                </span>
+                <span>·</span>
+                <span>{FORMAT_LABELS[currentTournament.format]}</span>
+                <span>·</span>
+                <span>{TOURNAMENT_STATUS_LABELS[currentTournament.status]}</span>
+              </div>
+
+              <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight">
+                {currentTournament.name}
+              </h1>
+
+              <p className={`text-xs sm:text-sm max-w-2xl leading-relaxed ${mutedText}`}>
+                {currentTournament.description}
+              </p>
+
+              <div className={`pt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${mutedText}`}>
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  {currentTournament.location}
+                </span>
+                <span>·</span>
+                <span className="font-mono-num">
+                  {currentTournament.startDate} → {currentTournament.endDate}
+                </span>
+                <span>·</span>
+                <span className="font-mono-num font-semibold">
+                  {currentTournament.courtsCount} sân
+                </span>
+              </div>
+
+              {currentTournament.divisions.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-2">
+                  {currentTournament.divisions.map((div) => (
+                    <span
+                      key={div}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${
+                        isDark
+                          ? 'bg-slate-800 text-orange-300 border-slate-700'
+                          : 'bg-orange-50 text-orange-800 border-orange-200'
+                      }`}
+                    >
+                      {div}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:flex flex-wrap items-center gap-2.5 pt-1">
               <button
                 type="button"
-                onClick={handleStartAddLandmark}
-                className="min-h-[38px] px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold inline-flex items-center gap-1.5 transition-colors"
+                onClick={() => setActiveTab('live')}
+                className="min-h-[42px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <Radio className="w-4 h-4" />
+                Xem tỷ số trực tiếp (Live)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('schedule')}
+                className={`min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                }`}
+              >
+                <Calendar className="w-4 h-4 text-orange-500" />
+                Lịch & Nhánh đấu
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('standings')}
+                className={`min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                }`}
+              >
+                <Trophy className="w-4 h-4 text-orange-500" />
+                Bảng xếp hạng
+              </button>
+
+              {isStaff && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('referee')}
+                    className={`min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                      isDark
+                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                    }`}
+                  >
+                    <Gavel className="w-4 h-4 text-orange-500" />
+                    Mở App Trọng Tài
+                  </button>
+
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('members')}
+                      className={`min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                        isDark
+                          ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                      }`}
+                    >
+                      <UserPlus className="w-4 h-4 text-orange-500" />
+                      Nhập VĐV & Sắp Xếp Bảng
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="lg:col-span-4 bg-slate-900 text-white rounded-xl p-4 sm:p-5 flex flex-col items-center justify-between text-center border border-slate-800">
+            <img
+              src={BRAND_LOGO_URL}
+              alt="1986 Bính Dần Pickleball"
+              referrerPolicy="no-referrer"
+              className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-orange-500 shadow-md"
+            />
+            <div className="my-2">
+              <div className="font-display text-lg sm:text-xl font-extrabold tracking-wide text-orange-400">
+                BÍNH DẦN 1986 PICKLEBALL
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                Cổng thông tin điều hành · Lịch thi đấu · Tỷ số trực tiếp
+              </p>
+            </div>
+            <div className="w-full pt-2 border-t border-slate-800 grid grid-cols-3 gap-2 font-mono-num text-xs">
+              <div>
+                <div className="text-slate-400">Đang đấu</div>
+                <div className="text-sm font-bold text-emerald-400">
+                  {liveMatches.length}/{currentTournament.courtsCount}
+                </div>
+              </div>
+              <div>
+                <div className="text-slate-400">Tổng đội</div>
+                <div className="text-sm font-bold text-white">
+                  {tournamentRegistrations.length}
+                </div>
+              </div>
+              <div>
+                <div className="text-slate-400">Tổng trận</div>
+                <div className="text-sm font-bold text-orange-400">
+                  {tournamentMatches.length}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Khối thông tin & hình ảnh giải đấu do Admin đăng / quản lý */}
+        <section className={`border rounded-2xl p-4 sm:p-6 space-y-4 ${surfaceCard}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="font-display text-base sm:text-lg font-bold uppercase tracking-tight">
+                THÔNG BÁO & HÌNH ẢNH GIẢI ĐẤU ({visiblePosts.length})
+              </h2>
+              <p className={`text-xs ${mutedText}`}>
+                Điều lệ, lịch họp kỹ thuật, sơ đồ sân và hình ảnh cập nhật từ Ban Tổ Chức.
+              </p>
+            </div>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleStartAddPost}
+                className="min-h-[38px] px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Thêm địa danh / Ảnh
+                Đăng thông tin / Hình ảnh
               </button>
-              <button
-                type="button"
-                onClick={handleRestoreDefaultLandmarks}
-                title="Khôi phục danh sách mặc định"
-                className="min-h-[38px] px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Mặc định
-              </button>
-            </>
-          )}
-          <div className="flex items-center gap-1.5 text-xs text-emerald-200 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2">
-            <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Cao Bằng · Việt Nam</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Sub-navigation: Địa danh | Ẩm thực | Hướng dẫn chi tiết */}
-      <div className="px-4 sm:px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setHomepageGuideTab('places')}
-            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${
-              homepageGuideTab === 'places'
-                ? 'bg-emerald-600 text-white shadow-2xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            <Compass className="w-3.5 h-3.5" />
-            <span>Địa danh du lịch ({landmarks.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setHomepageGuideTab('cuisine')}
-            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${
-              homepageGuideTab === 'cuisine'
-                ? 'bg-emerald-600 text-white shadow-2xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            <Utensils className="w-3.5 h-3.5" />
-            <span>Ẩm thực & Đặc sản ({CAO_BANG_CUISINE.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setHomepageGuideTab('guide')}
-            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${
-              homepageGuideTab === 'guide'
-                ? 'bg-emerald-600 text-white shadow-2xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            <Route className="w-3.5 h-3.5" />
-            <span>Hướng dẫn chi tiết</span>
-          </button>
-        </div>
-
-        <div className="text-[11px] text-slate-500">
-          Mùa thác đẹp: Tháng 8–10 · Mùa hoa & se lạnh: Tháng 11–12 & Mùa xuân
-        </div>
-      </div>
-
-      {/* Admin Add / Edit Form */}
-      {isAdmin && showLandmarkForm && (
-        <form
-          onSubmit={handleSaveLandmark}
-          className="m-4 sm:m-6 p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-sm font-bold text-slate-900">
-              {editingLandmarkId
-                ? 'Chỉnh sửa địa danh & hướng dẫn Cao Bằng'
-                : 'Thêm địa danh / điểm tham quan Cao Bằng mới'}
-            </div>
-            <button
-              type="button"
-              onClick={resetLandmarkForm}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/70"
-              title="Đóng biểu mẫu"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Tên địa danh / Tiêu đề *
-              </label>
-              <input
-                type="text"
-                value={spotName}
-                onChange={(e) => setSpotName(e.target.value)}
-                placeholder="VD: Đèo Mã Phục, Núi Mắt Thần..."
-                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Khu vực / Địa chỉ
-              </label>
-              <input
-                type="text"
-                value={spotArea}
-                onChange={(e) => setSpotArea(e.target.value)}
-                placeholder="VD: Trùng Khánh · Cao Bằng"
-                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Thẻ chủ đề (Badge)
-              </label>
-              <input
-                type="text"
-                value={spotTag}
-                onChange={(e) => setSpotTag(e.target.value)}
-                placeholder="VD: Thắng cảnh, Check-in, Ẩm thực..."
-                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-            </div>
-          </div>
-
-          {/* Multi-link manager */}
-          <div className="space-y-2 p-3.5 rounded-xl bg-white border border-slate-200">
-            <label className="block text-xs font-semibold text-slate-700">
-              Liên kết trên thẻ (Bản đồ, bài viết, video...)
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
-              <input
-                type="text"
-                value={newLinkLabel}
-                onChange={(e) => setNewLinkLabel(e.target.value)}
-                placeholder="Nhãn nút (VD: Bản đồ, Cẩm nang)"
-                className="sm:col-span-4 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-              <input
-                type="text"
-                value={newLinkUrl}
-                onChange={(e) => setNewLinkUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddLinkToForm();
-                  }
-                }}
-                placeholder="Dán đường dẫn URL (VD: https://maps.google.com/...)"
-                className="sm:col-span-6 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-              <button
-                type="button"
-                onClick={handleAddLinkToForm}
-                className="sm:col-span-2 min-h-[38px] px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shrink-0"
-              >
-                + Thêm link
-              </button>
-            </div>
-
-            {spotLinks.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {spotLinks.map((lnk, idx) => (
-                  <span
-                    key={`${idx}_${lnk.url}`}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 text-xs font-semibold"
-                  >
-                    <span>{lnk.label}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveLinkFromForm(idx)}
-                      className="text-rose-600 hover:text-rose-800 font-bold"
-                      title="Xóa liên kết này"
-                    >
-                      ✕
-                    </button>
-                  </span>
-                ))}
-              </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Giới thiệu ngắn gọn
-              </label>
-              <textarea
-                rows={3}
-                value={spotSummary}
-                onChange={(e) => setSpotSummary(e.target.value)}
-                placeholder="Mô tả ngắn gọn điểm nổi bật của địa danh..."
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-            </div>
+          {isAdmin && showPostForm && (
+            <form
+              onSubmit={handleSavePost}
+              className={`p-4 sm:p-5 rounded-2xl border space-y-4 ${
+                isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-sm font-bold">
+                  {editingPostId
+                    ? 'Chỉnh sửa thông tin & hình ảnh giải đấu'
+                    : 'Đăng thông tin & hình ảnh giải đấu mới'}
+                </div>
+                <button
+                  type="button"
+                  onClick={resetPostForm}
+                  className={`p-1.5 rounded-lg ${
+                    isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-200'
+                  }`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Hướng dẫn chi tiết (mở khi bấm "Xem thêm")
-              </label>
-              <textarea
-                rows={3}
-                value={spotGuideDetail}
-                onChange={(e) => setSpotGuideDetail(e.target.value)}
-                placeholder="Khoảng cách di chuyển, cách tham quan, lưu ý giờ mở cửa hoặc kết hợp điểm lân cận..."
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-            </div>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold mb-1">Tiêu đề thông tin *</label>
+                  <input
+                    type="text"
+                    value={postTitle}
+                    onChange={(e) => setPostTitle(e.target.value)}
+                    placeholder="VD: Điều lệ thi đấu, Sơ đồ sân, Hình ảnh khai mạc..."
+                    className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg ${
+                      isDark
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Nhãn phân loại</label>
+                  <input
+                    type="text"
+                    value={postBadge}
+                    onChange={(e) => setPostBadge(e.target.value)}
+                    placeholder="VD: Điều lệ, Lịch họp, Ảnh sân..."
+                    className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg ${
+                      isDark
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold text-slate-700">
-              Hình ảnh địa danh (chọn nhiều ảnh từ máy hoặc dán link URL ảnh)
-            </label>
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
-              <input
-                type="text"
-                value={spotUrlInput}
-                onChange={(e) => setSpotUrlInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddSpotUrlImage();
-                  }
-                }}
-                placeholder="Dán link URL ảnh rồi bấm + Ảnh"
-                className="flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-              />
-              <button
-                type="button"
-                onClick={handleAddSpotUrlImage}
-                className="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold shrink-0"
-              >
-                + Ảnh
-              </button>
-              <label className="min-h-[38px] px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-600 text-white text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5 shrink-0 transition-colors">
-                <ImagePlus className="w-3.5 h-3.5" />
-                Tải ảnh lên
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleSpotFilesChange}
-                  className="hidden"
-                />
-              </label>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Tóm tắt ngắn</label>
+                  <textarea
+                    rows={2}
+                    value={postSummary}
+                    onChange={(e) => setPostSummary(e.target.value)}
+                    placeholder="Nội dung tóm tắt hiển thị trên thẻ..."
+                    className={`w-full px-3 py-2 text-xs border rounded-lg ${
+                      isDark
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">
+                    Chi tiết đầy đủ (mở khi bấm Xem thêm)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={postDetail}
+                    onChange={(e) => setPostDetail(e.target.value)}
+                    placeholder="Quy định, giờ tập trung, lưu ý cho VĐV và trọng tài..."
+                    className={`w-full px-3 py-2 text-xs border rounded-lg ${
+                      isDark
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+              </div>
 
-            {spotDraftImages.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {spotDraftImages.map((src, idx) => (
-                  <div
-                    key={`${idx}_${src.slice(0, 20)}`}
-                    className="relative w-24 h-16 rounded-lg overflow-hidden border border-slate-300 bg-white"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Nhãn liên kết đính kèm</label>
+                  <input
+                    type="text"
+                    value={postLinkLabel}
+                    onChange={(e) => setPostLinkLabel(e.target.value)}
+                    placeholder="VD: Xem điều lệ / Bản đồ sân"
+                    className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg ${
+                      isDark
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Đường dẫn URL liên kết</label>
+                  <input
+                    type="text"
+                    value={postLinkUrl}
+                    onChange={(e) => setPostLinkUrl(e.target.value)}
+                    placeholder="https://..."
+                    className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg ${
+                      isDark
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold">
+                  Hình ảnh giải đấu (tải nhiều ảnh từ máy hoặc dán URL ảnh)
+                </label>
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={postUrlInput}
+                    onChange={(e) => setPostUrlInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddPostUrlImage();
+                      }
+                    }}
+                    placeholder="Dán link URL ảnh rồi bấm + Ảnh"
+                    className={`flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border rounded-lg ${
+                      isDark
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddPostUrlImage}
+                    className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 ${
+                      isDark
+                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                        : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+                    }`}
                   >
-                    <img
-                      src={src}
-                      alt={`Ảnh địa danh ${idx + 1}`}
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        e.currentTarget.src = createLandmarkArtwork(
-                          spotName || 'Cao Bằng',
-                          spotTag.toUpperCase(),
-                          'waterfall',
-                          '#059669',
-                        );
-                      }}
-                      className="w-full h-full object-cover"
+                    + Ảnh
+                  </button>
+                  <label className="min-h-[38px] px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-600 text-white text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5 shrink-0 transition-colors">
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    Tải ảnh lên
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handlePostFilesChange}
+                      className="hidden"
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSpotDraftImage(idx)}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-950/80 text-white text-[11px] flex items-center justify-center hover:bg-rose-600"
-                      title="Xóa ảnh này"
-                    >
-                      ✕
-                    </button>
+                  </label>
+                </div>
+
+                {postDraftImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {postDraftImages.map((src, idx) => (
+                      <div
+                        key={`${idx}_${src.slice(0, 20)}`}
+                        className="relative w-24 h-16 rounded-lg overflow-hidden border border-slate-300 bg-slate-900"
+                      >
+                        <img
+                          src={src}
+                          alt={`Ảnh giải đấu ${idx + 1}`}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePostDraftImage(idx)}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-950/80 text-white text-[11px] flex items-center justify-center hover:bg-rose-600"
+                          title="Xóa ảnh"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={resetLandmarkForm}
-              className="min-h-[38px] px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              className="min-h-[38px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
-            >
-              {editingLandmarkId ? 'Lưu chỉnh sửa' : 'Đăng địa danh'}
-            </button>
-          </div>
-        </form>
-      )}
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={resetPostForm}
+                  className={`min-h-[38px] px-4 py-2 rounded-xl text-xs font-semibold ${
+                    isDark
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                      : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+                  }`}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="min-h-[38px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold"
+                >
+                  {editingPostId ? 'Lưu cập nhật' : 'Đăng bài'}
+                </button>
+              </div>
+            </form>
+          )}
 
-      {/* Sub-tab 1: Places Grid with Photos & "Xem thêm" */}
-      {homepageGuideTab === 'places' &&
-        (landmarks.length === 0 ? (
-          <div className="p-6 text-center text-xs text-slate-500">
-            Chưa có địa danh Cao Bằng nào được hiển thị.
-          </div>
-        ) : (
-          <div className="p-4 sm:p-6 space-y-5 bg-slate-50/40">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-              {visibleLandmarks.map((spot) => {
-                const fallbackArt = createLandmarkArtwork(
-                  spot.name,
-                  spot.tag.toUpperCase(),
-                  spot.scene || 'waterfall',
-                  '#0d9488',
-                );
-                const coverImage = spot.images[0] || fallbackArt;
-                const isCardExpanded = Boolean(expandedCardIds[spot.id]);
-                const hasMoreContent =
-                  Boolean(spot.guideDetail) || spot.summary.length > 115;
+          {visiblePosts.length === 0 ? (
+            <div
+              className={`p-6 rounded-xl border text-center text-xs ${
+                isDark ? 'bg-slate-950/50 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+              }`}
+            >
+              Chưa có bài đăng thông tin hoặc hình ảnh nào cho giải đấu.
+              {isAdmin ? ' Bấm "Đăng thông tin / Hình ảnh" để thêm mới.' : ''}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+              {visiblePosts.map((post) => {
+                const isExpanded = Boolean(expandedPostIds[post.id]);
+                const hasMore = Boolean(post.detail) || post.summary.length > 120;
 
                 return (
                   <article
-                    key={spot.id}
-                    className="rounded-2xl bg-white border border-slate-200 hover:border-emerald-400 transition-colors overflow-hidden flex flex-col justify-between shadow-2xs"
+                    key={post.id}
+                    className={`rounded-2xl border overflow-hidden flex flex-col justify-between ${
+                      isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50/60 border-slate-200'
+                    }`}
                   >
                     <div>
-                      <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setLightboxState({
-                              title: spot.name,
-                              subtitle: spot.area,
-                              images: spot.images,
-                              imageIndex: 0,
-                              fallbackTitle: spot.name,
-                              fallbackTag: spot.tag.toUpperCase(),
-                              fallbackAccent: '#0d9488',
-                            })
-                          }
-                          className="block w-full h-full text-left"
-                        >
-                          <img
-                            src={coverImage}
-                            alt={spot.name}
-                            referrerPolicy="no-referrer"
-                            onError={(e) => {
-                              e.currentTarget.src = fallbackArt;
-                            }}
-                            className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300"
-                          />
-                        </button>
-                        <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-950/75 text-emerald-300 backdrop-blur-xs">
-                          {spot.tag}
-                        </span>
-                        {spot.images.length > 1 && (
+                      {post.images.length > 0 && (
+                        <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
                           <button
                             type="button"
                             onClick={() =>
                               setLightboxState({
-                                title: spot.name,
-                                subtitle: spot.area,
-                                images: spot.images,
+                                title: post.title,
+                                subtitle: post.createdAt || currentTournament.name,
+                                images: post.images,
                                 imageIndex: 0,
-                                fallbackTitle: spot.name,
-                                fallbackTag: spot.tag.toUpperCase(),
-                                fallbackAccent: '#0d9488',
                               })
                             }
-                            className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-950/80 text-white font-mono-num"
+                            className="block w-full h-full text-left"
                           >
-                            {spot.images.length} ảnh
+                            <img
+                              src={post.images[0]}
+                              alt={post.title}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300"
+                            />
                           </button>
-                        )}
-                      </div>
+                          {post.images.length > 1 && (
+                            <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-950/80 text-white font-mono-num">
+                              {post.images.length} ảnh
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <div className="p-4 space-y-2">
-                        <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-700">
-                          <MapPin className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">{spot.area}</span>
+                        <div className="flex items-center justify-between gap-2 text-[11px]">
+                          <span className="px-2 py-0.5 rounded-md font-bold bg-orange-500/15 text-orange-500">
+                            {post.badge}
+                          </span>
+                          {post.createdAt && (
+                            <span className={`font-mono-num ${mutedText}`}>{post.createdAt}</span>
+                          )}
                         </div>
 
-                        <h3 className="font-display text-base font-bold text-slate-900 leading-snug">
-                          {spot.name}
+                        <h3 className="font-display text-base font-bold leading-snug">
+                          {post.title}
                         </h3>
 
-                        {spot.summary && (
+                        {post.summary && (
                           <p
-                            className={`text-xs text-slate-600 leading-relaxed ${
-                              isCardExpanded ? '' : 'line-clamp-3'
+                            className={`text-xs leading-relaxed ${mutedText} ${
+                              isExpanded ? '' : 'line-clamp-3'
                             }`}
                           >
-                            {spot.summary}
+                            {post.summary}
                           </p>
                         )}
 
-                        {isCardExpanded && spot.guideDetail && (
-                          <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-xs text-slate-700 leading-relaxed">
-                            <span className="font-bold text-emerald-900">Hướng dẫn: </span>
-                            {spot.guideDetail}
+                        {isExpanded && post.detail && (
+                          <div
+                            className={`p-2.5 rounded-xl border text-xs leading-relaxed ${
+                              isDark
+                                ? 'bg-slate-900 border-slate-800 text-slate-200'
+                                : 'bg-white border-slate-200 text-slate-700'
+                            }`}
+                          >
+                            {post.detail}
                           </div>
                         )}
 
-                        {hasMoreContent && (
+                        {hasMore && (
                           <button
                             type="button"
-                            onClick={() => toggleCardExpand(spot.id)}
-                            className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 pt-0.5"
+                            onClick={() =>
+                              setExpandedPostIds((prev) => ({
+                                ...prev,
+                                [post.id]: !prev[post.id],
+                              }))
+                            }
+                            className="inline-flex items-center gap-1 text-xs font-bold text-orange-500 hover:text-orange-400"
                           >
-                            <span>{isCardExpanded ? 'Thu gọn' : 'Xem thêm hướng dẫn'}</span>
-                            {isCardExpanded ? (
+                            <span>{isExpanded ? 'Thu gọn' : 'Xem thêm'}</span>
+                            {isExpanded ? (
                               <ChevronUp className="w-3.5 h-3.5" />
                             ) : (
                               <ChevronDown className="w-3.5 h-3.5" />
@@ -2392,58 +1872,43 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                        {spot.links && spot.links.length > 0 ? (
-                          spot.links.map((lnk, idx) => (
-                            <a
-                              key={`${spot.id}_lnk_${idx}`}
-                              href={lnk.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold inline-flex items-center gap-1 transition-colors"
-                            >
-                              <span>{lnk.label}</span>
-                              <ExternalLink className="w-3 h-3 shrink-0" />
-                            </a>
-                          ))
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setLightboxState({
-                                title: spot.name,
-                                subtitle: spot.area,
-                                images: spot.images,
-                                imageIndex: 0,
-                                fallbackTitle: spot.name,
-                                fallbackTag: spot.tag.toUpperCase(),
-                                fallbackAccent: '#0d9488',
-                              })
-                            }
-                            className="text-xs font-semibold text-slate-600 hover:text-slate-900"
-                          >
-                            Xem ảnh
-                          </button>
-                        )}
-                      </div>
+                    <div
+                      className={`px-4 py-3 border-t flex items-center justify-between gap-2 ${
+                        isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-white'
+                      }`}
+                    >
+                      {post.linkUrl ? (
+                        <a
+                          href={post.linkUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold text-orange-500 hover:text-orange-400 inline-flex items-center gap-1 truncate"
+                        >
+                          <span className="truncate">{post.linkLabel || 'Xem liên kết'}</span>
+                          <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                        </a>
+                      ) : (
+                        <span className={`text-[11px] ${mutedText}`}>Ban Tổ Chức</span>
+                      )}
 
                       {isAdmin && (
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
-                            onClick={() => handleStartEditLandmark(spot)}
-                            className="text-xs font-semibold text-slate-700 hover:text-emerald-700 inline-flex items-center gap-1"
-                            title="Chỉnh sửa địa danh"
+                            onClick={() => handleStartEditPost(post)}
+                            className={`text-xs font-semibold inline-flex items-center gap-1 ${
+                              isDark
+                                ? 'text-slate-300 hover:text-orange-400'
+                                : 'text-slate-700 hover:text-orange-600'
+                            }`}
                           >
                             <Pencil className="w-3.5 h-3.5" />
                             Sửa
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteLandmark(spot.id)}
-                            className="text-xs font-semibold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1"
-                            title="Xóa địa danh"
+                            onClick={() => handleDeletePost(post.id)}
+                            className="text-xs font-semibold text-rose-500 hover:text-rose-400 inline-flex items-center gap-1"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             Xóa
@@ -2455,206 +1920,29 @@ export default function App() {
                 );
               })}
             </div>
-
-            {landmarks.length > 4 && (
-              <div className="flex justify-center pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowAllPlaces((prev) => !prev)}
-                  className="min-h-[40px] px-5 py-2 rounded-xl bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-extrabold inline-flex items-center gap-1.5 shadow-2xs transition-colors"
-                >
-                  <span>
-                    {showAllPlaces
-                      ? 'Thu gọn danh sách địa danh'
-                      : `Xem thêm ${landmarks.length - 4} địa danh Cao Bằng`}
-                  </span>
-                  {showAllPlaces ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-
-      {/* Sub-tab 2: Cuisine & Specialties with Photos & "Xem thêm" */}
-      {homepageGuideTab === 'cuisine' && (
-        <div className="p-4 sm:p-6 space-y-5 bg-slate-50/40">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-            {visibleCuisine.map((item) => {
-              const isExpanded = Boolean(expandedCardIds[item.id]);
-              const foodSrc =
-                item.image ||
-                createCuisineArtwork(item.name, item.tag.toUpperCase(), item.scene, item.mealTime);
-
-              return (
-                <article
-                  key={item.id}
-                  className="rounded-2xl bg-white border border-slate-200 hover:border-amber-400 transition-colors overflow-hidden flex flex-col justify-between shadow-2xs"
-                >
-                  <div>
-                    <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setLightboxState({
-                            title: item.name,
-                            subtitle: item.mealTime,
-                            images: [foodSrc],
-                            imageIndex: 0,
-                            fallbackTitle: item.name,
-                            fallbackTag: item.tag.toUpperCase(),
-                            fallbackAccent: '#d97706',
-                          })
-                        }
-                        className="block w-full h-full text-left"
-                      >
-                        <img
-                          src={foodSrc}
-                          alt={item.name}
-                          referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            e.currentTarget.src = createCuisineArtwork(
-                              item.name,
-                              item.tag.toUpperCase(),
-                              item.scene,
-                              item.mealTime,
-                            );
-                          }}
-                          className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300"
-                        />
-                      </button>
-                      <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-950/75 text-amber-300 backdrop-blur-xs">
-                        {item.tag}
-                      </span>
-                    </div>
-
-                    <div className="p-4 space-y-2">
-                      <div className="text-[11px] font-medium text-amber-700">
-                        {item.mealTime}
-                      </div>
-
-                      <h3 className="font-display text-base font-bold text-slate-900 leading-snug">
-                        {item.name}
-                      </h3>
-
-                      <p
-                        className={`text-xs text-slate-600 leading-relaxed ${
-                          isExpanded ? '' : 'line-clamp-3'
-                        }`}
-                      >
-                        {item.description}
-                      </p>
-
-                      {isExpanded && (
-                        <div className="space-y-2 pt-1">
-                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed">
-                            {item.detailedGuide}
-                          </div>
-                          <div className="p-2.5 rounded-xl bg-amber-50/90 border border-amber-200/80 text-xs text-amber-950">
-                            <strong>Mẹo nhỏ:</strong> {item.tip}
-                          </div>
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => toggleCardExpand(item.id)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 hover:text-amber-800 pt-0.5"
-                      >
-                        <span>{isExpanded ? 'Thu gọn' : 'Xem thêm cách thưởng thức'}</span>
-                        {isExpanded ? (
-                          <ChevronUp className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-
-          {CAO_BANG_CUISINE.length > 4 && (
-            <div className="flex justify-center pt-1">
-              <button
-                type="button"
-                onClick={() => setShowAllCuisine((prev) => !prev)}
-                className="min-h-[40px] px-5 py-2 rounded-xl bg-white hover:bg-amber-50 text-amber-900 border border-amber-300 text-xs font-extrabold inline-flex items-center gap-1.5 shadow-2xs transition-colors"
-              >
-                <span>
-                  {showAllCuisine
-                    ? 'Thu gọn danh sách món ngon'
-                    : `Xem thêm ${CAO_BANG_CUISINE.length - 4} đặc sản Cao Bằng`}
-                </span>
-                {showAllCuisine ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
-              </button>
-            </div>
           )}
-        </div>
-      )}
-
-      {/* Sub-tab 3: Detailed Guide with expandable sections */}
-      {homepageGuideTab === 'guide' && (
-        <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4 items-start bg-slate-50/40">
-          {CAO_BANG_TRAVEL_GUIDE.map((block, bIdx) => {
-            const isBlockExpanded = Boolean(expandedGuideBlocks[bIdx]);
-            return (
-              <div
-                key={block.title}
-                className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 space-y-3"
-              >
-                <h3 className="font-display text-base font-bold text-slate-900">{block.title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">{block.summary}</p>
-
-                {isBlockExpanded && (
-                  <ul className="space-y-2 text-xs text-slate-700 leading-relaxed list-disc pl-4 pt-1 border-t border-slate-100">
-                    {block.points.map((pt, idx) => (
-                      <li key={idx}>{pt}</li>
-                    ))}
-                  </ul>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setExpandedGuideBlocks((prev) => ({ ...prev, [bIdx]: !prev[bIdx] }))
-                  }
-                  className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800"
-                >
-                  <span>{isBlockExpanded ? 'Thu gọn chi tiết' : 'Xem thêm hướng dẫn'}</span>
-                  {isBlockExpanded ? (
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
+        </section>
+      </div>
+    );
+  };
 
   return (
     <div
       className={
         activeTab === 'referee' && isStaff
-          ? 'h-[100dvh] flex flex-col bg-slate-950 text-[#0F172A] overflow-hidden pb-11 sm:pb-12 lg:pb-0'
+          ? 'h-[100dvh] flex flex-col bg-slate-950 text-white overflow-hidden pb-11 sm:pb-12 lg:pb-0'
+          : isDark
+          ? 'min-h-screen flex flex-col bg-slate-950 text-slate-100 pb-16 lg:pb-0'
           : 'min-h-screen flex flex-col bg-[#F8FAFC] text-[#0F172A] pb-16 lg:pb-0'
       }
     >
       {/* TOP BAR CONTRACT */}
       <header
-        className={`no-print sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-slate-200 px-3 sm:px-6 shrink-0 flex items-center justify-between gap-2 sm:gap-8 ${
+        className={`no-print sticky top-0 z-30 backdrop-blur-xs border-b px-3 sm:px-6 shrink-0 flex items-center justify-between gap-2 sm:gap-8 ${
+          isDark
+            ? 'bg-slate-900/95 border-slate-800 text-slate-100'
+            : 'bg-white/95 border-slate-200 text-slate-900'
+        } ${
           activeTab === 'referee' && isStaff
             ? 'h-10 sm:h-12 hide-on-mobile-landscape'
             : 'h-12 sm:h-14'
@@ -2674,12 +1962,16 @@ export default function App() {
             referrerPolicy="no-referrer"
             className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-cover border border-orange-400 shadow-2xs shrink-0"
           />
-          <span className="font-display text-lg sm:text-2xl font-extrabold tracking-tight text-slate-900 group-hover:text-orange-600 transition-colors whitespace-nowrap">
+          <span className="font-display text-lg sm:text-2xl font-extrabold tracking-tight group-hover:text-orange-500 transition-colors whitespace-nowrap">
             1986 PICKLEBALL
           </span>
         </a>
 
-        <nav className="hidden lg:flex items-center gap-5 xl:gap-6 text-sm font-medium text-slate-600">
+        <nav
+          className={`hidden lg:flex items-center gap-5 xl:gap-6 text-sm font-medium ${
+            isDark ? 'text-slate-300' : 'text-slate-600'
+          }`}
+        >
           {visibleNavItems.map((item) => (
             <button
               key={item.id}
@@ -2687,7 +1979,11 @@ export default function App() {
               onClick={() => setActiveTab(item.id)}
               className={`py-1 transition-colors whitespace-nowrap shrink-0 border-b-2 ${
                 activeTab === item.id
-                  ? 'border-orange-600 text-slate-900 font-semibold'
+                  ? isDark
+                    ? 'border-orange-500 text-white font-semibold'
+                    : 'border-orange-600 text-slate-900 font-semibold'
+                  : isDark
+                  ? 'border-transparent hover:text-white'
                   : 'border-transparent hover:text-slate-900'
               }`}
             >
@@ -2697,6 +1993,20 @@ export default function App() {
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={toggleThemeMode}
+            title={isDark ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối'}
+            className={`min-h-[34px] px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+              isDark
+                ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+            }`}
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            <span className="hidden sm:inline">{isDark ? 'Sáng' : 'Tối'}</span>
+          </button>
+
           {currentAccount ? (
             <button
               type="button"
@@ -2739,9 +2049,9 @@ export default function App() {
 
       {/* Secondary Workspace Context Toolbar */}
       <div
-        className={`no-print bg-white border-b border-slate-200 px-2.5 sm:px-6 py-2 shrink-0 ${
-          activeTab === 'referee' && isStaff ? 'hidden' : ''
-        }`}
+        className={`no-print border-b px-2.5 sm:px-6 py-2 shrink-0 ${
+          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+        } ${activeTab === 'referee' && isStaff ? 'hidden' : ''}`}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -2749,7 +2059,11 @@ export default function App() {
               <select
                 value={currentTournament.id}
                 onChange={(e) => setSelectedTournamentId(e.target.value)}
-                className="min-h-[36px] w-full sm:w-auto flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-900 bg-slate-100 hover:bg-slate-200/70 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 max-w-full sm:max-w-md truncate"
+                className={`min-h-[36px] w-full sm:w-auto flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 text-xs font-semibold border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 max-w-full sm:max-w-md truncate ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
+                    : 'bg-slate-100 hover:bg-slate-200/70 text-slate-900 border-slate-200'
+                }`}
               >
                 {appState.tournaments.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -2758,7 +2072,7 @@ export default function App() {
                 ))}
               </select>
             ) : (
-              <span className="text-xs font-medium text-slate-500 truncate">
+              <span className={`text-xs font-medium truncate ${mutedText}`}>
                 Chưa có giải đấu nào đang diễn ra
               </span>
             )}
@@ -2783,9 +2097,13 @@ export default function App() {
                   setShowNotifDrawer((s) => !s);
                   setReadNotifIds(tournamentNotifications.map((n) => n.id));
                 }}
-                className="min-h-[34px] px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap"
+                className={`min-h-[34px] px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
               >
-                <Bell className="w-3.5 h-3.5 text-orange-600" />
+                <Bell className="w-3.5 h-3.5 text-orange-500" />
                 <span>{unreadCount > 0 ? `${unreadCount} mới` : tournamentNotifications.length}</span>
               </button>
             )}
@@ -2793,9 +2111,13 @@ export default function App() {
             {isAdmin && (
               <button
                 type="button"
-                onClick={handleResetDemoData}
-                title="Làm mới dữ liệu giải đấu"
-                className="min-h-[34px] p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                onClick={handleRequestResetDemoData}
+                title="Làm mới dữ liệu giải đấu (yêu cầu mật khẩu)"
+                className={`min-h-[34px] p-1.5 rounded-lg transition-colors ${
+                  isDark
+                    ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
@@ -2862,184 +2184,51 @@ export default function App() {
       >
         {!currentTournament ? (
           activeTab === 'overview' ? (
-            <div className="space-y-5">
-              {renderCaoBangTravelSection()}
-              {isAdmin && (
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleOpenCreateTournament}
-                    className="min-h-[40px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Tạo giải đấu mới
-                  </button>
-                </div>
-              )}
-            </div>
+            renderTournamentOverviewSection()
           ) : (
-            <section className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-xs text-slate-500">
+            <section className={`border rounded-2xl p-6 text-center text-xs ${surfaceCard} ${mutedText}`}>
               Chưa có giải đấu nào được chọn.
             </section>
           )
         ) : (
           <>
-            {/* TAB 1: TRANG CHỦ — ƯU TIÊN DU LỊCH & ẨM THỰC CAO BẰNG */}
-            {activeTab === 'overview' && (
-              <div className="space-y-5">
-                {renderCaoBangTravelSection()}
-
-                {/* Khối thông tin giải đấu thể thao kết nối */}
-                <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 lg:p-7 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-                  <div className="lg:col-span-8 flex flex-col justify-between space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-                        <span className="font-semibold text-orange-600 uppercase tracking-wider">
-                          SỰ KIỆN THỂ THAO TẠI CAO BẰNG · PICKLEBALL 1986
-                        </span>
-                        <span>·</span>
-                        <span>{FORMAT_LABELS[currentTournament.format]}</span>
-                        <span>·</span>
-                        <span>{TOURNAMENT_STATUS_LABELS[currentTournament.status]}</span>
-                      </div>
-
-                      <h2 className="font-display text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900">
-                        {currentTournament.name}
-                      </h2>
-
-                      <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
-                        {currentTournament.description}
-                      </p>
-
-                      <div className="pt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-                          {currentTournament.location}
-                        </span>
-                        <span>·</span>
-                        <span className="font-mono-num">
-                          {currentTournament.startDate} → {currentTournament.endDate}
-                        </span>
-                        <span>·</span>
-                        <span className="font-mono-num font-semibold text-slate-900">
-                          {currentTournament.courtsCount} sân
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:flex flex-wrap items-center gap-2.5 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('live')}
-                        className="min-h-[42px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Radio className="w-4 h-4" />
-                        Xem tỷ số trực tiếp (Live)
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('schedule')}
-                        className="min-h-[42px] px-4 py-2 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Calendar className="w-4 h-4 text-orange-600" />
-                        Lịch & Nhánh đấu
-                      </button>
-
-                      {isStaff && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab('referee')}
-                            className="min-h-[42px] px-4 py-2 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center justify-center gap-2"
-                          >
-                            <Gavel className="w-4 h-4 text-orange-600" />
-                            Mở App Trọng Tài
-                          </button>
-
-                          {isAdmin && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveTab('members')}
-                              className="min-h-[42px] px-4 py-2 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center justify-center gap-2"
-                            >
-                              <UserPlus className="w-4 h-4 text-orange-600" />
-                              Nhập VĐV & Sắp Xếp Bảng
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-4 bg-slate-900 text-white rounded-xl p-4 sm:p-5 flex flex-col items-center justify-between text-center border border-slate-800">
-                    <img
-                      src={BRAND_LOGO_URL}
-                      alt="1986 Bính Dần Pickleball"
-                      referrerPolicy="no-referrer"
-                      className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-orange-500 shadow-md"
-                    />
-                    <div className="my-2">
-                      <div className="font-display text-lg sm:text-xl font-extrabold tracking-wide text-orange-400">
-                        BÍNH DẦN 1986 PICKLEBALL
-                      </div>
-                      <p className="text-xs text-slate-300 mt-1">
-                        Giao lưu thể thao · Kết nối bạn bè phương xa về với Cao Bằng
-                      </p>
-                    </div>
-                    <div className="w-full pt-2 border-t border-slate-800 grid grid-cols-3 gap-2 font-mono-num text-xs">
-                      <div>
-                        <div className="text-slate-400">Đang đấu</div>
-                        <div className="text-sm font-bold text-emerald-400">
-                          {liveMatches.length}/{currentTournament.courtsCount}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400">Tổng đội</div>
-                        <div className="text-sm font-bold text-white">
-                          {tournamentRegistrations.length}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400">Tổng trận</div>
-                        <div className="text-sm font-bold text-orange-400">
-                          {tournamentMatches.length}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            )}
+            {/* TAB 1: TRANG CHỦ — CHỈ GIỚI THIỆU THÔNG TIN GIẢI ĐẤU */}
+            {activeTab === 'overview' && renderTournamentOverviewSection()}
 
             {/* TAB 2: LIVE */}
             {activeTab === 'live' && (
               <div className="space-y-5">
-                <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+                <section
+                  className={`border rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 ${surfaceCard}`}
+                >
                   <div>
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-600">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-500">
                       <Radio className="w-4 h-4" />
                       <span>TRỰC TIẾP SÂN THI ĐẤU</span>
                     </div>
-                    <h1 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">
+                    <h1 className="font-display text-xl sm:text-2xl font-extrabold mt-0.5">
                       Live Scoreboard — {currentTournament.name}
                     </h1>
                   </div>
                   <div className="flex items-center gap-2 text-xs font-mono-num">
-                    <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    <span className="px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-500 font-bold border border-emerald-500/30">
                       Đang đấu: {liveMatches.length} / {currentTournament.courtsCount} sân
                     </span>
                   </div>
                 </section>
 
                 <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                  <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                  <div className={`lg:col-span-7 border rounded-xl overflow-hidden ${surfaceCard}`}>
+                    <div
+                      className={`px-4 sm:px-5 py-3.5 border-b flex items-center justify-between ${
+                        isDark ? 'border-slate-800' : 'border-slate-200'
+                      }`}
+                    >
                       <div>
-                        <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
+                        <h2 className="font-display text-base sm:text-lg font-bold tracking-tight uppercase">
                           CÁC TRẬN ĐANG THI ĐẤU TRỰC TIẾP
                         </h2>
-                        <p className="text-xs text-slate-500">
+                        <p className={`text-xs ${mutedText}`}>
                           Cặp VĐV đứng sân, điểm số và lượt giao bóng cập nhật tức thời
                         </p>
                       </div>
@@ -3047,7 +2236,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setActiveTab('referee')}
-                          className="text-xs font-semibold text-orange-600 hover:text-orange-700 shrink-0"
+                          className="text-xs font-semibold text-orange-500 hover:text-orange-400 shrink-0"
                         >
                           App Trọng tài →
                         </button>
@@ -3056,8 +2245,14 @@ export default function App() {
 
                     <div className="p-4 sm:p-5 space-y-3.5">
                       {liveMatches.length === 0 ? (
-                        <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                          <p className="text-sm text-slate-600">
+                        <div
+                          className={`p-6 text-center rounded-xl border space-y-2 ${
+                            isDark
+                              ? 'bg-slate-950/60 border-slate-800'
+                              : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <p className={`text-sm ${mutedText}`}>
                             Hiện chưa có trận nào đang thi đấu trực tiếp trên sân.
                           </p>
                           <button
@@ -3072,54 +2267,54 @@ export default function App() {
                         liveMatches.map((m) => (
                           <div
                             key={m.id}
-                            className="border border-slate-200 rounded-xl p-3.5 sm:p-4 bg-slate-50/70 space-y-2.5"
+                            className={`border rounded-xl p-3.5 sm:p-4 space-y-2.5 ${
+                              isDark
+                                ? 'border-slate-800 bg-slate-950/60'
+                                : 'border-slate-200 bg-slate-50/70'
+                            }`}
                           >
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                            <div className={`flex flex-wrap items-center justify-between gap-2 text-xs ${mutedText}`}>
                               <div>
-                                <span className="font-mono-num font-bold text-orange-600">
+                                <span className="font-mono-num font-bold text-orange-500">
                                   SÂN {m.courtNumber} · TRẬN #{m.matchNumber}
                                 </span>
                                 <span> · </span>
-                                <span className="font-semibold text-slate-800">
+                                <span className="font-semibold">
                                   {m.teamSubCategory || m.division}
                                 </span>
                               </div>
-                              <span className="font-mono-num font-semibold text-emerald-600">
+                              <span className="font-mono-num font-semibold text-emerald-500">
                                 Hô điểm: {formatScoreCallout(m)}
                               </span>
                             </div>
 
                             <div className="grid grid-cols-12 items-center gap-2 py-1">
                               <div className="col-span-5 min-w-0">
-                                <div className="text-sm font-bold text-slate-900 truncate">
-                                  {m.teamAName}
-                                </div>
+                                <div className="text-sm font-bold truncate">{m.teamAName}</div>
                                 {(m.teamAPlayer1 || m.teamAPlayer2) && (
-                                  <div className="text-[11px] text-slate-600 truncate">
+                                  <div className={`text-[11px] truncate ${mutedText}`}>
                                     {m.teamAPlayer1} · {m.teamAPlayer2}
                                   </div>
                                 )}
-                                <div className="text-[10px] text-orange-600 font-semibold">
+                                <div className="text-[10px] text-orange-500 font-semibold">
                                   {m.servingTeam === 'A'
                                     ? `● Đang giao bóng (Người ${m.serverNumber})`
                                     : 'Đỡ giao bóng'}
                                 </div>
                               </div>
 
-                              <div className="col-span-2 text-center font-mono-num text-xl sm:text-2xl font-extrabold text-slate-900">
+                              <div className="col-span-2 text-center font-mono-num text-xl sm:text-2xl font-extrabold">
                                 {m.scoreA} : {m.scoreB}
                               </div>
 
                               <div className="col-span-5 text-right min-w-0">
-                                <div className="text-sm font-bold text-slate-900 truncate">
-                                  {m.teamBName}
-                                </div>
+                                <div className="text-sm font-bold truncate">{m.teamBName}</div>
                                 {(m.teamBPlayer1 || m.teamBPlayer2) && (
-                                  <div className="text-[11px] text-slate-600 truncate">
+                                  <div className={`text-[11px] truncate ${mutedText}`}>
                                     {m.teamBPlayer1} · {m.teamBPlayer2}
                                   </div>
                                 )}
-                                <div className="text-[10px] text-orange-600 font-semibold">
+                                <div className="text-[10px] text-orange-500 font-semibold">
                                   {m.servingTeam === 'B'
                                     ? `● Đang giao bóng (Người ${m.serverNumber})`
                                     : 'Đỡ giao bóng'}
@@ -3128,7 +2323,11 @@ export default function App() {
                             </div>
 
                             {isStaff && (
-                              <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
+                              <div
+                                className={`pt-2 border-t flex items-center justify-between text-xs ${
+                                  isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200/80 text-slate-500'
+                                }`}
+                              >
                                 <span className="truncate">TT: {m.refereeName || 'BTC 1986'}</span>
                                 <button
                                   type="button"
@@ -3148,13 +2347,17 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                  <div className={`lg:col-span-5 border rounded-xl overflow-hidden ${surfaceCard}`}>
+                    <div
+                      className={`px-4 sm:px-5 py-3.5 border-b flex items-center justify-between ${
+                        isDark ? 'border-slate-800' : 'border-slate-200'
+                      }`}
+                    >
                       <div>
-                        <h2 className="font-display text-base sm:text-lg font-bold tracking-tight text-slate-900 uppercase">
+                        <h2 className="font-display text-base sm:text-lg font-bold tracking-tight uppercase">
                           BẢNG XẾP HẠNG THỜI GIAN THỰC
                         </h2>
-                        <p className="text-xs text-slate-500">
+                        <p className={`text-xs ${mutedText}`}>
                           {currentTournament.divisions[0]
                             ? `Nội dung ${currentTournament.divisions[0]}`
                             : 'Chưa có nội dung thi đấu'}
@@ -3163,28 +2366,28 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setActiveTab('standings')}
-                        className="text-xs font-semibold text-orange-600 hover:text-orange-700"
+                        className="text-xs font-semibold text-orange-500 hover:text-orange-400"
                       >
                         Chi tiết →
                       </button>
                     </div>
 
-                    <div className="divide-y divide-slate-200">
+                    <div className={isDark ? 'divide-y divide-slate-800' : 'divide-y divide-slate-200'}>
                       {Object.keys(standingsPreview).length === 0 ? (
                         <div className="p-6 text-center space-y-2.5">
-                          <p className="text-xs text-slate-500">
+                          <p className={`text-xs ${mutedText}`}>
                             Chưa có dữ liệu bảng xếp hạng cho giải đấu này.
                           </p>
                         </div>
                       ) : (
                         Object.entries(standingsPreview).map(([gName, rows]) => (
                           <div key={gName} className="p-3.5 sm:p-4">
-                            <div className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                            <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${mutedText}`}>
                               {gName}
                             </div>
                             <table className="w-full text-left border-collapse text-xs">
                               <thead>
-                                <tr className="border-b border-slate-200 text-slate-500">
+                                <tr className={`border-b ${isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
                                   <th className="py-1.5 pr-2">#</th>
                                   <th className="py-1.5 px-2">Đội</th>
                                   <th className="py-1.5 px-2 text-right">T-B</th>
@@ -3192,13 +2395,11 @@ export default function App() {
                                   <th className="py-1.5 pl-2 text-right">Điểm</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-slate-100">
+                              <tbody className={isDark ? 'divide-y divide-slate-800/70' : 'divide-y divide-slate-100'}>
                                 {rows.map((r, i) => (
                                   <tr key={r.teamId}>
-                                    <td className="py-2 pr-2 font-mono-num font-bold text-slate-700">
-                                      {i + 1}
-                                    </td>
-                                    <td className="py-2 px-2 font-semibold text-slate-900 truncate max-w-[140px]">
+                                    <td className="py-2 pr-2 font-mono-num font-bold">{i + 1}</td>
+                                    <td className="py-2 px-2 font-semibold truncate max-w-[140px]">
                                       {r.teamName}
                                     </td>
                                     <td className="py-2 px-2 text-right font-mono-num">
@@ -3206,12 +2407,12 @@ export default function App() {
                                     </td>
                                     <td
                                       className={`py-2 px-2 text-right font-mono-num font-semibold ${
-                                        r.pointDiff >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                                        r.pointDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'
                                       }`}
                                     >
                                       {r.pointDiff > 0 ? `+${r.pointDiff}` : r.pointDiff}
                                     </td>
-                                    <td className="py-2 pl-2 text-right font-mono-num font-bold text-orange-600">
+                                    <td className="py-2 pl-2 text-right font-mono-num font-bold text-orange-500">
                                       {r.rankPoints}
                                     </td>
                                   </tr>
@@ -3306,7 +2507,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Lightbox Modal for Landmark & Cuisine Photos */}
+      {/* Lightbox Modal for Tournament Photos */}
       {lightboxState && (
         <div
           onClick={() => setLightboxState(null)}
@@ -3314,15 +2515,15 @@ export default function App() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl"
+            className="bg-slate-900 text-white rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl border border-slate-800"
           >
-            <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between gap-2">
+            <div className="px-4 py-3 bg-slate-950 flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <div className="text-sm font-bold truncate">
                   {lightboxState.title} ({lightboxState.imageIndex + 1}/
                   {lightboxState.images.length})
                 </div>
-                <div className="text-xs text-slate-300 truncate">{lightboxState.subtitle}</div>
+                <div className="text-xs text-slate-400 truncate">{lightboxState.subtitle}</div>
               </div>
               <button
                 type="button"
@@ -3337,14 +2538,6 @@ export default function App() {
                 src={lightboxState.images[lightboxState.imageIndex]}
                 alt={lightboxState.title}
                 referrerPolicy="no-referrer"
-                onError={(e) => {
-                  e.currentTarget.src = createLandmarkArtwork(
-                    lightboxState.fallbackTitle,
-                    lightboxState.fallbackTag,
-                    'waterfall',
-                    lightboxState.fallbackAccent,
-                  );
-                }}
                 className="max-h-[60vh] w-auto object-contain rounded-lg"
               />
               {lightboxState.images.length > 1 && (
@@ -3358,7 +2551,7 @@ export default function App() {
                       }
                       className={`w-14 h-10 rounded-md overflow-hidden border-2 ${
                         lightboxState.imageIndex === idx
-                          ? 'border-emerald-400'
+                          ? 'border-orange-400'
                           : 'border-transparent opacity-60 hover:opacity-100'
                       }`}
                     >
@@ -3366,14 +2559,6 @@ export default function App() {
                         src={thumb}
                         alt={`Ảnh ${idx + 1}`}
                         referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          e.currentTarget.src = createLandmarkArtwork(
-                            lightboxState.fallbackTitle,
-                            lightboxState.fallbackTag,
-                            'waterfall',
-                            lightboxState.fallbackAccent,
-                          );
-                        }}
                         className="w-full h-full object-cover"
                       />
                     </button>
@@ -3385,27 +2570,110 @@ export default function App() {
         </div>
       )}
 
+      {/* Password Confirmation Modal for Resetting Data */}
+      {showResetPasswordModal && (
+        <div
+          onClick={() => setShowResetPasswordModal(false)}
+          className="no-print fixed inset-0 z-50 bg-slate-950/75 p-4 flex items-center justify-center"
+        >
+          <form
+            onSubmit={handleConfirmResetDemoData}
+            onClick={(e) => e.stopPropagation()}
+            className={`rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border ${surfaceCard}`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="text-xs font-extrabold uppercase tracking-wider text-rose-500">
+                  Xác nhận thao tác nhạy cảm
+                </div>
+                <h3 className="font-display text-lg font-bold mt-0.5">
+                  Làm mới toàn bộ dữ liệu giải đấu?
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowResetPasswordModal(false)}
+                className={`p-1 rounded-lg ${
+                  isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-400 hover:bg-slate-100'
+                }`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className={`text-xs leading-relaxed ${mutedText}`}>
+              Thao tác này sẽ xóa dữ liệu giải đấu, danh sách VĐV/đội và lịch đấu hiện tại trên
+              trình duyệt. Vui lòng nhập mật khẩu Admin để xác nhận.
+            </p>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1">Mật khẩu xác nhận *</label>
+              <input
+                type="password"
+                autoFocus
+                value={resetPasswordInput}
+                onChange={(e) => {
+                  setResetPasswordInput(e.target.value);
+                  if (resetPasswordError) setResetPasswordError(null);
+                }}
+                placeholder="Nhập mật khẩu Admin..."
+                className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 ${
+                  isDark
+                    ? 'bg-slate-950 border-slate-700 text-white'
+                    : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              />
+              {resetPasswordError && (
+                <p className="text-xs font-semibold text-rose-500 mt-1.5">{resetPasswordError}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowResetPasswordModal(false)}
+                className={`min-h-[38px] px-4 py-2 rounded-xl text-xs font-semibold ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className="min-h-[38px] px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold"
+              >
+                Xác nhận làm mới
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Quiet Footer */}
       <footer
-        className={`no-print bg-white border-t border-slate-200 px-4 sm:px-6 py-4 text-xs text-slate-500 ${
-          activeTab === 'referee' && isStaff ? 'hidden' : ''
-        }`}
+        className={`no-print border-t px-4 sm:px-6 py-4 text-xs ${
+          isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+        } ${activeTab === 'referee' && isStaff ? 'hidden' : ''}`}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div>
-            © 2026 <strong className="text-slate-800">1986 — Bính Dần Pickleball</strong> · Kết nối du lịch, ẩm thực & thể thao Cao Bằng.
+            © 2026 <strong>1986 — Bính Dần Pickleball</strong> · Thông tin & điều hành giải đấu.
           </div>
           <div>
             {isStaff
               ? 'Nhập VĐV & Sắp bảng chủ động · Điều hành bàn trọng tài · Xuất PDF/CSV'
-              : 'Du lịch Cao Bằng · Lịch thi đấu · Tỷ số trực tiếp'}
+              : 'Thông tin giải đấu · Lịch thi đấu · Tỷ số trực tiếp'}
           </div>
         </div>
       </footer>
 
       {/* FIXED BOTTOM THUMB-ZONE TAB BAR FOR MOBILE PHONES */}
       <nav
-        className={`no-print lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-around h-11 sm:h-12 px-1 compact-on-mobile-landscape`}
+        className={`no-print lg:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md border-t flex items-center justify-around h-11 sm:h-12 px-1 compact-on-mobile-landscape ${
+          isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200'
+        }`}
       >
         {visibleNavItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -3415,7 +2683,11 @@ export default function App() {
               type="button"
               onClick={() => setActiveTab(item.id)}
               className={`min-h-[40px] sm:min-h-[44px] flex-1 min-w-0 flex flex-col items-center justify-center rounded-lg transition-colors ${
-                isActive ? 'text-orange-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+                isActive
+                  ? 'text-orange-500 font-bold'
+                  : isDark
+                  ? 'text-slate-400 hover:text-white'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               {item.icon}
