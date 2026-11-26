@@ -75,6 +75,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [shakeKey, setShakeKey] = useState(0);
 
   // Create new staff account form state (Admin only)
   const [newUsername, setNewUsername] = useState('');
@@ -92,6 +93,10 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
     }
   }, [initialMode, isAdmin]);
 
+  const triggerShake = () => {
+    setShakeKey((prev) => prev + 1);
+  };
+
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUser = username.trim().toLowerCase();
@@ -99,6 +104,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
 
     if (!cleanUser || !cleanPass) {
       setErrorMsg('Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu.');
+      triggerShake();
       return;
     }
 
@@ -111,6 +117,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
       setErrorMsg(
         'Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng kiểm tra lại thông tin tài khoản.',
       );
+      triggerShake();
       return;
     }
 
@@ -118,6 +125,7 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
       setErrorMsg(
         'Tài khoản này không có quyền đăng nhập vào khu vực điều hành Ban Tổ Chức / Trọng tài.',
       );
+      triggerShake();
       return;
     }
 
@@ -162,14 +170,19 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
     setCreateFeedback(`Đã tạo tài khoản ${ROLE_LABELS[newRole]} "${name}" (${u}).`);
   };
 
+  const hasAuthError = Boolean(errorMsg);
+
   return (
     <div
       onClick={onClose}
       className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-2xs p-3 sm:p-4 flex items-center justify-center overflow-y-auto"
     >
       <div
+        key={shakeKey}
         onClick={(e) => e.stopPropagation()}
         className={`rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border my-auto transition-colors ${
+          shakeKey > 0 ? 'popup-shake' : ''
+        } ${
           isDark
             ? 'bg-slate-900 border-slate-800 text-slate-100'
             : 'bg-white border-slate-200 text-slate-900'
@@ -335,9 +348,16 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                     autoFocus
                     autoComplete="username"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      if (errorMsg) setErrorMsg(null);
+                    }}
                     placeholder="Nhập tên đăng nhập"
-                    className={`w-full min-h-[42px] px-3.5 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                    className={`w-full min-h-[42px] px-3.5 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 ${
+                      hasAuthError
+                        ? 'border-rose-500 focus:ring-rose-500'
+                        : 'focus:ring-orange-500'
+                    } ${
                       isDark
                         ? 'bg-slate-950 border-slate-700 text-white placeholder:text-slate-500'
                         : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
@@ -357,9 +377,16 @@ export const StaffAuthModal: React.FC<StaffAuthModalProps> = ({
                     type="password"
                     autoComplete="current-password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errorMsg) setErrorMsg(null);
+                    }}
                     placeholder="Nhập mật khẩu"
-                    className={`w-full min-h-[42px] px-3.5 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                    className={`w-full min-h-[42px] px-3.5 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 ${
+                      hasAuthError
+                        ? 'border-rose-500 focus:ring-rose-500'
+                        : 'focus:ring-orange-500'
+                    } ${
                       isDark
                         ? 'bg-slate-950 border-slate-700 text-white placeholder:text-slate-500'
                         : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
