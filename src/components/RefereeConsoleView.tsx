@@ -36,7 +36,6 @@ interface RefereeConsoleViewProps {
   currentAccount: StaffAccount | null;
   themeMode?: ThemeMode;
   activeTab?: string;
-  onCreateTournament?: () => void;
   onRequestLogin: (reason: string) => void;
   onSelectMatch: (matchId: string) => void;
   onUpdateMatch: (matchId: string, patch: Partial<Match>) => void;
@@ -139,8 +138,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   selectedMatchId,
   currentAccount,
   themeMode = 'light',
-  activeTab = 'referee',
-  onCreateTournament,
   onSelectMatch,
   onUpdateMatch,
   onCompleteMatch,
@@ -148,7 +145,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   onAnnounceCourtAvailable,
 }) => {
   const isDark = themeMode === 'dark';
-  const showCreateTournamentBtn = activeTab === 'admin' && typeof onCreateTournament === 'function';
   const assignedCourt = useMemo(() => extractAssignedCourtNumber(currentAccount), [currentAccount]);
 
   const [timeoutModal, setTimeoutModal] = useState<{
@@ -226,8 +222,8 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
 
   const popupBackdrop =
-    'fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] p-4 flex items-center justify-center';
-  const popupCard = `border rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-4 shadow-2xl ${cardSurface}`;
+    'fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] p-3 sm:p-4 flex items-center justify-center overflow-y-auto';
+  const popupCard = `border rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-4 shadow-2xl my-auto ${cardSurface}`;
 
   if (!activeMatch) {
     return (
@@ -529,7 +525,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         </span>
 
         <span
-          className={`px-1 py-0.5 rounded text-[8px] sm:text-[11px] leading-none whitespace-nowrap shadow-sm ${tagClass}`}
+          className={`px-1 py-0.5 rounded text-[clamp(8px,2.1vw,11px)] leading-none whitespace-nowrap shadow-sm ${tagClass}`}
         >
           {shortLabel}
           {isServingSpot ? ' · PHÁT' : isReceivingSpot ? ' · ĐỠ' : ''}
@@ -539,48 +535,35 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-12 lg:grid lg:grid-cols-12 justify-start gap-1.5 sm:gap-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:gap-1.5">
+    <div className="w-full max-w-6xl mx-auto flex flex-col [@media(orientation:landscape)_and_(max-height:540px)]:grid [@media(orientation:landscape)_and_(max-height:540px)]:grid-cols-12 lg:grid lg:grid-cols-12 items-stretch gap-2 sm:gap-3 [@media(orientation:landscape)_and_(max-height:540px)]:gap-1.5">
       {/* CỘT TRÁI (điện thoại ngang & màn hình lớn) / KHỐI TRÊN (điện thoại dọc) */}
-      <div className="[@media(orientation:landscape)_and_(max-height:520px)]:col-span-6 lg:col-span-6 flex flex-col justify-start gap-1.5 sm:gap-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:gap-1 min-w-0">
+      <div className="[@media(orientation:landscape)_and_(max-height:540px)]:col-span-6 lg:col-span-6 flex flex-col gap-2 sm:gap-2.5 [@media(orientation:landscape)_and_(max-height:540px)]:gap-1 min-w-0">
         {/* 1. Thanh chọn trận của đúng sân & điều phối */}
         <section
-          className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 [@media(orientation:landscape)_and_(max-height:520px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:space-y-1 ${cardSurface}`}
+          className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 [@media(orientation:landscape)_and_(max-height:540px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-1 ${cardSurface}`}
         >
-          <div className="flex items-center justify-between gap-1.5">
-            <div className="flex items-center gap-1 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-orange-500 min-w-0">
+          <div className="flex items-center justify-between gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1 text-[clamp(10px,2.6vw,12px)] font-extrabold uppercase tracking-wider text-orange-500 min-w-0">
               <Gavel className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">
                 SÂN {activeMatch.courtNumber} · {tournament.name}
               </span>
             </div>
-
-            <div className="flex items-center gap-1 shrink-0">
-              {showCreateTournamentBtn && (
-                <button
-                  type="button"
-                  onClick={onCreateTournament}
-                  className="min-h-[26px] px-2 py-0.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold inline-flex items-center gap-1 whitespace-nowrap"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Tạo giải mới</span>
-                </button>
-              )}
-              <span
-                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border truncate max-w-[140px] ${
-                  isDark
-                    ? 'bg-slate-950 border-slate-800 text-slate-300'
-                    : 'bg-slate-100 border-slate-200 text-slate-700'
-                }`}
-              >
-                {currentAccount?.displayName || `Trọng tài Sân ${activeMatch.courtNumber}`}
-              </span>
-            </div>
+            <span
+              className={`px-2 py-0.5 rounded-lg text-[clamp(9px,2.3vw,11px)] font-bold border truncate max-w-[165px] ${
+                isDark
+                  ? 'bg-slate-950 border-slate-800 text-slate-300'
+                  : 'bg-slate-100 border-slate-200 text-slate-700'
+              }`}
+            >
+              {currentAccount?.displayName || `Trọng tài Sân ${activeMatch.courtNumber}`}
+            </span>
           </div>
 
           <select
             value={activeMatch.id}
             onChange={(e) => onSelectMatch(e.target.value)}
-            className={`w-full min-h-[32px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[28px] px-2.5 py-1 text-[11px] sm:text-xs font-bold border rounded-xl ${inputSurface}`}
+            className={`w-full min-h-[34px] sm:min-h-[38px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2.5 py-1 text-[clamp(11px,2.8vw,13px)] font-bold border rounded-xl ${inputSurface}`}
           >
             {courtOnlyMatches.map((m) => (
               <option key={m.id} value={m.id}>
@@ -590,48 +573,48 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             ))}
           </select>
 
-          <div className="grid grid-cols-4 gap-1 [@media(orientation:landscape)_and_(max-height:520px)]:gap-1 sm:gap-1.5">
+          <div className="grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-4 gap-1.5">
             <button
               type="button"
               onClick={handleOpenCoinToss}
-              className="min-h-[32px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[28px] px-1 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+              className="min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-1.5 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
             >
-              <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <Coins className="w-3.5 h-3.5 shrink-0" />
               <span>Bốc thăm</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleOpenSubstitute('A', 1)}
-              className={`min-h-[32px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[28px] px-1 py-1 rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
+              className={`min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-1.5 py-1 rounded-xl border text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-100'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
               }`}
             >
-              <UserCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-500 shrink-0" />
+              <UserCheck className="w-3.5 h-3.5 text-orange-500 shrink-0" />
               <span>Thay VĐV</span>
             </button>
 
             <button
               type="button"
               onClick={() => onAnnounceCourtCall(activeMatch)}
-              className="min-h-[32px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[28px] px-1 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+              className="min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-1.5 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
             >
-              <Megaphone className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <Megaphone className="w-3.5 h-3.5 shrink-0" />
               <span>Gọi sân</span>
             </button>
 
             <button
               type="button"
               onClick={() => onAnnounceCourtAvailable(activeMatch)}
-              className={`min-h-[32px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[28px] px-1 py-1 rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
+              className={`min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-1.5 py-1 rounded-xl border text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-emerald-400'
                   : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
               }`}
             >
-              <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
               <span>Sân trống</span>
             </button>
           </div>
@@ -639,36 +622,36 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
         {/* 2. Sân Pickleball 3D & VĐV 3D */}
         <section
-          className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 [@media(orientation:landscape)_and_(max-height:520px)]:p-1.5 space-y-1 [@media(orientation:landscape)_and_(max-height:520px)]:space-y-0.5 ${cardSurface}`}
+          className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 [@media(orientation:landscape)_and_(max-height:540px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-0.5 ${cardSurface}`}
         >
-          <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center justify-between gap-1 flex-wrap">
             <div className="flex items-center gap-1 min-w-0">
-              <h2 className="font-display text-[10px] sm:text-sm font-extrabold uppercase tracking-tight truncate">
+              <h2 className="font-display text-[clamp(10px,2.7vw,14px)] font-extrabold uppercase tracking-tight truncate">
                 SÂN 3D #{activeMatch.courtNumber} · {serverScore % 2 === 0 ? 'CHẴN' : 'LẺ'} · N
                 {currentServerNum}
               </h2>
-              <span className="inline-flex items-center gap-1 text-[8px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-300 text-slate-950 shrink-0">
+              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-300 text-slate-950 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
                 <span>Phát</span>
               </span>
-              <span className="inline-flex items-center gap-1 text-[8px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-cyan-300 text-slate-950 shrink-0">
+              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-cyan-300 text-slate-950 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
                 <span>Đỡ</span>
               </span>
             </div>
 
             <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-mono-num shrink-0">
-              <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 font-bold truncate max-w-[76px] sm:max-w-[150px]">
+              <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 font-bold truncate max-w-[92px] sm:max-w-[150px]">
                 T: {compactCourtNameLabel(leftTeamLabel)}
               </span>
-              <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-500 font-bold truncate max-w-[76px] sm:max-w-[150px]">
+              <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-500 font-bold truncate max-w-[92px] sm:max-w-[150px]">
                 P: {compactCourtNameLabel(rightTeamLabel)}
               </span>
             </div>
           </div>
 
           <div
-            className={`rounded-xl border p-1 sm:p-1.5 ${
+            className={`rounded-xl border p-1.5 ${
               isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
             }`}
           >
@@ -678,7 +661,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   transform: 'rotateX(14deg)',
                   transformStyle: 'preserve-3d',
                 }}
-                className="relative w-full max-h-[17svh] [@media(orientation:landscape)_and_(max-height:520px)]:max-h-[38svh] sm:max-h-[26svh] aspect-[22/10] mx-auto rounded-xl border-2 border-white shadow-[0_10px_22px_rgba(6,78,59,0.45)] bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-800 overflow-hidden select-none"
+                className="relative w-full max-h-[21svh] [@media(orientation:landscape)_and_(max-height:540px)]:max-h-[42svh] sm:max-h-[28svh] aspect-[22/10] mx-auto rounded-xl border-2 border-white shadow-[0_10px_22px_rgba(6,78,59,0.45)] bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-800 overflow-hidden select-none"
               >
                 <div className="absolute inset-x-0 bottom-0 h-1.5 bg-emerald-950/60 pointer-events-none" />
 
@@ -757,9 +740,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       </div>
 
       {/* CỘT PHẢI (điện thoại ngang & màn hình lớn) / KHỐI DƯỚI (điện thoại dọc): Bảng điểm to dễ bấm */}
-      <div className="[@media(orientation:landscape)_and_(max-height:520px)]:col-span-6 lg:col-span-6 flex flex-col justify-start min-w-0">
+      <div className="[@media(orientation:landscape)_and_(max-height:540px)]:col-span-6 lg:col-span-6 flex flex-col min-w-0">
         <section
-          className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 [@media(orientation:landscape)_and_(max-height:520px)]:p-1.5 space-y-2 [@media(orientation:landscape)_and_(max-height:520px)]:space-y-1 ${cardSurface}`}
+          className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 [@media(orientation:landscape)_and_(max-height:540px)]:p-1.5 space-y-2 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-1 ${cardSurface}`}
         >
           <div className="flex items-center justify-between gap-1 text-[10px] sm:text-xs font-mono-num">
             <div className="flex items-center gap-1 min-w-0">
@@ -779,15 +762,15 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-2">
             {/* Đội A */}
             <div
-              className={`border rounded-xl p-2 sm:p-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:space-y-1 min-w-0 ${
+              className={`border rounded-xl p-2 sm:p-2.5 [@media(orientation:landscape)_and_(max-height:540px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-1 min-w-0 ${
                 servingTeam === 'A' ? 'ring-2 ring-orange-500/70' : 'opacity-85'
               } ${subSurface}`}
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-orange-500 truncate">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-500 truncate">
                   ĐỘI A · {courtSideA === 'left' ? 'TRÁI' : 'PHẢI'}
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
@@ -804,35 +787,35 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleStartTimeout('A')}
-                    className={`min-h-[22px] sm:min-h-[24px] px-1.5 py-0.5 rounded border text-[9px] sm:text-[10px] font-bold inline-flex items-center gap-0.5 ${
+                    className={`min-h-[24px] px-1.5 py-0.5 rounded border text-[10px] font-bold inline-flex items-center gap-0.5 ${
                       isDark
                         ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
                         : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
                     }`}
                   >
-                    <Timer className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
+                    <Timer className="w-3 h-3 shrink-0" />
                     <span>TO ({activeMatch.timeoutsA || 0})</span>
                   </button>
                 </div>
               </div>
 
               <div
-                className="font-display text-[11px] sm:text-sm font-extrabold leading-tight truncate"
+                className="font-display text-xs sm:text-sm font-extrabold leading-tight truncate"
                 title={activeMatch.teamAName}
               >
                 {activeMatch.teamAName}
               </div>
 
-              <div className="flex items-center justify-between gap-1.5 pt-0.5">
-                <div className="font-mono-num text-xl sm:text-3xl font-black leading-none">
+              <div className="flex items-center justify-between gap-2 pt-0.5">
+                <div className="font-mono-num text-[clamp(22px,6vw,32px)] font-black leading-none">
                   {activeMatch.scoreA}
                 </div>
-                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     disabled={!canSubA}
                     onClick={() => handleAdjustScore('A', -1)}
-                    className="min-h-[40px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] w-9 sm:w-11 [@media(orientation:landscape)_and_(max-height:520px)]:w-8 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
+                    className="min-h-[42px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[34px] w-10 sm:w-11 [@media(orientation:landscape)_and_(max-height:540px)]:w-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
                     title="Trừ 1 điểm Đội A"
                   >
                     <Minus className="w-4 h-4" />
@@ -841,7 +824,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     type="button"
                     disabled={!canAddA}
                     onClick={() => handleAdjustScore('A', 1)}
-                    className="min-h-[40px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-black inline-flex items-center gap-1 whitespace-nowrap shadow-sm"
+                    className="min-h-[42px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[34px] px-3 sm:px-4 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-black inline-flex items-center gap-1 whitespace-nowrap shadow-sm"
                   >
                     <Plus className="w-4 h-4 shrink-0" />
                     <span>+1 A</span>
@@ -852,12 +835,12 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
             {/* Đội B */}
             <div
-              className={`border rounded-xl p-2 sm:p-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:space-y-1 min-w-0 ${
+              className={`border rounded-xl p-2 sm:p-2.5 [@media(orientation:landscape)_and_(max-height:540px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-1 min-w-0 ${
                 servingTeam === 'B' ? 'ring-2 ring-sky-500/70' : 'opacity-85'
               } ${subSurface}`}
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-sky-500 truncate">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-500 truncate">
                   ĐỘI B · {courtSideA === 'left' ? 'PHẢI' : 'TRÁI'}
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
@@ -874,35 +857,35 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleStartTimeout('B')}
-                    className={`min-h-[22px] sm:min-h-[24px] px-1.5 py-0.5 rounded border text-[9px] sm:text-[10px] font-bold inline-flex items-center gap-0.5 ${
+                    className={`min-h-[24px] px-1.5 py-0.5 rounded border text-[10px] font-bold inline-flex items-center gap-0.5 ${
                       isDark
                         ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
                         : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
                     }`}
                   >
-                    <Timer className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
+                    <Timer className="w-3 h-3 shrink-0" />
                     <span>TO ({activeMatch.timeoutsB || 0})</span>
                   </button>
                 </div>
               </div>
 
               <div
-                className="font-display text-[11px] sm:text-sm font-extrabold leading-tight truncate"
+                className="font-display text-xs sm:text-sm font-extrabold leading-tight truncate"
                 title={activeMatch.teamBName}
               >
                 {activeMatch.teamBName}
               </div>
 
-              <div className="flex items-center justify-between gap-1.5 pt-0.5">
-                <div className="font-mono-num text-xl sm:text-3xl font-black leading-none">
+              <div className="flex items-center justify-between gap-2 pt-0.5">
+                <div className="font-mono-num text-[clamp(22px,6vw,32px)] font-black leading-none">
                   {activeMatch.scoreB}
                 </div>
-                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     disabled={!canSubB}
                     onClick={() => handleAdjustScore('B', -1)}
-                    className="min-h-[40px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] w-9 sm:w-11 [@media(orientation:landscape)_and_(max-height:520px)]:w-8 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
+                    className="min-h-[42px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[34px] w-10 sm:w-11 [@media(orientation:landscape)_and_(max-height:540px)]:w-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
                     title="Trừ 1 điểm Đội B"
                   >
                     <Minus className="w-4 h-4" />
@@ -911,7 +894,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     type="button"
                     disabled={!canAddB}
                     onClick={() => handleAdjustScore('B', 1)}
-                    className="min-h-[40px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-black inline-flex items-center gap-1 whitespace-nowrap shadow-sm"
+                    className="min-h-[42px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[34px] px-3 sm:px-4 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-black inline-flex items-center gap-1 whitespace-nowrap shadow-sm"
                   >
                     <Plus className="w-4 h-4 shrink-0" />
                     <span>+1 B</span>
@@ -926,7 +909,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             <button
               type="button"
               onClick={handleFaultRotateServe}
-              className={`min-h-[32px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[28px] px-2 py-1 rounded-xl border text-[11px] sm:text-xs font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              className={`min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2 py-1 rounded-xl border text-[clamp(11px,2.7vw,12px)] font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
@@ -939,7 +922,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             <button
               type="button"
               onClick={handleSwitchCourtSides}
-              className={`min-h-[32px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[28px] px-2 py-1 rounded-xl border text-[11px] sm:text-xs font-bold inline-flex items-center justify-center whitespace-nowrap ${
+              className={`min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2 py-1 rounded-xl border text-[clamp(11px,2.7vw,12px)] font-bold inline-flex items-center justify-center whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
@@ -954,7 +937,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             <button
               type="button"
               onClick={() => onCompleteMatch(activeMatch, 'A')}
-              className="min-h-[32px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[28px] px-2 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+              className="min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
             >
               <Flag className="w-3.5 h-3.5 shrink-0" />
               <span>Đội A thắng</span>
@@ -963,7 +946,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             <button
               type="button"
               onClick={() => onCompleteMatch(activeMatch, 'B')}
-              className="min-h-[32px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[28px] px-2 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+              className="min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
             >
               <Flag className="w-3.5 h-3.5 shrink-0" />
               <span>Đội B thắng</span>
@@ -973,7 +956,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <button
                 type="button"
                 onClick={() => onCompleteMatch(activeMatch, '')}
-                className={`min-h-[32px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[28px] px-2 py-1 rounded-xl border text-[11px] sm:text-xs font-bold inline-flex items-center justify-center whitespace-nowrap ${
+                className={`min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2 py-1 rounded-xl border text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center whitespace-nowrap ${
                   isDark
                     ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                     : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
