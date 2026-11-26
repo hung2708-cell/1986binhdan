@@ -288,6 +288,7 @@ export default function App() {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [resetPasswordInput, setResetPasswordInput] = useState('');
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
+  const [resetShakeKey, setResetShakeKey] = useState(0);
 
   // Admin đăng / sửa / xóa thông tin & hình ảnh giải đấu trên trang chủ
   const [posts, setPosts] = useState<TournamentPost[]>(() => loadSavedTournamentPosts());
@@ -1223,6 +1224,7 @@ export default function App() {
     }
     setResetPasswordInput('');
     setResetPasswordError(null);
+    setResetShakeKey(0);
     setShowResetPasswordModal(true);
   };
 
@@ -1244,6 +1246,7 @@ export default function App() {
 
     if (!entered || (!matchesCurrentAccount && !matchedAdmin)) {
       setResetPasswordError('Mật khẩu không chính xác. Đã hủy thao tác làm mới dữ liệu.');
+      setResetShakeKey((prev) => prev + 1);
       return;
     }
 
@@ -1262,6 +1265,7 @@ export default function App() {
     setShowResetPasswordModal(false);
     setResetPasswordInput('');
     setResetPasswordError(null);
+    setResetShakeKey(0);
     showToast('Đã làm mới dữ liệu', 'Danh sách giải đấu đang trống. Admin có thể tạo giải mới.');
   };
 
@@ -2620,9 +2624,12 @@ export default function App() {
           className="no-print fixed inset-0 z-50 bg-slate-950/75 p-4 flex items-center justify-center"
         >
           <form
+            key={resetShakeKey}
             onSubmit={handleConfirmResetDemoData}
             onClick={(e) => e.stopPropagation()}
-            className={`rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border ${surfaceCard}`}
+            className={`rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border ${
+              resetShakeKey > 0 ? 'popup-shake' : ''
+            } ${surfaceCard}`}
           >
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -2660,7 +2667,11 @@ export default function App() {
                   if (resetPasswordError) setResetPasswordError(null);
                 }}
                 placeholder="Nhập mật khẩu Admin..."
-                className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 ${
+                className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-2 ${
+                  resetPasswordError
+                    ? 'border-rose-500 focus:ring-rose-500'
+                    : 'focus:ring-rose-500'
+                } ${
                   isDark
                     ? 'bg-slate-950 border-slate-700 text-white placeholder:text-slate-500'
                     : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
