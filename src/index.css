@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
   --font-display: "Barlow Condensed", "Plus Jakarta Sans", system-ui, sans-serif;
@@ -18,14 +17,17 @@
   html {
     font-family: var(--font-sans);
     -webkit-text-size-adjust: 100%;
-    touch-action: pan-x pan-y;
+    touch-action: manipulation;
   }
 
   body {
     margin: 0;
+    min-height: 100dvh;
+    overflow-x: clip;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y;
+    background-color: #F8FAFC;
+    color: #0F172A;
   }
 
   h1, h2 {
@@ -46,93 +48,36 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Mobile landscape optimization for phones rotated horizontally */
-@media (orientation: landscape) and (max-height: 560px) {
-  .hide-on-mobile-landscape {
-    display: none !important;
-  }
-  .compact-on-mobile-landscape {
+/* Co giãn gọn trên điện thoại xoay ngang (chiều cao thấp), vẫn giữ hiển thị trên Tablet/Tab ngang */
+@media (orientation: landscape) and (max-height: 480px) {
+  .compact-on-phone-landscape {
     padding-top: 0.25rem !important;
     padding-bottom: 0.25rem !important;
   }
 }
 
-/* Dramatic Coin Toss / Draw Shake & Sparkle Effect for Athlete Boxes */
-@keyframes drawShake {
+@keyframes popup-shake {
   0%, 100% {
-    transform: translate3d(0, 0, 0) rotate(0deg);
-  }
-  15% {
-    transform: translate3d(-2.5px, -1px, 0) rotate(-1.3deg);
-  }
-  30% {
-    transform: translate3d(2.5px, 1px, 0) rotate(1.3deg);
-  }
-  45% {
-    transform: translate3d(-2px, 1px, 0) rotate(-0.9deg);
-  }
-  60% {
-    transform: translate3d(2px, -1px, 0) rotate(0.9deg);
-  }
-  75% {
-    transform: translate3d(-1.5px, 0.5px, 0) rotate(-0.5deg);
-  }
-}
-
-@keyframes drawSparkleGlow {
-  0%, 100% {
-    box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.45), 0 0 12px rgba(250, 204, 21, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.9), 0 0 22px rgba(250, 204, 21, 0.72);
-  }
-}
-
-@keyframes drawShimmerSweep {
-  0% {
-    transform: translateX(-140%) skewX(-22deg);
-    opacity: 0;
+    transform: translateX(0);
   }
   20% {
-    opacity: 0.85;
+    transform: translateX(-7px);
+  }
+  40% {
+    transform: translateX(7px);
+  }
+  60% {
+    transform: translateX(-5px);
   }
   80% {
-    opacity: 0.85;
-  }
-  100% {
-    transform: translateX(240%) skewX(-22deg);
-    opacity: 0;
+    transform: translateX(5px);
   }
 }
 
-@keyframes sparkleStarTwinkle {
-  0%, 100% {
-    transform: scale(0.55) rotate(0deg);
-    opacity: 0.35;
-  }
-  50% {
-    transform: scale(1.2) rotate(28deg);
-    opacity: 1;
-  }
+.popup-shake {
+  animation: popup-shake 0.36s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
-.animate-draw-shake {
-  animation: drawShake 0.38s ease-in-out infinite;
-}
-
-.animate-draw-sparkle-box {
-  animation: drawSparkleGlow 1.1s ease-in-out infinite;
-}
-
-.animate-draw-shimmer {
-  animation: drawShimmerSweep 1.15s ease-in-out infinite;
-}
-
-.animate-sparkle-star {
-  animation: sparkleStarTwinkle 0.85s ease-in-out infinite;
-}
-
-/* Print-optimized layout for PDF post-tournament report export */
 @media print {
   @page {
     size: A4 portrait;
@@ -163,26 +108,4 @@
     break-before: page;
     page-break-before: always;
   }
-}
-
-@keyframes popup-shake {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  20% {
-    transform: translateX(-7px);
-  }
-  40% {
-    transform: translateX(7px);
-  }
-  60% {
-    transform: translateX(-5px);
-  }
-  80% {
-    transform: translateX(5px);
-  }
-}
-
-.popup-shake {
-  animation: popup-shake 0.36s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
