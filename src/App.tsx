@@ -932,7 +932,9 @@ export default function App() {
       ...prev,
       registrations: prev.registrations.map((reg) => {
         const assign = groupAssignments.find((a) => a.registrationId === reg.id);
-        return assign ? { ...reg, groupName: reg.groupName || assign.groupName, seed: assign.seed } : reg;
+        return assign
+          ? { ...reg, groupName: reg.groupName || assign.groupName, seed: assign.seed }
+          : reg;
       }),
       matches: [
         ...prev.matches.filter(
@@ -1032,8 +1034,10 @@ export default function App() {
           };
         }
         if (winnerSide && match.nextMatchId && m.id === match.nextMatchId) {
-          if (match.nextMatchSide === 'A') return { ...m, teamAId: winnerTeamId, teamAName: winnerTeamName };
-          if (match.nextMatchSide === 'B') return { ...m, teamBId: winnerTeamId, teamBName: winnerTeamName };
+          if (match.nextMatchSide === 'A')
+            return { ...m, teamAId: winnerTeamId, teamAName: winnerTeamName };
+          if (match.nextMatchSide === 'B')
+            return { ...m, teamBId: winnerTeamId, teamBName: winnerTeamName };
         }
         if (
           winnerSide &&
@@ -1042,8 +1046,10 @@ export default function App() {
           m.division === match.division &&
           m.stage === 'third_place'
         ) {
-          if (match.bracketSlot === 'SF1') return { ...m, teamAId: loserTeamId, teamAName: loserTeamName };
-          if (match.bracketSlot === 'SF2') return { ...m, teamBId: loserTeamId, teamBName: loserTeamName };
+          if (match.bracketSlot === 'SF1')
+            return { ...m, teamAId: loserTeamId, teamAName: loserTeamName };
+          if (match.bracketSlot === 'SF2')
+            return { ...m, teamBId: loserTeamId, teamBName: loserTeamName };
         }
         return m;
       }),
@@ -1133,7 +1139,9 @@ export default function App() {
     e.preventDefault();
     if (!isAdmin || !currentAccount) {
       setShowResetPasswordModal(false);
-      openLoginWithReason('Vui lòng đăng nhập tài khoản Ban Tổ Chức (Admin) để xác thực làm mới dữ liệu.');
+      openLoginWithReason(
+        'Vui lòng đăng nhập tài khoản Ban Tổ Chức (Admin) để xác thực làm mới dữ liệu.',
+      );
       return;
     }
 
@@ -2018,7 +2026,9 @@ export default function App() {
       {toastMessage && (
         <div
           className={`no-print fixed bottom-16 lg:bottom-5 right-3 left-3 sm:left-auto sm:right-5 z-50 sm:max-w-md border rounded-xl p-3.5 shadow-xl flex items-start gap-2.5 ${
-            isDark ? 'bg-slate-900 text-white border-slate-700' : 'bg-slate-900 text-white border-slate-800'
+            isDark
+              ? 'bg-slate-900 text-white border-slate-700'
+              : 'bg-slate-900 text-white border-slate-800'
           }`}
         >
           <CheckCircle2 className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
@@ -2033,7 +2043,9 @@ export default function App() {
       {showNotifDrawer && currentTournament && (
         <div
           className={`no-print border-b px-4 sm:px-6 py-4 ${
-            isDark ? 'bg-slate-950 text-white border-slate-800' : 'bg-slate-900 text-white border-slate-800'
+            isDark
+              ? 'bg-slate-950 text-white border-slate-800'
+              : 'bg-slate-900 text-white border-slate-800'
           }`}
         >
           <div className="max-w-7xl mx-auto space-y-3">
@@ -2154,16 +2166,22 @@ export default function App() {
                           <div
                             key={m.id}
                             className={`border rounded-xl p-3.5 sm:p-4 space-y-2.5 ${
-                              isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50/70'
+                              isDark
+                                ? 'border-slate-800 bg-slate-950/60'
+                                : 'border-slate-200 bg-slate-50/70'
                             }`}
                           >
-                            <div className={`flex flex-wrap items-center justify-between gap-2 text-xs ${mutedText}`}>
+                            <div
+                              className={`flex flex-wrap items-center justify-between gap-2 text-xs ${mutedText}`}
+                            >
                               <div>
                                 <span className="font-mono-num font-bold text-orange-500">
                                   SÂN {m.courtNumber} · TRẬN #{m.matchNumber}
                                 </span>
                                 <span> · </span>
-                                <span className="font-semibold">{m.teamSubCategory || m.division}</span>
+                                <span className="font-semibold">
+                                  {m.teamSubCategory || m.division}
+                                </span>
                               </div>
                               <span className="font-mono-num font-semibold text-emerald-500">
                                 Hô điểm: {formatScoreCallout(m)}
@@ -2207,7 +2225,9 @@ export default function App() {
                             {isStaff && (
                               <div
                                 className={`pt-2 border-t flex items-center justify-between text-xs ${
-                                  isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200/80 text-slate-500'
+                                  isDark
+                                    ? 'border-slate-800 text-slate-400'
+                                    : 'border-slate-200/80 text-slate-500'
                                 }`}
                               >
                                 <span className="truncate">TT: {m.refereeName || 'BTC 1986'}</span>
@@ -2254,7 +2274,11 @@ export default function App() {
                       </button>
                     </div>
 
-                    <div className={isDark ? 'divide-y divide-slate-800' : 'divide-y divide-slate-200'}>
+                    <div
+                      className={
+                        isDark ? 'divide-y divide-slate-800' : 'divide-y divide-slate-200'
+                      }
+                    >
                       {Object.keys(standingsPreview).length === 0 ? (
                         <div className="p-6 text-center space-y-2.5">
                           <p className={`text-xs ${mutedText}`}>
@@ -2264,14 +2288,18 @@ export default function App() {
                       ) : (
                         Object.entries(standingsPreview).map(([gName, rows]) => (
                           <div key={gName} className="p-3.5 sm:p-4 overflow-x-auto">
-                            <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${mutedText}`}>
+                            <div
+                              className={`text-xs font-bold uppercase tracking-wider mb-2 ${mutedText}`}
+                            >
                               {gName}
                             </div>
                             <table className="w-full text-left border-collapse text-xs">
                               <thead>
                                 <tr
                                   className={`border-b ${
-                                    isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
+                                    isDark
+                                      ? 'border-slate-800 text-slate-400'
+                                      : 'border-slate-200 text-slate-500'
                                   }`}
                                 >
                                   <th className="py-1.5 pr-2">#</th>
@@ -2282,7 +2310,11 @@ export default function App() {
                                 </tr>
                               </thead>
                               <tbody
-                                className={isDark ? 'divide-y divide-slate-800/70' : 'divide-y divide-slate-100'}
+                                className={
+                                  isDark
+                                    ? 'divide-y divide-slate-800/70'
+                                    : 'divide-y divide-slate-100'
+                                }
                               >
                                 {rows.map((r, i) => (
                                   <tr key={r.teamId}>
@@ -2392,7 +2424,9 @@ export default function App() {
           <div
             onClick={(e) => e.stopPropagation()}
             className={`rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl border ${
-              isDark ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-900 border-slate-200'
+              isDark
+                ? 'bg-slate-900 text-white border-slate-800'
+                : 'bg-white text-slate-900 border-slate-200'
             }`}
           >
             <div
@@ -2548,7 +2582,9 @@ export default function App() {
       {/* Quiet Footer */}
       <footer
         className={`no-print border-t px-4 sm:px-6 py-4 text-xs ${
-          isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+          isDark
+            ? 'bg-slate-900 border-slate-800 text-slate-400'
+            : 'bg-white border-slate-200 text-slate-500'
         }`}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
