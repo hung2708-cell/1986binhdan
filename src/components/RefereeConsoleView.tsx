@@ -322,18 +322,35 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   };
 
   const handleToggleServe = () => {
-    if (!activeMatch) return;
-    requireStaffAction(
-      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đổi lượt giao bóng.',
-      () => {
-        const toggled = toggleServeAndSide(activeMatch);
+  if (!activeMatch) return;
+  requireStaffAction(
+    'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đổi lượt giao bóng.',
+    () => {
+      const currentServer = activeMatch.serverNumber || 2;
+      if (activeMatch.scoringMode === 'rally') {
+        const nextServingTeam = activeMatch.servingTeam === 'A' ? 'B' : 'A';
         onUpdateMatch(activeMatch.id, {
-          servingTeam: toggled.servingTeam,
-          serverNumber: toggled.serverNumber,
+          servingTeam: nextServingTeam,
+          serverNumber: 1,
         });
-      },
-    );
-  };
+        return;
+      }
+
+      // Luật truyền thống (side-out): Người 1 -> Người 2 -> đổi đội giao (Người 2)
+      if (currentServer === 1) {
+        onUpdateMatch(activeMatch.id, {
+          serverNumber: 2,
+        });
+      } else {
+        const nextServingTeam = activeMatch.servingTeam === 'A' ? 'B' : 'A';
+        onUpdateMatch(activeMatch.id, {
+          servingTeam: nextServingTeam,
+          serverNumber: 2,
+        });
+      }
+    },
+  );
+};
 
   const handleSwitchCourtEnds = () => {
     if (!activeMatch) return;
