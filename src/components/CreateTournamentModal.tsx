@@ -1,266 +1,302 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState } from 'react';
-import { Plus, Trophy, X } from 'lucide-react';
-import type {
-  ScoringMode,
-  Tournament,
-  TournamentFormat,
-  TournamentStatus,
+import { Plus, Sparkles, X } from 'lucide-react';
+import {
+  BRAND_LOGO_URL,
+  type ScoringMode,
+  type Tournament,
+  type TournamentFormat,
 } from '../types/tournament';
 
+type ThemeMode = 'light' | 'dark';
+
 interface CreateTournamentModalProps {
+  themeMode?: ThemeMode;
   onClose: () => void;
   onCreate: (tournament: Omit<Tournament, 'id' | 'createdAt' | 'updatedAt'>) => void;
 }
 
+const THEME_STORAGE_KEY = 'pickleball_1986_theme_mode_v1';
+
+function detectIsDark(themeMode?: ThemeMode): boolean {
+  if (themeMode === 'dark') return true;
+  if (themeMode === 'light') return false;
+  try {
+    if (document.documentElement.classList.contains('dark')) return true;
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'dark') return true;
+  } catch {
+    // ignore storage errors
+  }
+  return false;
+}
+
 export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
+  themeMode,
   onClose,
   onCreate,
 }) => {
-  const [name, setName] = useState('');
-  const [location, setLocation] = useState('Cụm Sân Pickleball 1986');
-  const [startDate, setStartDate] = useState('2026-12-05');
-  const [endDate, setEndDate] = useState('2026-12-06');
-  const [format, setFormat] = useState<TournamentFormat>('group_knockout');
-  const [status, setStatus] = useState<TournamentStatus>('open');
+  const isDark = detectIsDark(themeMode);
+
+  const [name, setName] = useState('GIẢI PICKLEBALL BÍNH DẦN 1986 MỞ RỘNG');
+  const [location, setLocation] = useState('Cụm Sân Pickleball 1986, TP. Cao Bằng');
+  const [startDate, setStartDate] = useState('2026-11-28');
+  const [endDate, setEndDate] = useState('2026-11-29');
   const [courtsCount, setCourtsCount] = useState(4);
-  const [pointsToWin, setPointsToWin] = useState<11 | 15 | 21>(15);
-  const [scoringMode, setScoringMode] = useState<ScoringMode>('side_out');
-  const [divisionsText, setDivisionsText] = useState('');
+  const [format, setFormat] = useState<TournamentFormat>('group_knockout');
+  const [scoringMode, setScoringMode] = useState<ScoringMode>('rally_15');
+  const [pointsToWin, setPointsToWin] = useState(15);
+  const [winByTwo, setWinByTwo] = useState(true);
+  const [divisionsText, setDivisionsText] = useState(
+    'Đồng Đội - Team 1, Đôi Nam 4.5, Đôi Nam Nữ 4.5',
+  );
   const [description, setDescription] = useState(
-    'Điều lệ 494/QĐTDTTVN của Cục TDTT Việt Nam: Chạm 15 điểm (08đ đổi sân; KO 14–14 cách biệt 2đ max 18đ); Thắng 3đ, Hòa 2đ, Thua 1đ, Bỏ cuộc 0đ.',
+    'Giải giao lưu Pickleball cộng đồng 1986 Bính Dần — thi đấu công bằng, chuyên nghiệp, cập nhật tỷ số và bảng xếp hạng trực tiếp.',
   );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-
     const divisions = divisionsText
       .split(',')
-      .map((s) => s.trim())
+      .map((d) => d.trim())
       .filter(Boolean);
 
-    const hasTeamDivision = divisions.some((d) => d.toLowerCase().includes('đồng đội'));
-
     onCreate({
-      name: name.trim(),
+      name: name.trim() || 'Giải Pickleball 1986',
+      seasonYear: 2026,
       location: location.trim() || 'Cụm Sân Pickleball 1986',
       startDate,
       endDate,
+      status: 'ongoing',
       format,
-      competitionType: hasTeamDivision ? 'team' : 'doubles',
-      status,
-      courtsCount: Math.max(1, Number(courtsCount) || 4),
-      pointsToWin,
-      maxPointsCap: pointsToWin === 15 ? 18 : pointsToWin + 3,
       scoringMode,
-      winByTwo: true,
-      entryFee: 0,
-      bankBin: '',
-      bankName: '',
-      bankAccountNo: '',
-      bankAccountName: '',
-      divisions,
+      pointsToWin: Number(pointsToWin) || 15,
+      winByTwo,
+      courtsCount: Math.max(1, Math.min(20, Number(courtsCount) || 4)),
+      divisions: divisions.length > 0 ? divisions : ['Đồng Đội - Team 1', 'Đôi Nam 4.5'],
+      bannerUrl: BRAND_LOGO_URL,
       description: description.trim(),
-      visibility: 'public',
-      createdBy: 'u_admin_1986',
     });
     onClose();
   };
 
+  const inputClass = `w-full min-h-[38px] px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+    isDark
+      ? 'bg-slate-950 border-slate-700 text-white placeholder:text-slate-500'
+      : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
+  }`;
+
+  const labelClass = `block text-xs font-semibold mb-1 ${
+    isDark ? 'text-slate-300' : 'text-slate-700'
+  }`;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl my-auto">
-        <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Trophy className="w-5 h-5 text-orange-400" />
-            <div>
-              <h3 className="font-display text-lg font-bold tracking-tight uppercase">
-                KHỞI TẠO GIẢI ĐẤU THEO ĐIỀU LỆ 494/QĐTDTTVN
-              </h3>
-              <p className="text-xs text-slate-300">
-                Áp dụng quy định chuyên môn Pickleball của Cục TDTT Việt Nam
-              </p>
-            </div>
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-2xs p-3 sm:p-4 flex items-center justify-center overflow-y-auto"
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className={`rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border my-auto transition-colors ${
+          isDark
+            ? 'bg-slate-900 border-slate-800 text-slate-100'
+            : 'bg-white border-slate-200 text-slate-900'
+        }`}
+      >
+        <div
+          className={`px-5 py-4 border-b flex items-center justify-between ${
+            isDark
+              ? 'bg-slate-950/70 border-slate-800'
+              : 'bg-slate-50 border-slate-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-orange-500" />
+            <h2 className="font-display text-lg font-extrabold uppercase tracking-tight">
+              KHỞI TẠO GIẢI ĐẤU PICKLEBALL MỚI
+            </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+            className={`p-1.5 rounded-lg transition-colors ${
+              isDark
+                ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200/70'
+            }`}
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[82vh] overflow-y-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Tên giải đấu *
-              </label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="VD: Giải Pickleball 1986 Mở Rộng"
-                className="w-full min-h-[42px] px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
+        <div className="p-5 space-y-4 max-h-[78vh] overflow-y-auto">
+          <div>
+            <label className={labelClass}>Tên giải đấu *</label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+            />
+          </div>
 
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Địa điểm / Cụm sân *
-              </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>Địa điểm thi đấu</label>
               <input
                 type="text"
-                required
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full min-h-[42px] px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className={inputClass}
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Ngày khai mạc
-              </label>
+              <label className={labelClass}>Số lượng sân thi đấu</label>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={courtsCount}
+                onChange={(e) => setCourtsCount(Number(e.target.value))}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={labelClass}>Ngày khai mạc</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full min-h-[42px] px-3.5 py-2 text-sm font-mono-num border border-slate-300 rounded-xl"
+                className={inputClass}
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Ngày bế mạc
-              </label>
+              <label className={labelClass}>Ngày bế mạc</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full min-h-[42px] px-3.5 py-2 text-sm font-mono-num border border-slate-300 rounded-xl"
+                className={inputClass}
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Thể thức thi đấu
-              </label>
+              <label className={labelClass}>Thể thức giải</label>
               <select
                 value={format}
                 onChange={(e) => setFormat(e.target.value as TournamentFormat)}
-                className="w-full min-h-[42px] px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white"
+                className={inputClass}
               >
-                <option value="group_knockout">Vòng bảng + Loại trực tiếp</option>
+                <option value="group_knockout">Chia bảng + Loại trực tiếp</option>
                 <option value="round_robin">Vòng tròn tính điểm</option>
                 <option value="knockout">Loại trực tiếp</option>
               </select>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Trạng thái giải đấu
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TournamentStatus)}
-                className="w-full min-h-[42px] px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white"
-              >
-                <option value="open">Đang mở đăng ký</option>
-                <option value="ongoing">Đang thi đấu</option>
-                <option value="completed">Đã kết thúc</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Số lượng sân thi đấu
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={24}
-                value={courtsCount}
-                onChange={(e) => setCourtsCount(Number(e.target.value))}
-                className="w-full min-h-[42px] px-3.5 py-2 text-sm font-mono-num border border-slate-300 rounded-xl"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Mốc điểm kết thúc séc
-              </label>
-              <select
-                value={pointsToWin}
-                onChange={(e) => setPointsToWin(Number(e.target.value) as 11 | 15 | 21)}
-                className="w-full min-h-[42px] px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white"
-              >
-                <option value={15}>15 điểm (8đ đổi sân — Chuẩn 494)</option>
-                <option value={11}>11 điểm (6đ đổi sân)</option>
-                <option value={21}>21 điểm (11đ đổi sân)</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Luật tính điểm Pickleball
-              </label>
+              <label className={labelClass}>Luật tính điểm</label>
               <select
                 value={scoringMode}
                 onChange={(e) => setScoringMode(e.target.value as ScoringMode)}
-                className="w-full min-h-[42px] px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white"
+                className={inputClass}
               >
-                <option value="side_out">Luật Side-Out (3 số: Giao - Nhận - 1/2)</option>
-                <option value="rally">Tính điểm trực tiếp (Rally Scoring)</option>
+                <option value="rally_15">Rally 15 điểm</option>
+                <option value="traditional_11">Truyền thống 11 điểm</option>
               </select>
             </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Các nội dung thi đấu trong giải (tùy chọn — Admin có thể thêm sau)
-              </label>
+            <div>
+              <label className={labelClass}>Mốc điểm thắng set</label>
               <input
-                type="text"
-                value={divisionsText}
-                onChange={(e) => setDivisionsText(e.target.value)}
-                placeholder="VD: Đôi Nam 5.5, Đồng Đội CLB... (để trống nếu muốn tự thêm từng nội dung)"
-                className="w-full min-h-[42px] px-3.5 py-2 text-sm border border-slate-300 rounded-xl"
+                type="number"
+                min={11}
+                max={21}
+                value={pointsToWin}
+                onChange={(e) => setPointsToWin(Number(e.target.value))}
+                className={inputClass}
               />
             </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Điều lệ & Ghi chú giải đấu
+            <div className="flex items-end pb-1">
+              <label
+                className={`inline-flex items-center gap-2 text-xs font-semibold cursor-pointer ${
+                  isDark ? 'text-slate-200' : 'text-slate-700'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={winByTwo}
+                  onChange={(e) => setWinByTwo(e.target.checked)}
+                  className="rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+                />
+                <span>Cách biệt 2 điểm (Win by 2)</span>
               </label>
-              <textarea
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl"
-              />
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="min-h-[42px] px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              className="min-h-[42px] px-5 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              Tạo giải đấu & Mở đăng ký
-            </button>
+          <div>
+            <label className={labelClass}>
+              Các nội dung / hạng mục thi đấu (cách nhau dấu phẩy)
+            </label>
+            <input
+              type="text"
+              value={divisionsText}
+              onChange={(e) => setDivisionsText(e.target.value)}
+              placeholder="VD: Đồng Đội - Team 1, Đôi Nam 4.5, Đôi Nam Nữ 4.5"
+              className={inputClass}
+            />
           </div>
-        </form>
-      </div>
+
+          <div>
+            <label className={labelClass}>Giới thiệu ngắn về giải đấu</label>
+            <textarea
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                isDark
+                  ? 'bg-slate-950 border-slate-700 text-white placeholder:text-slate-500'
+                  : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
+              }`}
+            />
+          </div>
+        </div>
+
+        <div
+          className={`px-5 py-3.5 border-t flex items-center justify-end gap-2.5 ${
+            isDark
+              ? 'bg-slate-950/70 border-slate-800'
+              : 'bg-slate-50 border-slate-200'
+          }`}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className={`min-h-[38px] px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
+              isDark
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+            }`}
+          >
+            Hủy
+          </button>
+          <button
+            type="submit"
+            className="min-h-[38px] px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tạo giải đấu</span>
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
