@@ -2094,15 +2094,16 @@ export default function App() {
 
           <div className="flex items-center justify-end gap-1.5 shrink-0">
             {isAdmin && (
-              <button
-                type="button"
-                onClick={handleOpenCreateTournament}
-                className="min-h-[34px] px-2.5 py-1 text-xs font-bold text-white bg-slate-900 hover:bg-orange-600 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Tạo giải mới</span>
-              </button>
-            )}
+              {activeTab === 'admin' && (
+  <button
+    type="button"
+    onClick={handleOpenCreateTournament}
+    className="..."
+  >
+    + Tạo giải mới
+  </button>
+)}
+
 
             {currentTournament && (
               <button
