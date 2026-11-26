@@ -739,9 +739,10 @@ export default function App() {
       tournaments: [created, ...prev.tournaments],
     }));
     setSelectedTournamentId(newId);
+    setActiveTab('admin');
     showToast(
       `Đã tạo giải: ${created.name}`,
-      `Quy mô ${created.courtsCount} sân · Đã sẵn sàng nhập VĐV và xếp bảng`,
+      `Đã chuyển sang tab Quản lý giải · Quy mô ${created.courtsCount} sân`,
     );
   };
 
