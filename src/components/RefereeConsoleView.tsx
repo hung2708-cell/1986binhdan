@@ -8,16 +8,15 @@ import {
   ArrowLeftRight,
   Award,
   CheckCircle2,
-  ChevronDown,
   Clock,
   Flag,
+  Gavel,
   Megaphone,
   Minus,
   Plus,
   RefreshCw,
   RotateCcw,
   Shuffle,
-  User,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -78,45 +77,96 @@ function getNormalizedLineupSlots(match: Match): TeamLineupSlot[] {
   const b1 = match.teamBPlayer1 || bParts[0] || 'VĐV B1';
   const b2 = match.teamBPlayer2 || bParts[1] || 'VĐV B2';
 
-  return [
-    {
-      order: 1,
-      label: TEAM_EVENT_SUBCATEGORIES[0] || 'Trận 1: Đôi Nữ',
-      teamAPlayer1: a1,
-      teamAPlayer2: a2,
-      teamBPlayer1: b1,
-      teamBPlayer2: b2,
-      scoreA: 0,
-      scoreB: 0,
-      completed: false,
-      winnerSide: '',
-    },
-    {
-      order: 2,
-      label: TEAM_EVENT_SUBCATEGORIES[1] || 'Trận 2: Đôi Nam',
-      teamAPlayer1: a1,
-      teamAPlayer2: a2,
-      teamBPlayer1: b1,
-      teamBPlayer2: b2,
-      scoreA: 0,
-      scoreB: 0,
-      completed: false,
-      winnerSide: '',
-    },
-    {
-      order: 3,
-      label: TEAM_EVENT_SUBCATEGORIES[2] || 'Trận 3: Đôi Nam Nữ 1',
-      teamAPlayer1: a1,
-      teamAPlayer2: a2,
-      teamBPlayer1: b1,
-      teamBPlayer2: b2,
-      scoreA: 0,
-      scoreB: 0,
-      completed: false,
-      winnerSide: '',
-    },
-  ];
+  return TEAM_EVENT_SUBCATEGORIES.map((label, index) => ({
+    order: index + 1,
+    label,
+    teamAPlayer1: a1,
+    teamAPlayer2: a2,
+    teamBPlayer1: b1,
+    teamBPlayer2: b2,
+    scoreA: 0,
+    scoreB: 0,
+    completed: false,
+    winnerSide: '',
+  }));
 }
+
+function shortenPlayerName(rawName: string): string {
+  const cleaned = rawName.replace(/\([^)]*\)/g, '').trim();
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  if (parts.length <= 2) return cleaned;
+  return parts.slice(-2).join(' ');
+}
+
+interface Player3DTokenProps {
+  name: string;
+  isServing: boolean;
+  isReceiver: boolean;
+  align: 'left' | 'right';
+}
+
+const Player3DToken: React.FC<Player3DTokenProps> = ({
+  name,
+  isServing,
+  isReceiver,
+  align,
+}) => {
+  const shortName = shortenPlayerName(name);
+  const badgeBg = isServing
+    ? 'bg-amber-400 text-slate-950 ring-2 ring-white shadow-md'
+    : isReceiver
+    ? 'bg-cyan-300 text-slate-950 ring-1 ring-white/90 shadow-sm'
+    : 'bg-slate-950/80 text-white border border-white/25';
+
+  return (
+    <div
+      title={name}
+      className={`inline-flex items-center gap-1.5 max-w-full ${
+        align === 'right' ? 'flex-row-reverse text-right' : 'flex-row text-left'
+      }`}
+    >
+      {/* Icon người 3D đơn giản */}
+      <svg
+        viewBox="0 0 28 32"
+        className="w-5 h-6 sm:w-6 sm:h-7 shrink-0 drop-shadow-[0_3px_3px_rgba(0,0,0,0.65)]"
+        aria-hidden="true"
+      >
+        <ellipse cx="14" cy="29.5" rx="9" ry="2.2" fill="rgba(0,0,0,0.42)" />
+        <circle
+          cx="14"
+          cy="8.5"
+          r="5"
+          fill={isServing ? '#FACC15' : isReceiver ? '#67E8F9' : '#F8FAFC'}
+          stroke="#0F172A"
+          strokeWidth="1.6"
+        />
+        <path
+          d="M5.5 25.5C5.5 19.8 9.2 16.5 14 16.5C18.8 16.5 22.5 19.8 22.5 25.5V27.5H5.5V25.5Z"
+          fill={isServing ? '#F59E0B' : isReceiver ? '#06B6D4' : '#E2E8F0'}
+          stroke="#0F172A"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+      </svg>
+
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate max-w-[115px] sm:max-w-[140px] ${badgeBg}`}
+      >
+        <span className="truncate">{shortName}</span>
+        {isServing && (
+          <span className="px-1 rounded bg-slate-950 text-amber-300 text-[8px] font-black shrink-0">
+            PHÁT
+          </span>
+        )}
+        {isReceiver && !isServing && (
+          <span className="px-1 rounded bg-slate-950 text-cyan-300 text-[8px] font-black shrink-0">
+            ĐỠ
+          </span>
+        )}
+      </span>
+    </div>
+  );
+};
 
 export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   tournament,
@@ -134,7 +184,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   onAddRosterAthlete,
 }) => {
   const isDark = themeMode === 'dark';
-  const isStaff = Boolean(currentAccount);
+  const isStaff = Boolean(currentAccount && (currentAccount.role === 'admin' || currentAccount.role === 'referee'));
   const isAdmin = currentAccount?.role === 'admin';
 
   const courtNumbers = useMemo(
@@ -630,67 +680,44 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const rightTopServing = rightIsServing && (serverNum === 1 ? isOddScore : !isOddScore);
   const rightBottomServing = rightIsServing && !rightTopServing;
 
-  // Người đỡ chéo sân tương ứng với người phát
-  const rightTopReceiving = leftIsServing && leftBottomServing;
-  const rightBottomReceiving = leftIsServing && leftTopServing;
-  const leftTopReceiving = rightIsServing && rightBottomServing;
-  const leftBottomReceiving = rightIsServing && rightTopServing;
+  // Người đỡ giao bóng đứng chéo ô với người phát bóng
+  const leftTopReceiver = rightIsServing && rightBottomServing;
+  const leftBottomReceiver = rightIsServing && rightTopServing;
+  const rightTopReceiver = leftIsServing && leftBottomServing;
+  const rightBottomReceiver = leftIsServing && leftTopServing;
 
-  const serverDisplayName =
+  const serverDisplayName = shortenPlayerName(
     servingSide === 'A'
       ? activeMatch.teamAPlayer1 || activeMatch.teamAName
-      : activeMatch.teamBPlayer1 || activeMatch.teamBName;
-  const receiverDisplayName =
+      : activeMatch.teamBPlayer1 || activeMatch.teamBName,
+  );
+  const receiverDisplayName = shortenPlayerName(
     servingSide === 'A'
       ? activeMatch.teamBPlayer1 || activeMatch.teamBName
-      : activeMatch.teamAPlayer1 || activeMatch.teamAName;
+      : activeMatch.teamAPlayer1 || activeMatch.teamAName,
+  );
 
-  // Mũi tên ngắn gọn nằm gọn giữa phần sân phát và phần sân đỡ, không đè lên tên VĐV
-  const shortArrow = leftIsServing
+  // Tọa độ đường giao chéo chuẩn theo phối cảnh sân 3D (viewBox 640x280)
+  const arrowLine = leftIsServing
     ? {
-        x1: 215,
-        y1: leftTopServing ? 74 : 166,
-        x2: 385,
-        y2: leftTopServing ? 166 : 74,
+        x1: 112,
+        y1: leftTopServing ? 92 : 212,
+        x2: 528,
+        y2: leftTopServing ? 212 : 92,
       }
     : {
-        x1: 385,
-        y1: rightTopServing ? 74 : 166,
-        x2: 215,
-        y2: rightTopServing ? 166 : 74,
+        x1: 528,
+        y1: rightTopServing ? 92 : 212,
+        x2: 112,
+        y2: rightTopServing ? 212 : 92,
       };
-
-  const renderPlayerChip = (
-    name: string,
-    isServing: boolean,
-    isReceiving: boolean,
-    alignRight = false,
-  ) => (
-    <span
-      style={{ fontSize: 'clamp(9.5px, 2.2vw, 11.5px)' }}
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold leading-tight truncate max-w-full transition-all ${
-        alignRight ? 'flex-row-reverse' : 'flex-row'
-      } ${
-        isServing
-          ? 'bg-amber-400 text-slate-950 ring-2 ring-white animate-pulse shadow-md'
-          : isReceiving
-          ? 'bg-cyan-400 text-slate-950 ring-1 ring-cyan-100 animate-pulse shadow-sm'
-          : 'bg-slate-950/75 text-white'
-      }`}
-    >
-      <User className="w-3 h-3 shrink-0" />
-      <span className="truncate">{name}</span>
-      {isServing && <span className="text-[9px] font-black shrink-0">PHÁT</span>}
-      {isReceiving && <span className="text-[9px] font-black shrink-0">ĐỠ</span>}
-    </span>
-  );
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {/* Court Switcher & Staff Status */}
-      <section className={`border rounded-2xl p-3 sm:p-4 space-y-2.5 ${surfaceCard}`}>
+      {/* Court Switcher & Staff Badge */}
+      <section className={`border rounded-2xl p-3 sm:p-4 ${surfaceCard}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 max-w-full">
+          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full">
             {courtNumbers.map((cNum) => {
               const isSelected = cNum === selectedCourt;
               const courtLive = matches.some((m) => m.courtNumber === cNum && m.status === 'live');
@@ -750,98 +777,70 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             )}
           </div>
         </div>
-
-        {/* Team Sub-Match Selector */}
-        {isTeamMatch && lineupSlots.length > 0 && (
-          <div
-            className={`pt-2 border-t flex flex-wrap items-center justify-between gap-2 ${
-              isDark ? 'border-slate-800' : 'border-slate-200'
-            }`}
-          >
-            <div className="flex items-center gap-1.5 text-xs font-bold text-orange-500">
-              <Users className="w-3.5 h-3.5 shrink-0" />
-              <span>ĐỒNG ĐỘI — TRẬN NHỎ:</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {lineupSlots.map((slot) => {
-                const isCurr = slot.order === activeSlotOrder;
-                return (
-                  <button
-                    key={slot.order}
-                    type="button"
-                    onClick={() => handleSelectTeamSlot(slot.order)}
-                    className={`min-h-[32px] px-2.5 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
-                      isCurr
-                        ? 'bg-orange-600 text-white'
-                        : slot.completed
-                        ? isDark
-                          ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50'
-                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : isDark
-                        ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    <span>{slot.label}</span>
-                    <span className="font-mono-num">
-                      ({slot.scoreA}-{slot.scoreB})
-                    </span>
-                    {slot.completed && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </section>
 
       {/* Main Console Layout */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
-        {/* LEFT: COURT LABEL + MATCH DROPDOWN + 4 ACTIONS + 3D COURT */}
+        {/* LEFT: MATCH PICKER + SELECT TRẬN NHỎ ĐỒNG ĐỘI + 4 ACTIONS + 3D COURT */}
         <div className="lg:col-span-6 space-y-3.5">
           <div className={`border rounded-2xl p-3 sm:p-4 space-y-3 ${surfaceCard}`}>
-            {/* Chỉ hiển thị Sân đang chọn (bỏ trùng tên giải / địa điểm) */}
             <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="px-2.5 py-1 rounded-lg bg-orange-500/15 text-orange-500 font-extrabold uppercase">
-                SÂN {activeMatch.courtNumber}
-              </span>
-              <span className={`text-[11px] font-semibold ${mutedText}`}>
-                Chọn trận đấu:
+              <div className="flex items-center gap-1.5 font-bold text-orange-500">
+                <Gavel className="w-3.5 h-3.5 shrink-0" />
+                <span>SÂN {activeMatch.courtNumber}</span>
+              </div>
+              <span className={`font-mono-num text-[11px] ${mutedText}`}>
+                {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]}
               </span>
             </div>
 
-            {/* Dropdown sổ xuống các trận tiếp theo */}
-            <div className="relative">
-              <select
-                value={activeMatch.id}
-                onChange={(e) => onSelectMatch(e.target.value)}
-                aria-label="Chọn trận đấu"
-                className={`w-full appearance-none min-h-[40px] pl-3 pr-9 py-2 text-xs sm:text-sm font-bold border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                  isDark
-                    ? 'bg-slate-950 border-slate-700 text-white'
-                    : 'bg-slate-50 border-slate-300 text-slate-900'
-                }`}
-              >
-                {courtMatches.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    Trận #{m.matchNumber} — {m.teamAName} vs {m.teamBName} (
-                    {m.status === 'live' ? 'Đang đấu' : m.status === 'completed' ? 'Xong' : 'Sắp đấu'})
-                  </option>
-                ))}
-                {matches
-                  .filter((m) => m.courtNumber !== activeMatch.courtNumber)
-                  .map((m) => (
-                    <option key={m.id} value={m.id}>
-                      Sân {m.courtNumber} · Trận #{m.matchNumber} — {m.teamAName} vs {m.teamBName}
+            <select
+              value={activeMatch.id}
+              onChange={(e) => onSelectMatch(e.target.value)}
+              aria-label="Chọn trận đấu trên sân"
+              className={`w-full min-h-[38px] px-3 py-2 text-xs sm:text-sm font-bold border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                isDark
+                  ? 'bg-slate-950 border-slate-700 text-white'
+                  : 'bg-slate-50 border-slate-300 text-slate-900'
+              }`}
+            >
+              {matches.map((m) => (
+                <option key={m.id} value={m.id}>
+                  Trận #{m.matchNumber} (Sân {m.courtNumber}) — {m.teamAName} vs {m.teamBName}
+                </option>
+              ))}
+            </select>
+
+            {/* Select trận nhỏ cho nội dung Đồng đội ngay trên bảng trọng tài */}
+            {isTeamMatch && lineupSlots.length > 0 && (
+              <div className="space-y-1">
+                <label
+                  htmlFor="team-submatch-select"
+                  className="flex items-center gap-1.5 text-[11px] font-bold text-orange-500"
+                >
+                  <Users className="w-3.5 h-3.5 shrink-0" />
+                  <span>Chọn trận nhỏ (Đồng đội)</span>
+                </label>
+                <select
+                  id="team-submatch-select"
+                  value={activeSlotOrder}
+                  onChange={(e) => handleSelectTeamSlot(Number(e.target.value))}
+                  className={`w-full min-h-[38px] px-3 py-2 text-xs font-bold border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                    isDark
+                      ? 'bg-slate-950 border-slate-700 text-amber-300'
+                      : 'bg-orange-50/50 border-orange-300 text-slate-900'
+                  }`}
+                >
+                  {lineupSlots.map((slot) => (
+                    <option key={slot.order} value={slot.order}>
+                      {slot.label} · ({slot.scoreA}-{slot.scoreB}){slot.completed ? ' ✓' : ''}
                     </option>
                   ))}
-              </select>
-              <ChevronDown
-                className={`pointer-events-none w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 ${mutedText}`}
-              />
-            </div>
+                </select>
+              </div>
+            )}
 
-            {/* 4 Core Court Buttons: 2x2 on Portrait Mobile, 4-Col Row on Tablet/Desktop/Landscape */}
+            {/* 4 Core Court Buttons */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
@@ -1078,129 +1077,242 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             )}
           </div>
 
-          {/* 3D PICKLEBALL COURT: SINGLE COLOR, BLINKING SERVE/RECEIVE WITH USER ICON, SHORT ARROW */}
-          <div className={`border rounded-2xl p-3 sm:p-4 space-y-2 ${surfaceCard}`}>
+          {/* SÂN THI ĐẤU 3D + ICON NGƯỜI 3D ĐƠN GIẢN */}
+          <div className={`border rounded-2xl p-3 sm:p-4 space-y-2.5 ${surfaceCard}`}>
             <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-mono-num font-extrabold uppercase">
                   SÂN 3D #{activeMatch.courtNumber} · {isOddScore ? 'LẺ' : 'CHẴN'} · N{serverNum}
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-extrabold animate-pulse">
+                <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-extrabold">
                   Phát
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[10px] font-extrabold animate-pulse">
+                <span className="px-1.5 py-0.5 rounded bg-cyan-300 text-slate-950 text-[10px] font-extrabold">
                   Đỡ
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5 font-semibold">
-                <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 truncate max-w-[100px]">
-                  T: {serverDisplayName}
+                <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 truncate max-w-[115px]">
+                  P: {serverDisplayName}
                 </span>
-                <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-500 truncate max-w-[100px]">
-                  P: {receiverDisplayName}
+                <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-500 truncate max-w-[115px]">
+                  Đ: {receiverDisplayName}
                 </span>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-slate-950 p-2 sm:p-2.5 border border-slate-800">
-              {/* Sân 1 màu đồng nhất (#15803d) có độ sâu 3D */}
-              <div className="relative w-full max-h-[30vh] sm:max-h-[225px] aspect-[22/10] mx-auto rounded-xl bg-[#15803d] border-2 border-white/95 shadow-[0_7px_0_#064e3b,0_12px_20px_rgba(0,0,0,0.5)] overflow-hidden select-none">
-                <div className="w-full h-full grid grid-cols-12 relative z-10">
-                  {/* LEFT SERVICE COURTS */}
-                  <div className="col-span-3 grid grid-rows-2 border-r-2 border-white/95">
-                    <div className="px-1.5 py-1 border-b border-white/90 flex items-center">
-                      {renderPlayerChip(pLeftTop, leftTopServing, leftTopReceiving, false)}
+            {/* Khung sân phối cảnh 3D */}
+            <div
+              className="rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-2 sm:p-3 border border-slate-800 overflow-hidden"
+              style={{ perspective: '900px' }}
+            >
+              <div
+                style={{ transform: 'rotateX(16deg)', transformOrigin: 'center center' }}
+                className="relative w-full max-h-[34vh] sm:max-h-[245px] aspect-[20/9] mx-auto rounded-xl bg-gradient-to-b from-[#16a34a] via-[#15803d] to-[#14532d] border-2 border-white shadow-[0_10px_0_#052e16,0_18px_28px_rgba(0,0,0,0.65)] overflow-hidden select-none"
+              >
+                {/* Vạch sân chuẩn Pickleball (2 nửa sân trái - phải, 2 ô giao mỗi bên, khu NVZ 7ft ở giữa, lưới dọc chính giữa) */}
+                <svg
+                  viewBox="0 0 640 280"
+                  className="pointer-events-none absolute inset-0 w-full h-full z-10"
+                  preserveAspectRatio="none"
+                >
+                  {/* Đường biên ngoài sân */}
+                  <rect
+                    x="14"
+                    y="14"
+                    width="612"
+                    height="252"
+                    rx="4"
+                    fill="none"
+                    stroke="#FFFFFF"
+                    strokeWidth="3.5"
+                  />
+
+                  {/* Khu vực bếp / NVZ 7ft hai bên lưới */}
+                  <rect
+                    x="228"
+                    y="14"
+                    width="92"
+                    height="252"
+                    fill="rgba(6, 78, 59, 0.36)"
+                    stroke="#FFFFFF"
+                    strokeWidth="3"
+                  />
+                  <rect
+                    x="320"
+                    y="14"
+                    width="92"
+                    height="252"
+                    fill="rgba(6, 78, 59, 0.36)"
+                    stroke="#FFFFFF"
+                    strokeWidth="3"
+                  />
+
+                  {/* Đường chia ô giao bóng trái & phải (chỉ chạy từ đường biên cuối sân tới đường NVZ) */}
+                  <line
+                    x1="14"
+                    y1="140"
+                    x2="228"
+                    y2="140"
+                    stroke="#FFFFFF"
+                    strokeWidth="2.8"
+                  />
+                  <line
+                    x1="412"
+                    y1="140"
+                    x2="626"
+                    y2="140"
+                    stroke="#FFFFFF"
+                    strokeWidth="2.8"
+                  />
+
+                  {/* Bóng lưới đổ xuống mặt sân */}
+                  <rect x="314" y="10" width="12" height="260" fill="rgba(2, 6, 23, 0.32)" />
+
+                  {/* Đường lưới chính giữa */}
+                  <line
+                    x1="320"
+                    y1="6"
+                    x2="320"
+                    y2="274"
+                    stroke="#FFFFFF"
+                    strokeWidth="4.5"
+                  />
+
+                  {/* Cột lưới 3D hai đầu */}
+                  <circle cx="320" cy="14" r="5" fill="#F8FAFC" stroke="#0F172A" strokeWidth="2" />
+                  <circle cx="320" cy="266" r="5" fill="#F8FAFC" stroke="#0F172A" strokeWidth="2" />
+
+                  {/* Nhãn NVZ */}
+                  <text
+                    x="274"
+                    y="144"
+                    textAnchor="middle"
+                    fill="rgba(255,255,255,0.78)"
+                    fontSize="11"
+                    fontWeight="800"
+                    letterSpacing="2"
+                  >
+                    NVZ
+                  </text>
+                  <text
+                    x="366"
+                    y="144"
+                    textAnchor="middle"
+                    fill="rgba(255,255,255,0.78)"
+                    fontSize="11"
+                    fontWeight="800"
+                    letterSpacing="2"
+                  >
+                    NVZ
+                  </text>
+
+                  {/* Mũi tên quỹ đạo giao bóng chéo sân */}
+                  <defs>
+                    <marker
+                      id="serveArrow3D"
+                      markerWidth="8"
+                      markerHeight="8"
+                      refX="6"
+                      refY="4"
+                      orient="auto"
+                    >
+                      <polygon points="0 0, 8 4, 0 8" fill="#FACC15" />
+                    </marker>
+                  </defs>
+                  <line
+                    x1={arrowLine.x1}
+                    y1={arrowLine.y1}
+                    x2={arrowLine.x2}
+                    y2={arrowLine.y2}
+                    stroke="#020617"
+                    strokeWidth="5"
+                    strokeOpacity="0.45"
+                  />
+                  <line
+                    x1={arrowLine.x1}
+                    y1={arrowLine.y1}
+                    x2={arrowLine.x2}
+                    y2={arrowLine.y2}
+                    stroke="#FACC15"
+                    strokeWidth="3"
+                    strokeDasharray="7 5"
+                    markerEnd="url(#serveArrow3D)"
+                  />
+                </svg>
+
+                {/* Lớp đặt Icon Người 3D theo vị trí 4 ô trên sân */}
+                <div className="relative z-20 w-full h-full grid grid-cols-12">
+                  {/* Nửa sân trái */}
+                  <div className="col-span-4 grid grid-rows-2 py-2 px-2">
+                    <div
+                      className={`flex items-center justify-start rounded-lg px-1 ${
+                        leftTopServing ? 'bg-amber-400/20' : ''
+                      }`}
+                    >
+                      <Player3DToken
+                        name={pLeftTop}
+                        isServing={leftTopServing}
+                        isReceiver={leftTopReceiver}
+                        align="left"
+                      />
                     </div>
-                    <div className="px-1.5 py-1 flex items-center">
-                      {renderPlayerChip(pLeftBottom, leftBottomServing, leftBottomReceiving, false)}
+                    <div
+                      className={`flex items-center justify-start rounded-lg px-1 ${
+                        leftBottomServing ? 'bg-amber-400/20' : ''
+                      }`}
+                    >
+                      <Player3DToken
+                        name={pLeftBottom}
+                        isServing={leftBottomServing}
+                        isReceiver={leftBottomReceiver}
+                        align="left"
+                      />
                     </div>
                   </div>
 
-                  {/* LEFT NVZ */}
-                  <div className="col-span-2 border-r-2 border-white/95 flex items-center justify-center">
-                    <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-white/80 -rotate-90 whitespace-nowrap">
-                      NVZ 7FT
-                    </span>
-                  </div>
-
-                  {/* CENTER 3D NET */}
-                  <div className="col-span-2 relative flex items-center justify-center">
-                    <div className="w-2 h-full bg-black/20" />
-                    <div className="absolute inset-y-0 w-[3px] bg-white" />
-                    <span className="absolute top-1 w-2 h-2 rounded-full bg-white border border-slate-900" />
-                    <span className="absolute bottom-1 w-2 h-2 rounded-full bg-white border border-slate-900" />
-                    <span className="relative z-20 px-1.5 py-0.5 rounded bg-slate-950/90 text-white text-[8px] sm:text-[9px] font-extrabold border border-white/30 whitespace-nowrap">
+                  {/* Khu giữa (NVZ + Lưới) */}
+                  <div className="col-span-4 flex items-center justify-center">
+                    <span className="px-2 py-0.5 rounded bg-slate-950/85 text-white text-[9px] sm:text-[10px] font-extrabold tracking-wider border border-white/30">
                       LƯỚI
                     </span>
                   </div>
 
-                  {/* RIGHT NVZ */}
-                  <div className="col-span-2 border-l-2 border-white/95 flex items-center justify-center">
-                    <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-white/80 rotate-90 whitespace-nowrap">
-                      NVZ 7FT
-                    </span>
-                  </div>
-
-                  {/* RIGHT SERVICE COURTS */}
-                  <div className="col-span-3 grid grid-rows-2 border-l-2 border-white/95">
-                    <div className="px-1.5 py-1 border-b border-white/90 flex items-center justify-end">
-                      {renderPlayerChip(pRightTop, rightTopServing, rightTopReceiving, true)}
+                  {/* Nửa sân phải */}
+                  <div className="col-span-4 grid grid-rows-2 py-2 px-2">
+                    <div
+                      className={`flex items-center justify-end rounded-lg px-1 ${
+                        rightTopServing ? 'bg-amber-400/20' : ''
+                      }`}
+                    >
+                      <Player3DToken
+                        name={pRightTop}
+                        isServing={rightTopServing}
+                        isReceiver={rightTopReceiver}
+                        align="right"
+                      />
                     </div>
-                    <div className="px-1.5 py-1 flex items-center justify-end">
-                      {renderPlayerChip(
-                        pRightBottom,
-                        rightBottomServing,
-                        rightBottomReceiving,
-                        true,
-                      )}
+                    <div
+                      className={`flex items-center justify-end rounded-lg px-1 ${
+                        rightBottomServing ? 'bg-amber-400/20' : ''
+                      }`}
+                    >
+                      <Player3DToken
+                        name={pRightBottom}
+                        isServing={rightBottomServing}
+                        isReceiver={rightBottomReceiver}
+                        align="right"
+                      />
                     </div>
                   </div>
                 </div>
-
-                {/* Mũi tên ngắn gọn từ Phát sang Đỡ, nằm giữa khu vực sân */}
-                <svg
-                  viewBox="0 0 600 240"
-                  className="pointer-events-none absolute inset-0 w-full h-full z-20"
-                  preserveAspectRatio="none"
-                >
-                  <defs>
-                    <marker
-                      id="shortServeArrow"
-                      markerWidth="7"
-                      markerHeight="7"
-                      refX="5"
-                      refY="3.5"
-                      orient="auto"
-                    >
-                      <polygon points="0 0, 7 3.5, 0 7" fill="#FACC15" />
-                    </marker>
-                  </defs>
-                  <line
-                    x1={shortArrow.x1}
-                    y1={shortArrow.y1}
-                    x2={shortArrow.x2}
-                    y2={shortArrow.y2}
-                    stroke="#020617"
-                    strokeWidth="4.5"
-                    strokeOpacity="0.4"
-                  />
-                  <line
-                    x1={shortArrow.x1}
-                    y1={shortArrow.y1}
-                    x2={shortArrow.x2}
-                    y2={shortArrow.y2}
-                    stroke="#FACC15"
-                    strokeWidth="2.75"
-                    strokeDasharray="6 4"
-                    markerEnd="url(#shortServeArrow)"
-                  />
-                </svg>
               </div>
 
-              <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-slate-300 px-1">
+              {/* Chú thích 2 đội */}
+              <div className="mt-2.5 flex items-center justify-between gap-2 text-[10px] text-slate-300 px-1">
                 <span className="truncate font-bold text-amber-300">{leftTeamName}</span>
-                <span className="text-slate-400 shrink-0">Phát → Đỡ</span>
+                <span className="text-slate-400 shrink-0">Giao chéo sân</span>
                 <span className="truncate font-bold text-cyan-300 text-right">{rightTeamName}</span>
               </div>
             </div>
