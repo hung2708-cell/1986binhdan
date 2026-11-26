@@ -1,30 +1,40 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ArrowLeftRight,
+  Award,
   CheckCircle2,
+  ClipboardCheck,
   Clock,
-  Coins,
   Flag,
   Gavel,
-  Lock,
   Megaphone,
   Minus,
-  PauseCircle,
-  Play,
   Plus,
+  RefreshCw,
   RotateCcw,
-  Timer,
-  UserCheck,
-  X,
+  Shuffle,
+  Sparkles,
+  UserPlus,
+  Users,
 } from 'lucide-react';
 import {
   MATCH_STAGE_LABELS,
-  MATCH_STATUS_LABELS,
   type Match,
   type Registration,
   type StaffAccount,
+  type TeamLineupSlot,
   type Tournament,
 } from '../types/tournament';
-import { formatScoreCallout, isTeamDivision } from '../utils/pickleballEngine';
+import {
+  formatScoreCallout,
+  isTeamDivision,
+  toggleServeAndSide,
+} from '../utils/pickleballEngine';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -36,99 +46,61 @@ interface RefereeConsoleViewProps {
   currentAccount: StaffAccount | null;
   themeMode?: ThemeMode;
   activeTab?: string;
-  onRequestLogin: (reason: string) => void;
+  onRequestLogin?: (reason: string) => void;
   onSelectMatch: (matchId: string) => void;
   onUpdateMatch: (matchId: string, patch: Partial<Match>) => void;
   onCompleteMatch: (match: Match, winnerSide: '' | 'A' | 'B') => void;
   onAnnounceCourtCall: (match: Match) => void;
-  onAnnounceCourtAvailable: (finishedMatch: Match) => void;
+  onAnnounceCourtAvailable?: (finishedMatch: Match) => void;
   onAddRosterAthlete?: (registrationId: string, athleteLabel: string) => void;
 }
 
-const TIMEOUT_DURATION_SEC = 60;
-
-function compactCourtNameLabel(raw?: string): string {
-  if (!raw) return 'VĐV';
-  const beforeParen = raw.split('(')[0].trim();
-  if (!beforeParen) return raw;
-  const parts = beforeParen.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return parts.slice(-2).join(' ');
+function getDefaultLineupSlots(match: Match): TeamLineupSlot[] {
+  if (Array.isArray(match.teamLineupSlots) && match.teamLineupSlots.length > 0) {
+    return match.teamLineupSlots;
   }
-  return beforeParen;
-}
+  const aParts = (match.teamAName || '').split('/').map((s) => s.trim()).filter(Boolean);
+  const bParts = (match.teamBName || '').split('/').map((s) => s.trim()).filter(Boolean);
+  const a1 = match.teamAPlayer1 || aParts[0] || 'VĐV A1';
+  const a2 = match.teamAPlayer2 || aParts[1] || 'VĐV A2';
+  const b1 = match.teamBPlayer1 || bParts[0] || 'VĐV B1';
+  const b2 = match.teamBPlayer2 || bParts[1] || 'VĐV B2';
 
-function getServeAndReceiveCoords(params: {
-  servingTeam: 'A' | 'B';
-  serverScore: number;
-  courtSideA: 'left' | 'right';
-}): {
-  serveSide: 'left' | 'right';
-  serveRow: 0 | 1;
-  receiveSide: 'left' | 'right';
-  receiveRow: 0 | 1;
-} {
-  const { servingTeam, serverScore, courtSideA } = params;
-  const serveSide: 'left' | 'right' =
-    servingTeam === 'A'
-      ? courtSideA === 'left'
-        ? 'left'
-        : 'right'
-      : courtSideA === 'left'
-      ? 'right'
-      : 'left';
-
-  const isEven = serverScore % 2 === 0;
-  const rightHandRow: 0 | 1 = serveSide === 'left' ? 1 : 0;
-  const serveRow: 0 | 1 = isEven ? rightHandRow : rightHandRow === 0 ? 1 : 0;
-
-  const receiveSide: 'left' | 'right' = serveSide === 'left' ? 'right' : 'left';
-  const receiveRow: 0 | 1 = serveRow === 0 ? 1 : 0;
-
-  return { serveSide, serveRow, receiveSide, receiveRow };
-}
-
-function shortenSegment(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  trimStart = 44,
-  trimEnd = 48,
-): { sx: number; sy: number; ex: number; ey: number } {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const len = Math.hypot(dx, dy) || 1;
-  const ux = dx / len;
-  const uy = dy / len;
-
-  const maxTrim = len * 0.34;
-  const sTrim = Math.min(trimStart, maxTrim);
-  const eTrim = Math.min(trimEnd, maxTrim);
-
-  return {
-    sx: x1 + ux * sTrim,
-    sy: y1 + uy * sTrim,
-    ex: x2 - ux * eTrim,
-    ey: y2 - uy * eTrim,
-  };
-}
-
-function extractAssignedCourtNumber(account: StaffAccount | null): number | null {
-  if (!account) return null;
-  const rec = account as unknown as Record<string, unknown>;
-  const rawCourt = rec.courtNumber ?? rec.assignedCourt ?? rec.court;
-  if (typeof rawCourt === 'number' && Number.isFinite(rawCourt) && rawCourt > 0) {
-    return rawCourt;
-  }
-  if (typeof rawCourt === 'string') {
-    const numMatch = rawCourt.match(/\d+/);
-    if (numMatch) return Number(numMatch[0]);
-  }
-  const text = `${account.displayName || ''} ${account.role || ''}`;
-  const sânMatch = text.match(/sân\s*(\d+)/i);
-  if (sânMatch) return Number(sânMatch[1]);
-  return null;
+  return [
+    {
+      slotOrder: 1,
+      subLabel: 'Trận 1: Đôi Nữ',
+      teamAPlayer1: a1,
+      teamAPlayer2: a2,
+      teamBPlayer1: b1,
+      teamBPlayer2: b2,
+      scoreA: 0,
+      scoreB: 0,
+      completed: false,
+    },
+    {
+      slotOrder: 2,
+      subLabel: 'Trận 2: Đôi Nam',
+      teamAPlayer1: a1,
+      teamAPlayer2: a2,
+      teamBPlayer1: b1,
+      teamBPlayer2: b2,
+      scoreA: 0,
+      scoreB: 0,
+      completed: false,
+    },
+    {
+      slotOrder: 3,
+      subLabel: 'Trận 3: Đôi Nam - Nữ',
+      teamAPlayer1: a1,
+      teamAPlayer2: a2,
+      teamBPlayer1: b1,
+      teamBPlayer2: b2,
+      scoreA: 0,
+      scoreB: 0,
+      completed: false,
+    },
+  ];
 }
 
 export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
@@ -138,781 +110,1246 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   selectedMatchId,
   currentAccount,
   themeMode = 'light',
+  onRequestLogin,
   onSelectMatch,
   onUpdateMatch,
   onCompleteMatch,
   onAnnounceCourtCall,
   onAnnounceCourtAvailable,
+  onAddRosterAthlete,
 }) => {
   const isDark = themeMode === 'dark';
-  const assignedCourt = useMemo(() => extractAssignedCourtNumber(currentAccount), [currentAccount]);
+  const isStaff = Boolean(currentAccount);
+  const isAdmin = currentAccount?.role === 'admin';
 
-  const [timeoutModal, setTimeoutModal] = useState<{
-    team: 'A' | 'B';
-    remainingSec: number;
-    running: boolean;
-  } | null>(null);
+  const courtNumbers = useMemo(
+    () => Array.from({ length: Math.max(1, tournament.courtsCount) }, (_, i) => i + 1),
+    [tournament.courtsCount],
+  );
 
-  const [showSubstituteModal, setShowSubstituteModal] = useState(false);
-  const [subSide, setSubSide] = useState<'A' | 'B'>('A');
-  const [subSlot, setSubSlot] = useState<1 | 2>(1);
-  const [subNameInput, setSubNameInput] = useState('');
+  const [selectedCourt, setSelectedCourt] = useState<number>(1);
+  const [drawNotice, setDrawNotice] = useState<string | null>(null);
+  const [showLineupEditor, setShowLineupEditor] = useState(false);
 
-  const [showCoinTossModal, setShowCoinTossModal] = useState(false);
-  const [isFlippingCoin, setIsFlippingCoin] = useState(false);
-  const [coinResultTeam, setCoinResultTeam] = useState<'A' | 'B'>('A');
-  const [tossServeTeam, setTossServeTeam] = useState<'A' | 'B'>('A');
-  const [tossCourtSideA, setTossCourtSideA] = useState<'left' | 'right'>('left');
+  const [editA1, setEditA1] = useState('');
+  const [editA2, setEditA2] = useState('');
+  const [editB1, setEditB1] = useState('');
+  const [editB2, setEditB2] = useState('');
+  const [newRosterNameA, setNewRosterNameA] = useState('');
+  const [newRosterNameB, setNewRosterNameB] = useState('');
 
-  useEffect(() => {
-    if (!timeoutModal || !timeoutModal.running) return;
-    if (timeoutModal.remainingSec <= 0) {
-      setTimeoutModal((prev) => (prev ? { ...prev, running: false } : null));
-      return;
-    }
-    const timer = window.setInterval(() => {
-      setTimeoutModal((prev) => {
-        if (!prev) return null;
-        if (prev.remainingSec <= 1) {
-          return { ...prev, remainingSec: 0, running: false };
-        }
-        return { ...prev, remainingSec: prev.remainingSec - 1 };
-      });
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [timeoutModal]);
-
-  // Trọng tài sân nào chỉ hiển thị đúng trận đấu của sân đó
-  const courtOnlyMatches = useMemo(() => {
-    if (!assignedCourt) return matches;
-    return matches.filter((m) => m.courtNumber === assignedCourt);
-  }, [matches, assignedCourt]);
+  const courtMatches = useMemo(
+    () =>
+      matches
+        .filter((m) => m.courtNumber === selectedCourt)
+        .sort((a, b) => {
+          const rank = (s: Match['status']) => (s === 'live' ? 0 : s === 'scheduled' ? 1 : 2);
+          return rank(a.status) !== rank(b.status)
+            ? rank(a.status) - rank(b.status)
+            : a.matchNumber - b.matchNumber;
+        }),
+    [matches, selectedCourt],
+  );
 
   const activeMatch = useMemo(() => {
-    if (courtOnlyMatches.length === 0) return null;
     if (selectedMatchId) {
-      const found = courtOnlyMatches.find((m) => m.id === selectedMatchId);
-      if (found) return found;
+      const explicit = matches.find((m) => m.id === selectedMatchId);
+      if (explicit) return explicit;
     }
-    return courtOnlyMatches.find((m) => m.status === 'live') || courtOnlyMatches[0];
-  }, [courtOnlyMatches, selectedMatchId]);
+    return (
+      courtMatches.find((m) => m.status === 'live') ||
+      courtMatches.find((m) => m.status === 'scheduled') ||
+      courtMatches[0] ||
+      matches.find((m) => m.status === 'live') ||
+      matches[0] ||
+      null
+    );
+  }, [selectedMatchId, matches, courtMatches]);
 
-  const availablePlayersPool = useMemo(() => {
-    const names = new Set<string>();
-    registrations.forEach((r) => {
-      if (r.player1Name) names.add(r.player1Name);
-      if (r.player2Name) names.add(r.player2Name);
-      (r.squadRoster || []).forEach((n) => n && names.add(n));
-    });
-    return Array.from(names);
-  }, [registrations]);
+  useEffect(() => {
+    if (activeMatch && activeMatch.courtNumber !== selectedCourt) {
+      setSelectedCourt(activeMatch.courtNumber);
+    }
+  }, [activeMatch?.id]);
 
-  const cardSurface = isDark
+  useEffect(() => {
+    if (!activeMatch) return;
+    setEditA1(activeMatch.teamAPlayer1 || '');
+    setEditA2(activeMatch.teamAPlayer2 || '');
+    setEditB1(activeMatch.teamBPlayer1 || '');
+    setEditB2(activeMatch.teamBPlayer2 || '');
+    setDrawNotice(null);
+  }, [
+    activeMatch?.id,
+    activeMatch?.teamAPlayer1,
+    activeMatch?.teamAPlayer2,
+    activeMatch?.teamBPlayer1,
+    activeMatch?.teamBPlayer2,
+  ]);
+
+  const requireStaffAction = (reason: string, action: () => void) => {
+    if (!isStaff) {
+      if (onRequestLogin) {
+        onRequestLogin(reason);
+      }
+      return;
+    }
+    action();
+  };
+
+  const requireAdminAction = (reason: string, action: () => void) => {
+    if (!isAdmin) {
+      if (onRequestLogin) {
+        onRequestLogin(reason);
+      }
+      return;
+    }
+    action();
+  };
+
+  const isTeamMatch = activeMatch
+    ? isTeamDivision(activeMatch.division, activeMatch.competitionType)
+    : false;
+
+  const lineupSlots = useMemo(
+    () => (activeMatch && isTeamMatch ? getDefaultLineupSlots(activeMatch) : []),
+    [activeMatch, isTeamMatch],
+  );
+
+  const activeSlotOrder = activeMatch?.activeSlotOrder || 1;
+  const currentSlot =
+    lineupSlots.find((s) => s.slotOrder === activeSlotOrder) || lineupSlots[0] || null;
+
+  const regTeamA = useMemo(
+    () =>
+      activeMatch
+        ? registrations.find(
+            (r) => r.id === activeMatch.teamAId || r.teamName === activeMatch.teamAName,
+          )
+        : undefined,
+    [registrations, activeMatch],
+  );
+
+  const regTeamB = useMemo(
+    () =>
+      activeMatch
+        ? registrations.find(
+            (r) => r.id === activeMatch.teamBId || r.teamName === activeMatch.teamBName,
+          )
+        : undefined,
+    [registrations, activeMatch],
+  );
+
+  const availablePoolA = useMemo(() => {
+    const fromRoster = regTeamA?.squadRoster || [];
+    const fromPlayers = [
+      activeMatch?.teamAPlayer1,
+      activeMatch?.teamAPlayer2,
+      ...(activeMatch?.teamAName || '').split('/').map((s) => s.trim()),
+    ].filter(Boolean) as string[];
+    const fromAllRegs = registrations
+      .filter((r) => r.tournamentId === tournament.id)
+      .flatMap((r) => r.squadRoster || [r.player1Name, r.player2Name].filter(Boolean));
+    return Array.from(new Set([...fromRoster, ...fromPlayers, ...fromAllRegs]));
+  }, [regTeamA, activeMatch, registrations, tournament.id]);
+
+  const availablePoolB = useMemo(() => {
+    const fromRoster = regTeamB?.squadRoster || [];
+    const fromPlayers = [
+      activeMatch?.teamBPlayer1,
+      activeMatch?.teamBPlayer2,
+      ...(activeMatch?.teamBName || '').split('/').map((s) => s.trim()),
+    ].filter(Boolean) as string[];
+    const fromAllRegs = registrations
+      .filter((r) => r.tournamentId === tournament.id)
+      .flatMap((r) => r.squadRoster || [r.player1Name, r.player2Name].filter(Boolean));
+    return Array.from(new Set([...fromRoster, ...fromPlayers, ...fromAllRegs]));
+  }, [regTeamB, activeMatch, registrations, tournament.id]);
+
+  const adjustScore = (side: 'A' | 'B', delta: number) => {
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để ghi và cập nhật điểm trên sân.',
+      () => {
+        const nextA = side === 'A' ? Math.max(0, activeMatch.scoreA + delta) : activeMatch.scoreA;
+        const nextB = side === 'B' ? Math.max(0, activeMatch.scoreB + delta) : activeMatch.scoreB;
+
+        const shouldAutoSwitchServe =
+          delta > 0 &&
+          activeMatch.status === 'live' &&
+          activeMatch.servingTeam !== side &&
+          activeMatch.scoringMode === 'rally';
+
+        const nextServingTeam = shouldAutoSwitchServe ? side : activeMatch.servingTeam;
+        const nextServerNumber = shouldAutoSwitchServe ? 1 : activeMatch.serverNumber;
+
+        const updatedSlots =
+          isTeamMatch && lineupSlots.length > 0
+            ? lineupSlots.map((slot) =>
+                slot.slotOrder === activeSlotOrder
+                  ? { ...slot, scoreA: nextA, scoreB: nextB }
+                  : slot,
+              )
+            : undefined;
+
+        const nextHistory = [
+          ...activeMatch.scoreHistory,
+          {
+            timestamp: new Date().toLocaleTimeString('vi-VN', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            }),
+            side,
+            delta,
+            scoreAfter: `${nextA}-${nextB}`,
+            slotOrder: isTeamMatch ? activeSlotOrder : undefined,
+          },
+        ];
+
+        onUpdateMatch(activeMatch.id, {
+          status: activeMatch.status === 'scheduled' ? 'live' : activeMatch.status,
+          startedAtMs: activeMatch.startedAtMs || Date.now(),
+          scoreA: nextA,
+          scoreB: nextB,
+          servingTeam: nextServingTeam,
+          serverNumber: nextServerNumber,
+          teamLineupSlots: updatedSlots,
+          scoreHistory: nextHistory,
+        });
+      },
+    );
+  };
+
+  const handleToggleServe = () => {
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đổi lượt giao bóng.',
+      () => {
+        const toggled = toggleServeAndSide(activeMatch);
+        onUpdateMatch(activeMatch.id, {
+          servingTeam: toggled.servingTeam,
+          serverNumber: toggled.serverNumber,
+        });
+      },
+    );
+  };
+
+  const handleSwitchCourtEnds = () => {
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đổi sân.',
+      () => {
+        const nextSideA = activeMatch.courtSideA === 'left' ? 'right' : 'left';
+        onUpdateMatch(activeMatch.id, {
+          courtSideA: nextSideA,
+          sideSwitched: !activeMatch.sideSwitched,
+        });
+      },
+    );
+  };
+
+  const handleToggleTimeout = (side: 'A' | 'B') => {
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để bấm Timeout hội ý.',
+      () => {
+        if (side === 'A') {
+          onUpdateMatch(activeMatch.id, { timeoutsA: activeMatch.timeoutsA >= 2 ? 0 : activeMatch.timeoutsA + 1 });
+        } else {
+          onUpdateMatch(activeMatch.id, { timeoutsB: activeMatch.timeoutsB >= 2 ? 0 : activeMatch.timeoutsB + 1 });
+        }
+      },
+    );
+  };
+
+  const handleDrawStartingServeAndSide = () => {
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để bốc thăm giao bóng và chọn sân.',
+      () => {
+        const coinForServe = Math.random() < 0.5 ? 'A' : 'B';
+        const coinForSideA = Math.random() < 0.5 ? 'left' : 'right';
+        const starterLabel = coinForServe === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
+        const sideLabel = coinForSideA === 'left' ? 'Bên Trái (L)' : 'Bên Phải (R)';
+
+        onUpdateMatch(activeMatch.id, {
+          status: activeMatch.status === 'scheduled' ? 'live' : activeMatch.status,
+          startedAtMs: activeMatch.startedAtMs || Date.now(),
+          servingTeam: coinForServe,
+          serverNumber: 2,
+          courtSideA: coinForSideA,
+        });
+
+        setDrawNotice(
+          `Bốc thăm xong: ${starterLabel} giao bóng trước (Người 2, ô Phải) · ${activeMatch.teamAName} đứng ${sideLabel}.`,
+        );
+      },
+    );
+  };
+
+  const handleSelectTeamSlot = (slotOrder: number) => {
+    if (!activeMatch || !isTeamMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để chuyển trận đồng đội.',
+      () => {
+        const targetSlot = lineupSlots.find((s) => s.slotOrder === slotOrder);
+        if (!targetSlot) return;
+
+        onUpdateMatch(activeMatch.id, {
+          status: activeMatch.status === 'scheduled' ? 'live' : activeMatch.status,
+          startedAtMs: activeMatch.startedAtMs || Date.now(),
+          activeSlotOrder: slotOrder,
+          teamSubCategory: targetSlot.subLabel,
+          teamAPlayer1: targetSlot.teamAPlayer1,
+          teamAPlayer2: targetSlot.teamAPlayer2,
+          teamBPlayer1: targetSlot.teamBPlayer1,
+          teamBPlayer2: targetSlot.teamBPlayer2,
+          scoreA: targetSlot.scoreA,
+          scoreB: targetSlot.scoreB,
+          servingTeam: 'A',
+          serverNumber: 2,
+        });
+      },
+    );
+  };
+
+  const handleSaveLineup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để cập nhật danh sách VĐV đứng sân.',
+      () => {
+        const cleanA1 = editA1.trim();
+        const cleanA2 = editA2.trim();
+        const cleanB1 = editB1.trim();
+        const cleanB2 = editB2.trim();
+
+        const updatedSlots =
+          isTeamMatch && lineupSlots.length > 0
+            ? lineupSlots.map((slot) =>
+                slot.slotOrder === activeSlotOrder
+                  ? {
+                      ...slot,
+                      teamAPlayer1: cleanA1,
+                      teamAPlayer2: cleanA2,
+                      teamBPlayer1: cleanB1,
+                      teamBPlayer2: cleanB2,
+                    }
+                  : slot,
+              )
+            : undefined;
+
+        onUpdateMatch(activeMatch.id, {
+          teamAPlayer1: cleanA1,
+          teamAPlayer2: cleanA2,
+          teamBPlayer1: cleanB1,
+          teamBPlayer2: cleanB2,
+          teamLineupSlots: updatedSlots,
+        });
+        setShowLineupEditor(false);
+        setDrawNotice(
+          `Đã cập nhật VĐV đứng sân: Đội A (${[cleanA1, cleanA2].filter(Boolean).join(' & ') || 'Chưa chọn'}) vs Đội B (${[cleanB1, cleanB2].filter(Boolean).join(' & ') || 'Chưa chọn'}).`,
+        );
+      },
+    );
+  };
+
+  const handleQuickAddRoster = (side: 'A' | 'B') => {
+    if (!activeMatch || !onAddRosterAthlete) return;
+    const rawName = (side === 'A' ? newRosterNameA : newRosterNameB).trim();
+    if (!rawName) return;
+    const targetReg = side === 'A' ? regTeamA : regTeamB;
+    if (!targetReg) return;
+
+    requireAdminAction(
+      'Chỉ tài khoản Ban Tổ Chức (Admin) mới được phép bổ sung VĐV mới vào danh sách đội.',
+      () => {
+        onAddRosterAthlete(targetReg.id, rawName);
+        if (side === 'A') {
+          if (!editA1) setEditA1(rawName);
+          else if (!editA2) setEditA2(rawName);
+          setNewRosterNameA('');
+        } else {
+          if (!editB1) setEditB1(rawName);
+          else if (!editB2) setEditB2(rawName);
+          setNewRosterNameB('');
+        }
+      },
+    );
+  };
+
+  const handleTriggerCourtCall = () => {
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để phát thông báo gọi VĐV vào sân.',
+      () => {
+        onAnnounceCourtCall(activeMatch);
+        setDrawNotice(`Đã phát thông báo gọi VĐV vào Sân ${activeMatch.courtNumber} cho Trận #${activeMatch.matchNumber}.`);
+      },
+    );
+  };
+
+  const handleTriggerCourtAvailable = () => {
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để báo sân trống và gọi VĐV trận tiếp theo.',
+      () => {
+        if (onAnnounceCourtAvailable) {
+          onAnnounceCourtAvailable(activeMatch);
+        } else {
+          onAnnounceCourtCall(activeMatch);
+        }
+        setDrawNotice(`Đã báo Sân ${activeMatch.courtNumber} trống và gửi thông báo mời VĐV trận tiếp theo vào sân.`);
+      },
+    );
+  };
+
+  const handleFinishMatch = (winnerSide: '' | 'A' | 'B') => {
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để xác nhận kết quả trận đấu.',
+      () => {
+        if (isTeamMatch && lineupSlots.length > 0) {
+          const nextSlots = lineupSlots.map((slot) =>
+            slot.slotOrder === activeSlotOrder
+              ? {
+                  ...slot,
+                  scoreA: activeMatch.scoreA,
+                  scoreB: activeMatch.scoreB,
+                  completed: true,
+                  winnerSide,
+                }
+              : slot,
+          );
+          const nextUnfinished = nextSlots.find((s) => !s.completed && s.slotOrder !== activeSlotOrder);
+          if (nextUnfinished) {
+            onUpdateMatch(activeMatch.id, {
+              status: 'live',
+              teamLineupSlots: nextSlots,
+              activeSlotOrder: nextUnfinished.slotOrder,
+              teamSubCategory: nextUnfinished.subLabel,
+              teamAPlayer1: nextUnfinished.teamAPlayer1,
+              teamAPlayer2: nextUnfinished.teamAPlayer2,
+              teamBPlayer1: nextUnfinished.teamBPlayer1,
+              teamBPlayer2: nextUnfinished.teamBPlayer2,
+              scoreA: nextUnfinished.scoreA,
+              scoreB: nextUnfinished.scoreB,
+              servingTeam: 'A',
+              serverNumber: 2,
+            });
+            setDrawNotice(
+              `Đã lưu kết quả ${currentSlot?.subLabel || 'Trận nhỏ'} (${activeMatch.scoreA}-${activeMatch.scoreB}). Chuyển sang ${nextUnfinished.subLabel}!`,
+            );
+            return;
+          }
+        }
+        onCompleteMatch(activeMatch, winnerSide);
+      },
+    );
+  };
+
+  const surfaceCard = isDark
     ? 'bg-slate-900 border-slate-800 text-slate-100'
     : 'bg-white border-slate-200 text-slate-900';
 
-  const subSurface = isDark
-    ? 'bg-slate-950/75 border-slate-800 text-slate-100'
-    : 'bg-slate-50 border-slate-200 text-slate-900';
+  const mutedText = isDark ? 'text-slate-400' : 'text-slate-500';
 
-  const inputSurface = isDark
-    ? 'bg-slate-950 border-slate-700 text-white placeholder:text-slate-500'
-    : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400';
-
-  const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
-
-  const popupBackdrop =
-    'fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-[2px] p-3 sm:p-4 flex items-center justify-center overflow-y-auto';
-  const popupCard = `border rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-4 shadow-2xl my-auto ${cardSurface}`;
-
-  if (!activeMatch) {
+  if (matches.length === 0 || !activeMatch) {
     return (
-      <section className={`border rounded-2xl p-4 text-center space-y-1.5 ${cardSurface}`}>
-        <div className="font-display text-sm sm:text-base font-bold">
-          {assignedCourt
-            ? `Sân ${assignedCourt} hiện chưa có trận đấu nào.`
-            : 'Chưa có trận đấu nào trong giải này.'}
-        </div>
-        <p className={`text-xs ${mutedText}`}>
-          {assignedCourt
-            ? `Trọng tài Sân ${assignedCourt} chỉ hiển thị các trận thuộc Sân ${assignedCourt}.`
-            : 'Vui lòng kiểm tra lịch thi đấu tại mục Lịch & Nhánh đấu.'}
-        </p>
-      </section>
+      <div className={`border rounded-2xl p-6 text-center space-y-3 ${surfaceCard}`}>
+        <p className={`text-sm ${mutedText}`}>Chưa có trận đấu nào được xếp lịch cho giải đấu này.</p>
+      </div>
     );
   }
 
-  const targetPoints = activeMatch.pointsToWin || tournament.pointsToWin || 15;
-  const isTeam = isTeamDivision(activeMatch.division, activeMatch.competitionType);
-  const isDoublesMatch =
-    isTeam ||
-    activeMatch.division?.toLowerCase().includes('đôi') ||
-    Boolean(activeMatch.teamAPlayer2 && activeMatch.teamBPlayer2);
+  const leftSideIsA = activeMatch.courtSideA !== 'right';
+  const leftTeamLabel = leftSideIsA ? 'ĐỘI A · TRÁI' : 'ĐỘI B · TRÁI';
+  const rightTeamLabel = leftSideIsA ? 'ĐỘI B · PHẢI' : 'ĐỘI A · PHẢI';
 
-  const courtSideA: 'left' | 'right' = activeMatch.courtSideA === 'right' ? 'right' : 'left';
+  const leftTeamName = leftSideIsA ? activeMatch.teamAName : activeMatch.teamBName;
+  const rightTeamName = leftSideIsA ? activeMatch.teamBName : activeMatch.teamAName;
 
-  const teamAPlayers: [string, string] = [
-    activeMatch.teamAPlayer1 || 'VĐV A1',
-    activeMatch.teamAPlayer2 || 'VĐV A2',
-  ];
-  const teamBPlayers: [string, string] = [
-    activeMatch.teamBPlayer1 || 'VĐV B1',
-    activeMatch.teamBPlayer2 || 'VĐV B2',
-  ];
+  const leftPlayers = leftSideIsA
+    ? [activeMatch.teamAPlayer1, activeMatch.teamAPlayer2].filter(Boolean)
+    : [activeMatch.teamBPlayer1, activeMatch.teamBPlayer2].filter(Boolean);
+  const rightPlayers = leftSideIsA
+    ? [activeMatch.teamBPlayer1, activeMatch.teamBPlayer2].filter(Boolean)
+    : [activeMatch.teamAPlayer1, activeMatch.teamAPlayer2].filter(Boolean);
 
-  const leftTeamKey: 'A' | 'B' = courtSideA === 'left' ? 'A' : 'B';
-  const rightTeamKey: 'A' | 'B' = leftTeamKey === 'A' ? 'B' : 'A';
+  const pLeftTop = leftPlayers[0] || (leftSideIsA ? 'VĐV A1' : 'VĐV B1');
+  const pLeftBottom = leftPlayers[1] || (leftSideIsA ? 'VĐV A2' : 'VĐV B2');
+  const pRightTop = rightPlayers[0] || (leftSideIsA ? 'VĐV B1' : 'VĐV A1');
+  const pRightBottom = rightPlayers[1] || (leftSideIsA ? 'VĐV B2' : 'VĐV A2');
 
-  const leftTeamLabel = leftTeamKey === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
-  const rightTeamLabel = rightTeamKey === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
-  const leftPlayers = leftTeamKey === 'A' ? teamAPlayers : teamBPlayers;
-  const rightPlayers = rightTeamKey === 'A' ? teamAPlayers : teamBPlayers;
+  const servingSide = activeMatch.servingTeam;
+  const serverNum = activeMatch.serverNumber || 2;
+  const isOddScore = (activeMatch.scoreA + activeMatch.scoreB) % 2 !== 0;
 
-  const servingTeam: 'A' | 'B' = activeMatch.servingTeam === 'B' ? 'B' : 'A';
-  const currentServerNum: 1 | 2 = activeMatch.serverNumber === 2 ? 2 : 1;
-  const serverScore = servingTeam === 'A' ? activeMatch.scoreA : activeMatch.scoreB;
+  const leftIsServing = (leftSideIsA && servingSide === 'A') || (!leftSideIsA && servingSide === 'B');
+  const rightIsServing = !leftIsServing;
 
-  const reachedEndScore =
-    activeMatch.scoreA >= targetPoints || activeMatch.scoreB >= targetPoints;
+  const leftTopServing = leftIsServing && (serverNum === 1 ? !isOddScore : isOddScore);
+  const leftBottomServing = leftIsServing && !leftTopServing;
+  const rightTopServing = rightIsServing && (serverNum === 1 ? isOddScore : !isOddScore);
+  const rightBottomServing = rightIsServing && !rightTopServing;
 
-  const canAddA = servingTeam === 'A' && !reachedEndScore && activeMatch.scoreA < targetPoints;
-  const canSubA = servingTeam === 'A' && activeMatch.scoreA > 0;
-
-  const canAddB = servingTeam === 'B' && !reachedEndScore && activeMatch.scoreB < targetPoints;
-  const canSubB = servingTeam === 'B' && activeMatch.scoreB > 0;
-
-  const { serveSide, serveRow, receiveSide, receiveRow } = getServeAndReceiveCoords({
-    servingTeam,
-    serverScore,
-    courtSideA,
-  });
-
-  const rawServeX = serveSide === 'left' ? 86 : 354;
-  const rawServeY = serveRow === 0 ? 56 : 146;
-  const rawReceiveX = receiveSide === 'left' ? 86 : 354;
-  const rawReceiveY = receiveRow === 0 ? 56 : 146;
-
-  const { sx, sy, ex, ey } = shortenSegment(
-    rawServeX,
-    rawServeY,
-    rawReceiveX,
-    rawReceiveY,
-    46,
-    50,
-  );
-
-  const handleAdjustScore = (side: 'A' | 'B', delta: 1 | -1) => {
-    if (servingTeam !== side) return;
-
-    if (delta === 1) {
-      if (reachedEndScore) return;
-      const currentVal = side === 'A' ? activeMatch.scoreA : activeMatch.scoreB;
-      if (currentVal >= targetPoints) return;
-
-      const nextScoreA = side === 'A' ? activeMatch.scoreA + 1 : activeMatch.scoreA;
-      const nextScoreB = side === 'B' ? activeMatch.scoreB + 1 : activeMatch.scoreB;
-
-      const shouldSwapA = side === 'A' && isDoublesMatch;
-      const shouldSwapB = side === 'B' && isDoublesMatch;
-
-      onUpdateMatch(activeMatch.id, {
-        status: activeMatch.status === 'scheduled' ? 'live' : activeMatch.status,
-        startedAtMs: activeMatch.startedAtMs || Date.now(),
-        scoreA: nextScoreA,
-        scoreB: nextScoreB,
-        servingTeam: side,
-        serverNumber: currentServerNum,
-        teamAPlayer1: shouldSwapA ? activeMatch.teamAPlayer2 : activeMatch.teamAPlayer1,
-        teamAPlayer2: shouldSwapA ? activeMatch.teamAPlayer1 : activeMatch.teamAPlayer2,
-        teamBPlayer1: shouldSwapB ? activeMatch.teamBPlayer2 : activeMatch.teamBPlayer1,
-        teamBPlayer2: shouldSwapB ? activeMatch.teamBPlayer1 : activeMatch.teamBPlayer2,
-      });
-      return;
-    }
-
-    const nextScoreA = side === 'A' ? Math.max(0, activeMatch.scoreA - 1) : activeMatch.scoreA;
-    const nextScoreB = side === 'B' ? Math.max(0, activeMatch.scoreB - 1) : activeMatch.scoreB;
-
-    const shouldSwapBackA = side === 'A' && isDoublesMatch && activeMatch.scoreA > 0;
-    const shouldSwapBackB = side === 'B' && isDoublesMatch && activeMatch.scoreB > 0;
-
-    onUpdateMatch(activeMatch.id, {
-      scoreA: nextScoreA,
-      scoreB: nextScoreB,
-      teamAPlayer1: shouldSwapBackA ? activeMatch.teamAPlayer2 : activeMatch.teamAPlayer1,
-      teamAPlayer2: shouldSwapBackA ? activeMatch.teamAPlayer1 : activeMatch.teamAPlayer2,
-      teamBPlayer1: shouldSwapBackB ? activeMatch.teamBPlayer2 : activeMatch.teamBPlayer1,
-      teamBPlayer2: shouldSwapBackB ? activeMatch.teamBPlayer1 : activeMatch.teamBPlayer2,
-    });
-  };
-
-  const handleFaultRotateServe = () => {
-    const otherTeam: 'A' | 'B' = servingTeam === 'A' ? 'B' : 'A';
-    const isOpeningDoublesStart =
-      isDoublesMatch &&
-      activeMatch.scoreA === 0 &&
-      activeMatch.scoreB === 0 &&
-      currentServerNum === 2;
-
-    if (isDoublesMatch && !isOpeningDoublesStart && currentServerNum === 1) {
-      onUpdateMatch(activeMatch.id, {
-        servingTeam,
-        serverNumber: 2,
-      });
-      return;
-    }
-
-    onUpdateMatch(activeMatch.id, {
-      servingTeam: otherTeam,
-      serverNumber: 1,
-    });
-  };
-
-  const handleSwitchCourtSides = () => {
-    onUpdateMatch(activeMatch.id, {
-      courtSideA: courtSideA === 'left' ? 'right' : 'left',
-      sideSwitched: !activeMatch.sideSwitched,
-    });
-  };
-
-  const handleStartTimeout = (team: 'A' | 'B') => {
-    const nextCountA =
-      team === 'A' ? (activeMatch.timeoutsA || 0) + 1 : activeMatch.timeoutsA || 0;
-    const nextCountB =
-      team === 'B' ? (activeMatch.timeoutsB || 0) + 1 : activeMatch.timeoutsB || 0;
-
-    onUpdateMatch(activeMatch.id, {
-      timeoutsA: nextCountA,
-      timeoutsB: nextCountB,
-    });
-    setTimeoutModal({
-      team,
-      remainingSec: TIMEOUT_DURATION_SEC,
-      running: true,
-    });
-  };
-
-  const handleOpenSubstitute = (side: 'A' | 'B', slot: 1 | 2) => {
-    setSubSide(side);
-    setSubSlot(slot);
-    const currentVal =
-      side === 'A'
-        ? slot === 1
-          ? activeMatch.teamAPlayer1
-          : activeMatch.teamAPlayer2
-        : slot === 1
-        ? activeMatch.teamBPlayer1
-        : activeMatch.teamBPlayer2;
-    setSubNameInput(currentVal || '');
-    setShowSubstituteModal(true);
-  };
-
-  const handleConfirmSubstitute = (e: React.FormEvent) => {
-    e.preventDefault();
-    const clean = subNameInput.trim();
-    if (!clean) return;
-
-    if (subSide === 'A') {
-      onUpdateMatch(activeMatch.id, {
-        teamAPlayer1: subSlot === 1 ? clean : activeMatch.teamAPlayer1,
-        teamAPlayer2: subSlot === 2 ? clean : activeMatch.teamAPlayer2,
-      });
-    } else {
-      onUpdateMatch(activeMatch.id, {
-        teamBPlayer1: subSlot === 1 ? clean : activeMatch.teamBPlayer1,
-        teamBPlayer2: subSlot === 2 ? clean : activeMatch.teamBPlayer2,
-      });
-    }
-    setShowSubstituteModal(false);
-  };
-
-  const handleOpenCoinToss = () => {
-    setCoinResultTeam(servingTeam);
-    setTossServeTeam(servingTeam);
-    setTossCourtSideA(courtSideA);
-    setIsFlippingCoin(false);
-    setShowCoinTossModal(true);
-  };
-
-  const handleFlipCoin = () => {
-    if (isFlippingCoin) return;
-    setIsFlippingCoin(true);
-    const picked: 'A' | 'B' = Math.random() < 0.5 ? 'A' : 'B';
-    window.setTimeout(() => {
-      setCoinResultTeam(picked);
-      setTossServeTeam(picked);
-      setIsFlippingCoin(false);
-    }, 900);
-  };
-
-  const handleApplyCoinToss = () => {
-    onUpdateMatch(activeMatch.id, {
-      servingTeam: tossServeTeam,
-      serverNumber: 1,
-      courtSideA: tossCourtSideA,
-      sideSwitched: tossCourtSideA !== 'left',
-    });
-    setShowCoinTossModal(false);
-  };
-
-  const formatCountdown = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
-
-  const render3DPlayerNode = (
-    side: 'left' | 'right',
-    row: 0 | 1,
-    teamKey: 'A' | 'B',
-    slotNum: 1 | 2,
-    fullLabel: string,
-  ) => {
-    const isServingSpot = serveSide === side && serveRow === row;
-    const isReceivingSpot = receiveSide === side && receiveRow === row;
-    const shortLabel = compactCourtNameLabel(fullLabel);
-    const reverse = side === 'right';
-
-    const jerseyFill = isServingSpot
-      ? '#facc15'
-      : isReceivingSpot
-      ? '#38bdf8'
-      : teamKey === 'A'
-      ? '#f97316'
-      : '#0ea5e9';
-
-    const tagClass = isServingSpot
-      ? 'bg-amber-300 text-slate-950 font-black animate-pulse'
-      : isReceivingSpot
-      ? 'bg-cyan-300 text-slate-950 font-black animate-pulse'
-      : 'bg-slate-950/85 text-white font-bold';
-
-    return (
-      <button
-        type="button"
-        onClick={() => handleOpenSubstitute(teamKey, slotNum)}
-        className={`group flex items-center gap-1 max-w-full relative z-30 ${
-          reverse ? 'flex-row-reverse text-right' : 'flex-row text-left'
-        }`}
-        title={`${fullLabel} — Chạm để thay VĐV`}
-      >
-        <span className="relative flex items-center justify-center shrink-0 w-4 h-4 sm:w-6 sm:h-6">
-          {(isServingSpot || isReceivingSpot) && (
-            <span
-              className={`absolute inset-0 rounded-full animate-ping opacity-70 ${
-                isServingSpot ? 'bg-amber-300' : 'bg-cyan-300'
-              }`}
-            />
-          )}
-          <svg viewBox="0 0 32 32" className="w-4 h-4 sm:w-6 sm:h-6 drop-shadow-md">
-            <ellipse cx="16" cy="28.5" rx="8" ry="2.5" fill="rgba(0,0,0,0.42)" />
-            <path
-              d="M9 26.5 C9.5 20.5, 12.5 18, 16 18 C19.5 18, 22.5 20.5, 23 26.5 Z"
-              fill={jerseyFill}
-              stroke="#ffffff"
-              strokeWidth="1.5"
-            />
-            <circle
-              cx="16"
-              cy="11.5"
-              r="5.5"
-              fill="#fde68a"
-              stroke="#ffffff"
-              strokeWidth="1.5"
-            />
-            <circle cx="14.2" cy="9.6" r="1.6" fill="#ffffff" opacity="0.8" />
-          </svg>
-        </span>
-
-        <span
-          className={`px-1 py-0.5 rounded text-[clamp(8px,2.1vw,11px)] leading-none whitespace-nowrap shadow-sm ${tagClass}`}
-        >
-          {shortLabel}
-          {isServingSpot ? ' · PHÁT' : isReceivingSpot ? ' · ĐỠ' : ''}
-        </span>
-      </button>
-    );
-  };
+  const serverDisplayName =
+    servingSide === 'A'
+      ? activeMatch.teamAPlayer1 || activeMatch.teamAName
+      : activeMatch.teamBPlayer1 || activeMatch.teamBName;
+  const receiverDisplayName =
+    servingSide === 'A'
+      ? activeMatch.teamBPlayer1 || activeMatch.teamBName
+      : activeMatch.teamAPlayer1 || activeMatch.teamAName;
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col [@media(orientation:landscape)_and_(max-height:540px)]:grid [@media(orientation:landscape)_and_(max-height:540px)]:grid-cols-12 lg:grid lg:grid-cols-12 items-stretch gap-2 sm:gap-3 [@media(orientation:landscape)_and_(max-height:540px)]:gap-1.5">
-      {/* CỘT TRÁI (điện thoại ngang & màn hình lớn) / KHỐI TRÊN (điện thoại dọc) */}
-      <div className="[@media(orientation:landscape)_and_(max-height:540px)]:col-span-6 lg:col-span-6 flex flex-col gap-2 sm:gap-2.5 [@media(orientation:landscape)_and_(max-height:540px)]:gap-1 min-w-0">
-        {/* 1. Thanh chọn trận của đúng sân & điều phối */}
-        <section
-          className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 [@media(orientation:landscape)_and_(max-height:540px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-1 ${cardSurface}`}
-        >
-          <div className="flex items-center justify-between gap-1.5 flex-wrap">
-            <div className="flex items-center gap-1 text-[clamp(10px,2.6vw,12px)] font-extrabold uppercase tracking-wider text-orange-500 min-w-0">
-              <Gavel className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">
-                SÂN {activeMatch.courtNumber} · {tournament.name}
-              </span>
-            </div>
-            <span
-              className={`px-2 py-0.5 rounded-lg text-[clamp(9px,2.3vw,11px)] font-bold border truncate max-w-[165px] ${
-                isDark
-                  ? 'bg-slate-950 border-slate-800 text-slate-300'
-                  : 'bg-slate-100 border-slate-200 text-slate-700'
-              }`}
-            >
-              {currentAccount?.displayName || `Trọng tài Sân ${activeMatch.courtNumber}`}
-            </span>
+    <div className="space-y-3 sm:space-y-4">
+      {/* Compact Court Switcher + Staff Status Bar */}
+      <section className={`border rounded-2xl p-3 sm:p-4 space-y-2.5 ${surfaceCard}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 max-w-full">
+            {courtNumbers.map((cNum) => {
+              const isSelected = cNum === selectedCourt;
+              const courtLive = matches.some((m) => m.courtNumber === cNum && m.status === 'live');
+              return (
+                <button
+                  key={cNum}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCourt(cNum);
+                    const firstOnCourt = matches.find((m) => m.courtNumber === cNum);
+                    if (firstOnCourt) onSelectMatch(firstOnCourt.id);
+                  }}
+                  className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-orange-600 text-white shadow-2xs'
+                      : isDark
+                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>Sân {cNum}</span>
+                  {courtLive && (
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isSelected ? 'bg-white' : 'bg-emerald-500'
+                      }`}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          <select
-            value={activeMatch.id}
-            onChange={(e) => onSelectMatch(e.target.value)}
-            className={`w-full min-h-[34px] sm:min-h-[38px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2.5 py-1 text-[clamp(11px,2.8vw,13px)] font-bold border rounded-xl ${inputSurface}`}
-          >
-            {courtOnlyMatches.map((m) => (
-              <option key={m.id} value={m.id}>
-                Trận #{m.matchNumber} (Sân {m.courtNumber}) — {m.teamAName} vs {m.teamBName} [
-                {MATCH_STATUS_LABELS[m.status]}]
-              </option>
-            ))}
-          </select>
-
-          <div className="grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-4 gap-1.5">
-            <button
-              type="button"
-              onClick={handleOpenCoinToss}
-              className="min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-1.5 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
-            >
-              <Coins className="w-3.5 h-3.5 shrink-0" />
-              <span>Bốc thăm</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleOpenSubstitute('A', 1)}
-              className={`min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-1.5 py-1 rounded-xl border text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
-                isDark
-                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-100'
-                  : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
-              }`}
-            >
-              <UserCheck className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-              <span>Thay VĐV</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onAnnounceCourtCall(activeMatch)}
-              className="min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-1.5 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
-            >
-              <Megaphone className="w-3.5 h-3.5 shrink-0" />
-              <span>Gọi sân</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onAnnounceCourtAvailable(activeMatch)}
-              className={`min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-1.5 py-1 rounded-xl border text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
-                isDark
-                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-emerald-400'
-                  : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
-              }`}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-              <span>Sân trống</span>
-            </button>
+          <div className="flex items-center gap-2 text-xs shrink-0">
+            {isStaff && currentAccount ? (
+              <span
+                className={`px-2.5 py-1 rounded-lg font-semibold border ${
+                  isDark
+                    ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                }`}
+              >
+                {isAdmin ? 'BTC' : 'Trọng tài'}: {currentAccount.displayName}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  onRequestLogin?.(
+                    'Đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để điều khiển tỷ số và gọi sân.',
+                  )
+                }
+                className="min-h-[34px] px-3 py-1 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs"
+              >
+                Đăng nhập điều hành
+              </button>
+            )}
           </div>
-        </section>
+        </div>
 
-        {/* 2. Sân Pickleball 3D & VĐV 3D */}
-        <section
-          className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 [@media(orientation:landscape)_and_(max-height:540px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-0.5 ${cardSurface}`}
-        >
-          <div className="flex items-center justify-between gap-1 flex-wrap">
-            <div className="flex items-center gap-1 min-w-0">
-              <h2 className="font-display text-[clamp(10px,2.7vw,14px)] font-extrabold uppercase tracking-tight truncate">
-                SÂN 3D #{activeMatch.courtNumber} · {serverScore % 2 === 0 ? 'CHẴN' : 'LẺ'} · N
-                {currentServerNum}
-              </h2>
-              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-300 text-slate-950 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
-                <span>Phát</span>
-              </span>
-              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-cyan-300 text-slate-950 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
-                <span>Đỡ</span>
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-mono-num shrink-0">
-              <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 font-bold truncate max-w-[92px] sm:max-w-[150px]">
-                T: {compactCourtNameLabel(leftTeamLabel)}
-              </span>
-              <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-500 font-bold truncate max-w-[92px] sm:max-w-[150px]">
-                P: {compactCourtNameLabel(rightTeamLabel)}
-              </span>
-            </div>
-          </div>
-
+        {/* Team Division Sub-Match Switcher */}
+        {isTeamMatch && lineupSlots.length > 0 && (
           <div
-            className={`rounded-xl border p-1.5 ${
-              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+            className={`pt-2 border-t flex flex-wrap items-center justify-between gap-2 ${
+              isDark ? 'border-slate-800' : 'border-slate-200'
             }`}
           >
-            <div className="w-full max-w-2xl mx-auto" style={{ perspective: '760px' }}>
-              <div
-                style={{
-                  transform: 'rotateX(14deg)',
-                  transformStyle: 'preserve-3d',
-                }}
-                className="relative w-full max-h-[21svh] [@media(orientation:landscape)_and_(max-height:540px)]:max-h-[42svh] sm:max-h-[28svh] aspect-[22/10] mx-auto rounded-xl border-2 border-white shadow-[0_10px_22px_rgba(6,78,59,0.45)] bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-800 overflow-hidden select-none"
+            <div className="flex items-center gap-1.5 text-xs font-bold text-orange-500">
+              <Users className="w-3.5 h-3.5 shrink-0" />
+              <span>THỂ THỨC ĐỒNG ĐỘI — CHỌN TRẬN NHỎ:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {lineupSlots.map((slot) => {
+                const isCurr = slot.slotOrder === activeSlotOrder;
+                return (
+                  <button
+                    key={slot.slotOrder}
+                    type="button"
+                    onClick={() => handleSelectTeamSlot(slot.slotOrder)}
+                    className={`min-h-[32px] px-2.5 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                      isCurr
+                        ? 'bg-orange-600 text-white'
+                        : slot.completed
+                        ? isDark
+                          ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50'
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : isDark
+                        ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>{slot.subLabel}</span>
+                    <span className="font-mono-num">
+                      ({slot.scoreA}-{slot.scoreB})
+                    </span>
+                    {slot.completed && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* MAIN CONSOLE GRID: Left (Match Selector + 4 Action Buttons + 3D Court) | Right (Scoreboard) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
+        {/* LEFT COLUMN */}
+        <div className="lg:col-span-6 space-y-3.5">
+          {/* Match Selector + 4 Core Court Buttons */}
+          <div className={`border rounded-2xl p-3 sm:p-4 space-y-3 ${surfaceCard}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-orange-500">
+                <Gavel className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  SÂN {activeMatch.courtNumber} · {tournament.name}
+                </span>
+              </div>
+              <span
+                className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold border truncate max-w-[200px] sm:max-w-none ${
+                  isDark
+                    ? 'bg-slate-800 text-slate-300 border-slate-700'
+                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                }`}
               >
-                <div className="absolute inset-x-0 bottom-0 h-1.5 bg-emerald-950/60 pointer-events-none" />
+                {tournament.location}
+              </span>
+            </div>
 
-                <div className="w-full h-full flex relative z-10">
-                  <div className="w-[34.09%] h-full border-r-2 border-white flex flex-col relative">
-                    <div className="flex-1 border-b border-white/85 flex items-center justify-center p-0.5">
-                      {render3DPlayerNode('left', 0, leftTeamKey, 1, leftPlayers[0])}
+            <select
+              value={activeMatch.id}
+              onChange={(e) => onSelectMatch(e.target.value)}
+              aria-label="Chọn trận đấu trên sân"
+              className={`w-full min-h-[38px] px-3 py-2 text-xs sm:text-sm font-bold border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                isDark
+                  ? 'bg-slate-950 border-slate-700 text-white'
+                  : 'bg-slate-50 border-slate-300 text-slate-900'
+              }`}
+            >
+              {matches.map((m) => (
+                <option key={m.id} value={m.id}>
+                  Trận #{m.matchNumber} (Sân {m.courtNumber}) — {m.teamAName} vs {m.teamBName} [
+                  {m.groupName || MATCH_STAGE_LABELS[m.stage]}]
+                </option>
+              ))}
+            </select>
+
+            {/* 4 Primary Action Buttons: 2x2 on Portrait Mobile, Row on Tablet/Desktop & Landscape */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={handleDrawStartingServeAndSide}
+                className="min-h-[40px] sm:min-h-[38px] px-2.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Shuffle className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Bốc thăm</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  requireStaffAction(
+                    'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đổi/thay VĐV đứng sân.',
+                    () => setShowLineupEditor((prev) => !prev),
+                  )
+                }
+                className={`min-h-[40px] sm:min-h-[38px] px-2.5 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
+                  showLineupEditor
+                    ? 'bg-orange-600 text-white border-orange-600'
+                    : isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+                }`}
+              >
+                <UserPlus className="w-3.5 h-3.5 shrink-0 text-orange-500" />
+                <span className="truncate">Thay VĐV</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTriggerCourtCall}
+                className="min-h-[40px] sm:min-h-[38px] px-2.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Megaphone className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Gọi sân</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTriggerCourtAvailable}
+                className={`min-h-[40px] sm:min-h-[38px] px-2.5 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
+                  isDark
+                    ? 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border-emerald-700/70'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Sân trống</span>
+              </button>
+            </div>
+
+            {drawNotice && (
+              <div
+                className={`p-2.5 rounded-xl text-xs font-medium border flex items-start justify-between gap-2 ${
+                  isDark
+                    ? 'bg-orange-950/40 border-orange-800/60 text-orange-200'
+                    : 'bg-orange-50 border-orange-200 text-orange-900'
+                }`}
+              >
+                <span>{drawNotice}</span>
+                <button
+                  type="button"
+                  onClick={() => setDrawNotice(null)}
+                  className="text-[11px] font-bold opacity-70 hover:opacity-100 shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Lineup Editor Drawer when "Thay VĐV" is opened */}
+            {showLineupEditor && (
+              <form
+                onSubmit={handleSaveLineup}
+                className={`p-3 rounded-xl border space-y-3 ${
+                  isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold">
+                    Cập nhật / Thay đổi VĐV ra sân ({activeMatch.teamSubCategory || activeMatch.division})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowLineupEditor(false)}
+                    className={`text-xs ${mutedText} hover:text-orange-500`}
+                  >
+                    Đóng
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-bold text-orange-500">
+                      Đội A: {activeMatch.teamAName}
                     </div>
-                    <div className="flex-1 border-t border-white/85 flex items-center justify-center p-0.5">
-                      {render3DPlayerNode('left', 1, leftTeamKey, 2, leftPlayers[1])}
-                    </div>
+                    <select
+                      value={editA1}
+                      onChange={(e) => setEditA1(e.target.value)}
+                      className={`w-full min-h-[36px] px-2.5 py-1.5 text-xs border rounded-lg ${
+                        isDark
+                          ? 'bg-slate-900 border-slate-700 text-white'
+                          : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    >
+                      <option value="">-- Chọn VĐV A1 --</option>
+                      {availablePoolA.map((name) => (
+                        <option key={`a1_${name}`} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={editA2}
+                      onChange={(e) => setEditA2(e.target.value)}
+                      className={`w-full min-h-[36px] px-2.5 py-1.5 text-xs border rounded-lg ${
+                        isDark
+                          ? 'bg-slate-900 border-slate-700 text-white'
+                          : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    >
+                      <option value="">-- Chọn VĐV A2 --</option>
+                      {availablePoolA.map((name) => (
+                        <option key={`a2_${name}`} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                    {isAdmin && onAddRosterAthlete && (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={newRosterNameA}
+                          onChange={(e) => setNewRosterNameA(e.target.value)}
+                          placeholder="Thêm VĐV mới vào Đội A..."
+                          className={`flex-1 min-w-0 min-h-[32px] px-2.5 py-1 text-xs border rounded-lg ${
+                            isDark
+                              ? 'bg-slate-900 border-slate-700 text-white'
+                              : 'bg-white border-slate-300 text-slate-900'
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAddRoster('A')}
+                          className="min-h-[32px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-orange-600 text-white text-xs font-bold shrink-0"
+                        >
+                          + VĐV
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="w-[15.91%] h-full bg-emerald-900/45 border-r border-white/70 flex items-center justify-center">
-                    <span className="text-[7px] sm:text-[9px] font-bold uppercase tracking-widest text-white/65 -rotate-90 whitespace-nowrap">
-                      NVZ 7FT
-                    </span>
-                  </div>
-
-                  <div className="w-[15.91%] h-full bg-emerald-900/45 border-l border-white/70 flex items-center justify-center">
-                    <span className="text-[7px] sm:text-[9px] font-bold uppercase tracking-widest text-white/65 rotate-90 whitespace-nowrap">
-                      NVZ 7FT
-                    </span>
-                  </div>
-
-                  <div className="w-[34.09%] h-full border-l-2 border-white flex flex-col relative">
-                    <div className="flex-1 border-b border-white/85 flex items-center justify-center p-0.5">
-                      {render3DPlayerNode('right', 0, rightTeamKey, 1, rightPlayers[0])}
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-bold text-sky-500">
+                      Đội B: {activeMatch.teamBName}
                     </div>
-                    <div className="flex-1 border-t border-white/85 flex items-center justify-center p-0.5">
-                      {render3DPlayerNode('right', 1, rightTeamKey, 2, rightPlayers[1])}
-                    </div>
-                  </div>
-
-                  <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1.5 bg-gradient-to-r from-white/75 via-white to-white/75 shadow-[0_0_8px_rgba(0,0,0,0.45)] pointer-events-none flex flex-col items-center justify-between py-0.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-900 border border-white -mt-0.5" />
-                    <span className="px-1 py-0.5 rounded bg-slate-950/85 text-[7px] sm:text-[9px] font-extrabold text-white uppercase leading-none">
-                      Lưới 3D
-                    </span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-900 border border-white -mb-0.5" />
+                    <select
+                      value={editB1}
+                      onChange={(e) => setEditB1(e.target.value)}
+                      className={`w-full min-h-[36px] px-2.5 py-1.5 text-xs border rounded-lg ${
+                        isDark
+                          ? 'bg-slate-900 border-slate-700 text-white'
+                          : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    >
+                      <option value="">-- Chọn VĐV B1 --</option>
+                      {availablePoolB.map((name) => (
+                        <option key={`b1_${name}`} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={editB2}
+                      onChange={(e) => setEditB2(e.target.value)}
+                      className={`w-full min-h-[36px] px-2.5 py-1.5 text-xs border rounded-lg ${
+                        isDark
+                          ? 'bg-slate-900 border-slate-700 text-white'
+                          : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    >
+                      <option value="">-- Chọn VĐV B2 --</option>
+                      {availablePoolB.map((name) => (
+                        <option key={`b2_${name}`} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                    {isAdmin && onAddRosterAthlete && (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={newRosterNameB}
+                          onChange={(e) => setNewRosterNameB(e.target.value)}
+                          placeholder="Thêm VĐV mới vào Đội B..."
+                          className={`flex-1 min-w-0 min-h-[32px] px-2.5 py-1 text-xs border rounded-lg ${
+                            isDark
+                              ? 'bg-slate-900 border-slate-700 text-white'
+                              : 'bg-white border-slate-300 text-slate-900'
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAddRoster('B')}
+                          className="min-h-[32px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-orange-600 text-white text-xs font-bold shrink-0"
+                        >
+                          + VĐV
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowLineupEditor(false)}
+                    className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-semibold ${
+                      isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="min-h-[34px] px-3.5 py-1 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold"
+                  >
+                    Lưu VĐV đứng sân
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
+          {/* 3D PICKLEBALL COURT DIAGRAM */}
+          <div className={`border rounded-2xl p-3 sm:p-4 space-y-2.5 ${surfaceCard}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-mono-num font-extrabold uppercase">
+                  SÂN 3D #{activeMatch.courtNumber} · {isOddScore ? 'LẺ' : 'CHẴN'} · N{serverNum}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[10px] font-extrabold">
+                  Phát
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-cyan-400 text-slate-950 text-[10px] font-extrabold">
+                  Đỡ
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold">
+                <span className="px-2 py-0.5 rounded-md bg-orange-500/15 text-orange-500 truncate max-w-[115px]">
+                  T: {serverDisplayName}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-500 truncate max-w-[115px]">
+                  P: {receiverDisplayName}
+                </span>
+              </div>
+            </div>
+
+            <div className="relative rounded-2xl overflow-hidden border border-emerald-900/40 bg-gradient-to-b from-emerald-700 to-emerald-800 p-2 sm:p-3 shadow-inner max-h-[42vh] sm:max-h-none">
+              <div className="relative w-full aspect-[16/9] max-h-[36vh] sm:max-h-[260px] mx-auto rounded-xl border-2 border-white/95 bg-emerald-600/90 grid grid-cols-12 overflow-hidden select-none">
+                {/* Left Service Boxes */}
+                <div className="col-span-3 grid grid-rows-2 border-r-2 border-white/95">
+                  <div
+                    className={`p-1.5 sm:p-2 border-b border-white/80 flex items-center justify-between gap-1 ${
+                      leftTopServing ? 'bg-amber-300/25' : ''
+                    }`}
+                  >
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate ${
+                        leftTopServing
+                          ? 'bg-amber-400 text-slate-950 shadow-xs'
+                          : leftIsServing
+                          ? 'bg-sky-500/90 text-white'
+                          : 'bg-slate-900/75 text-white'
+                      }`}
+                    >
+                      {pLeftTop}
+                      {leftTopServing ? ' · PHÁT' : ''}
+                    </span>
+                  </div>
+
+                  <div
+                    className={`p-1.5 sm:p-2 flex items-center justify-between gap-1 ${
+                      leftBottomServing ? 'bg-amber-300/25' : ''
+                    }`}
+                  >
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate ${
+                        leftBottomServing
+                          ? 'bg-amber-400 text-slate-950 shadow-xs'
+                          : leftIsServing
+                          ? 'bg-sky-500/90 text-white'
+                          : 'bg-slate-900/75 text-white'
+                      }`}
+                    >
+                      {pLeftBottom}
+                      {leftBottomServing ? ' · PHÁT' : ''}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Left Non-Volley Zone (Kitchen 7FT) */}
+                <div className="col-span-2 border-r-2 border-white/95 bg-emerald-700/45 flex items-center justify-center">
+                  <span className="text-[10px] font-extrabold tracking-widest text-white/75 -rotate-90 whitespace-nowrap">
+                    NVZ 7FT
+                  </span>
+                </div>
+
+                {/* Center Net Line */}
+                <div className="col-span-2 relative flex items-center justify-center">
+                  <div className="w-1 h-full bg-slate-950/90 shadow-md" />
+                  <span className="absolute px-1.5 py-0.5 rounded bg-slate-950 text-white text-[9px] font-extrabold tracking-wider">
+                    LƯỚI 3D
+                  </span>
+                </div>
+
+                {/* Right Non-Volley Zone (Kitchen 7FT) */}
+                <div className="col-span-2 border-l-2 border-white/95 bg-emerald-700/45 flex items-center justify-center">
+                  <span className="text-[10px] font-extrabold tracking-widest text-white/75 rotate-90 whitespace-nowrap">
+                    NVZ 7FT
+                  </span>
+                </div>
+
+                {/* Right Service Boxes */}
+                <div className="col-span-3 grid grid-rows-2 border-l-2 border-white/95">
+                  <div
+                    className={`p-1.5 sm:p-2 border-b border-white/80 flex items-center justify-end gap-1 ${
+                      rightTopServing ? 'bg-amber-300/25' : ''
+                    }`}
+                  >
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate ${
+                        rightTopServing
+                          ? 'bg-amber-400 text-slate-950 shadow-xs'
+                          : rightIsServing
+                          ? 'bg-sky-500/90 text-white'
+                          : 'bg-slate-900/75 text-white'
+                      }`}
+                    >
+                      {pRightTop}
+                      {rightTopServing ? ' · PHÁT' : ''}
+                    </span>
+                  </div>
+
+                  <div
+                    className={`p-1.5 sm:p-2 flex items-center justify-end gap-1 ${
+                      rightBottomServing ? 'bg-amber-300/25' : ''
+                    }`}
+                  >
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate ${
+                        rightBottomServing
+                          ? 'bg-amber-400 text-slate-950 shadow-xs'
+                          : rightIsServing
+                          ? 'bg-sky-500/90 text-white'
+                          : 'bg-slate-900/75 text-white'
+                      }`}
+                    >
+                      {pRightBottom}
+                      {rightBottomServing ? ' · PHÁT' : ''}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Diagonal Serve Trajectory Arrow */}
                 <svg
-                  viewBox="0 0 440 200"
-                  className="absolute inset-0 w-full h-full pointer-events-none z-20"
+                  viewBox="0 0 400 180"
+                  className="pointer-events-none absolute inset-0 w-full h-full"
                   preserveAspectRatio="none"
                 >
                   <defs>
                     <marker
-                      id="serveArrow3DHead"
+                      id="serveArrowHead3D"
                       markerWidth="7"
                       markerHeight="7"
-                      refX="5.5"
+                      refX="5"
                       refY="3.5"
                       orient="auto"
                     >
-                      <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#fde047" />
+                      <polygon points="0 0, 7 3.5, 0 7" fill="#FACC15" />
                     </marker>
                   </defs>
-                  <line
-                    x1={sx}
-                    y1={sy}
-                    x2={ex}
-                    y2={ey}
-                    stroke="#fde047"
-                    strokeWidth="3"
-                    strokeDasharray="6 4"
-                    markerEnd="url(#serveArrow3DHead)"
-                  />
+                  {leftIsServing ? (
+                    <line
+                      x1="75"
+                      y1={leftTopServing ? '45' : '135'}
+                      x2="325"
+                      y2={leftTopServing ? '135' : '45'}
+                      stroke="#FACC15"
+                      strokeWidth="3"
+                      strokeDasharray="6 4"
+                      markerEnd="url(#serveArrowHead3D)"
+                    />
+                  ) : (
+                    <line
+                      x1="325"
+                      y1={rightTopServing ? '45' : '135'}
+                      x2="75"
+                      y2={rightTopServing ? '135' : '45'}
+                      stroke="#FACC15"
+                      strokeWidth="3"
+                      strokeDasharray="6 4"
+                      markerEnd="url(#serveArrowHead3D)"
+                    />
+                  )}
                 </svg>
               </div>
             </div>
           </div>
-        </section>
-      </div>
+        </div>
 
-      {/* CỘT PHẢI (điện thoại ngang & màn hình lớn) / KHỐI DƯỚI (điện thoại dọc): Bảng điểm to dễ bấm */}
-      <div className="[@media(orientation:landscape)_and_(max-height:540px)]:col-span-6 lg:col-span-6 flex flex-col min-w-0">
-        <section
-          className={`border rounded-xl sm:rounded-2xl p-2 sm:p-3 [@media(orientation:landscape)_and_(max-height:540px)]:p-1.5 space-y-2 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-1 ${cardSurface}`}
-        >
-          <div className="flex items-center justify-between gap-1 text-[10px] sm:text-xs font-mono-num">
-            <div className="flex items-center gap-1 min-w-0">
-              <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 font-extrabold shrink-0">
+        {/* RIGHT COLUMN: LIVE SCOREBOARD + CONTROLS */}
+        <div className={`lg:col-span-6 border rounded-2xl p-3 sm:p-4 space-y-3 ${surfaceCard}`}>
+          {/* Top Match Meta & Callout */}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-1.5 font-mono-num font-bold">
+              <span className="px-2 py-0.5 rounded-md bg-orange-500/15 text-orange-500">
                 #{activeMatch.matchNumber} · S{activeMatch.courtNumber}
               </span>
-              <span className={`truncate ${mutedText}`}>
+              <span className={mutedText}>
                 {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]}
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                {formatScoreCallout(activeMatch)}
-              </span>
-              <span className={mutedText}>/{targetPoints}đ</span>
+            <div className="font-mono-num font-extrabold text-emerald-500">
+              {formatScoreCallout(activeMatch)} / {activeMatch.pointsToWin}đ
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-2">
-            {/* Đội A */}
+          {/* Two Team Score Cards (Stack on Narrow Portrait, 2-Col on Wider/Landscape) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* LEFT CARD */}
             <div
-              className={`border rounded-xl p-2 sm:p-2.5 [@media(orientation:landscape)_and_(max-height:540px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-1 min-w-0 ${
-                servingTeam === 'A' ? 'ring-2 ring-orange-500/70' : 'opacity-85'
-              } ${subSurface}`}
+              className={`rounded-xl border p-3 space-y-2.5 transition-colors ${
+                leftIsServing
+                  ? isDark
+                    ? 'border-sky-500 bg-sky-950/20'
+                    : 'border-sky-500 bg-sky-50/40'
+                  : isDark
+                  ? 'border-slate-800 bg-slate-950/50'
+                  : 'border-slate-200 bg-slate-50/60'
+              }`}
             >
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-500 truncate">
-                  ĐỘI A · {courtSideA === 'left' ? 'TRÁI' : 'PHẢI'}
-                </span>
-                <div className="flex items-center gap-1 shrink-0">
-                  {servingTeam === 'A' ? (
-                    <span className="px-1.5 py-0.5 rounded bg-orange-600 text-white text-[9px] font-bold leading-none">
-                      PHÁT N{currentServerNum}
-                    </span>
-                  ) : (
-                    <span className="px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-500 text-[9px] font-bold leading-none inline-flex items-center gap-0.5">
-                      <Lock className="w-2.5 h-2.5" />
-                      <span>ĐỠ</span>
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleStartTimeout('A')}
-                    className={`min-h-[24px] px-1.5 py-0.5 rounded border text-[10px] font-bold inline-flex items-center gap-0.5 ${
-                      isDark
-                        ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
-                        : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
+              <div className="flex items-center justify-between gap-1 text-[11px] font-bold">
+                <span className="text-orange-500 uppercase">{leftTeamLabel}</span>
+                <div className="flex items-center gap-1">
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-[10px] ${
+                      leftIsServing
+                        ? 'bg-sky-600 text-white'
+                        : isDark
+                        ? 'bg-slate-800 text-slate-400'
+                        : 'bg-slate-200 text-slate-600'
                     }`}
                   >
-                    <Timer className="w-3 h-3 shrink-0" />
-                    <span>TO ({activeMatch.timeoutsA || 0})</span>
+                    {leftIsServing ? `PHÁT N${serverNum}` : 'ĐỠ'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTimeout(leftSideIsA ? 'A' : 'B')}
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-mono-num border ${
+                      isDark
+                        ? 'bg-amber-950/50 text-amber-300 border-amber-800/60'
+                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                    }`}
+                  >
+                    TO ({leftSideIsA ? activeMatch.timeoutsA : activeMatch.timeoutsB})
                   </button>
                 </div>
               </div>
 
-              <div
-                className="font-display text-xs sm:text-sm font-extrabold leading-tight truncate"
-                title={activeMatch.teamAName}
-              >
-                {activeMatch.teamAName}
+              <div className="text-xs sm:text-sm font-bold truncate" title={leftTeamName}>
+                {leftTeamName}
               </div>
 
               <div className="flex items-center justify-between gap-2 pt-0.5">
-                <div className="font-mono-num text-[clamp(22px,6vw,32px)] font-black leading-none">
-                  {activeMatch.scoreA}
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <span className="font-mono-num text-3xl sm:text-4xl font-extrabold leading-none">
+                  {leftSideIsA ? activeMatch.scoreA : activeMatch.scoreB}
+                </span>
+
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    disabled={!canSubA}
-                    onClick={() => handleAdjustScore('A', -1)}
-                    className="min-h-[42px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[34px] w-10 sm:w-11 [@media(orientation:landscape)_and_(max-height:540px)]:w-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
-                    title="Trừ 1 điểm Đội A"
+                    onClick={() => adjustScore(leftSideIsA ? 'A' : 'B', -1)}
+                    aria-label="Giảm điểm đội trái"
+                    className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-bold transition-colors ${
+                      isDark
+                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                        : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                    }`}
                   >
                     <Minus className="w-4 h-4" />
                   </button>
+
                   <button
                     type="button"
-                    disabled={!canAddA}
-                    onClick={() => handleAdjustScore('A', 1)}
-                    className="min-h-[42px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[34px] px-3 sm:px-4 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-black inline-flex items-center gap-1 whitespace-nowrap shadow-sm"
+                    onClick={() => adjustScore(leftSideIsA ? 'A' : 'B', 1)}
+                    className="min-w-[62px] sm:min-w-[68px] h-10 sm:h-11 px-3 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-mono-num text-xs sm:text-sm font-extrabold flex items-center justify-center gap-1 shadow-xs transition-all"
                   >
-                    <Plus className="w-4 h-4 shrink-0" />
-                    <span>+1 A</span>
+                    <Plus className="w-4 h-4" />
+                    <span>+1{leftSideIsA ? 'A' : 'B'}</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Đội B */}
+            {/* RIGHT CARD */}
             <div
-              className={`border rounded-xl p-2 sm:p-2.5 [@media(orientation:landscape)_and_(max-height:540px)]:p-1.5 space-y-1.5 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-1 min-w-0 ${
-                servingTeam === 'B' ? 'ring-2 ring-sky-500/70' : 'opacity-85'
-              } ${subSurface}`}
+              className={`rounded-xl border p-3 space-y-2.5 transition-colors ${
+                rightIsServing
+                  ? isDark
+                    ? 'border-sky-500 bg-sky-950/20'
+                    : 'border-sky-500 bg-sky-50/40'
+                  : isDark
+                  ? 'border-slate-800 bg-slate-950/50'
+                  : 'border-slate-200 bg-slate-50/60'
+              }`}
             >
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-500 truncate">
-                  ĐỘI B · {courtSideA === 'left' ? 'PHẢI' : 'TRÁI'}
-                </span>
-                <div className="flex items-center gap-1 shrink-0">
-                  {servingTeam === 'B' ? (
-                    <span className="px-1.5 py-0.5 rounded bg-sky-600 text-white text-[9px] font-bold leading-none">
-                      PHÁT N{currentServerNum}
-                    </span>
-                  ) : (
-                    <span className="px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-500 text-[9px] font-bold leading-none inline-flex items-center gap-0.5">
-                      <Lock className="w-2.5 h-2.5" />
-                      <span>ĐỠ</span>
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleStartTimeout('B')}
-                    className={`min-h-[24px] px-1.5 py-0.5 rounded border text-[10px] font-bold inline-flex items-center gap-0.5 ${
-                      isDark
-                        ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
-                        : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
+              <div className="flex items-center justify-between gap-1 text-[11px] font-bold">
+                <span className="text-sky-500 uppercase">{rightTeamLabel}</span>
+                <div className="flex items-center gap-1">
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-[10px] ${
+                      rightIsServing
+                        ? 'bg-sky-600 text-white'
+                        : isDark
+                        ? 'bg-slate-800 text-slate-400'
+                        : 'bg-slate-200 text-slate-600'
                     }`}
                   >
-                    <Timer className="w-3 h-3 shrink-0" />
-                    <span>TO ({activeMatch.timeoutsB || 0})</span>
+                    {rightIsServing ? `PHÁT N${serverNum}` : 'ĐỠ'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTimeout(leftSideIsA ? 'B' : 'A')}
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-mono-num border ${
+                      isDark
+                        ? 'bg-amber-950/50 text-amber-300 border-amber-800/60'
+                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                    }`}
+                  >
+                    TO ({leftSideIsA ? activeMatch.timeoutsB : activeMatch.timeoutsA})
                   </button>
                 </div>
               </div>
 
-              <div
-                className="font-display text-xs sm:text-sm font-extrabold leading-tight truncate"
-                title={activeMatch.teamBName}
-              >
-                {activeMatch.teamBName}
+              <div className="text-xs sm:text-sm font-bold truncate" title={rightTeamName}>
+                {rightTeamName}
               </div>
 
               <div className="flex items-center justify-between gap-2 pt-0.5">
-                <div className="font-mono-num text-[clamp(22px,6vw,32px)] font-black leading-none">
-                  {activeMatch.scoreB}
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <span className="font-mono-num text-3xl sm:text-4xl font-extrabold leading-none">
+                  {leftSideIsA ? activeMatch.scoreB : activeMatch.scoreA}
+                </span>
+
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    disabled={!canSubB}
-                    onClick={() => handleAdjustScore('B', -1)}
-                    className="min-h-[42px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[34px] w-10 sm:w-11 [@media(orientation:landscape)_and_(max-height:540px)]:w-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
-                    title="Trừ 1 điểm Đội B"
+                    onClick={() => adjustScore(leftSideIsA ? 'B' : 'A', -1)}
+                    aria-label="Giảm điểm đội phải"
+                    className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-bold transition-colors ${
+                      isDark
+                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                        : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                    }`}
                   >
                     <Minus className="w-4 h-4" />
                   </button>
+
                   <button
                     type="button"
-                    disabled={!canAddB}
-                    onClick={() => handleAdjustScore('B', 1)}
-                    className="min-h-[42px] sm:min-h-[46px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[34px] px-3 sm:px-4 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-black inline-flex items-center gap-1 whitespace-nowrap shadow-sm"
+                    onClick={() => adjustScore(leftSideIsA ? 'B' : 'A', 1)}
+                    className="min-w-[62px] sm:min-w-[68px] h-10 sm:h-11 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] text-white font-mono-num text-xs sm:text-sm font-extrabold flex items-center justify-center gap-1 shadow-xs transition-all"
                   >
-                    <Plus className="w-4 h-4 shrink-0" />
-                    <span>+1 B</span>
+                    <Plus className="w-4 h-4" />
+                    <span>+1{leftSideIsA ? 'B' : 'A'}</span>
                   </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Hàng 1: Đổi giao / Đổi sân */}
-          <div className="grid grid-cols-2 gap-1.5">
+          {/* Serve & Switch Side Row */}
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={handleFaultRotateServe}
-              className={`min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2 py-1 rounded-xl border text-[clamp(11px,2.7vw,12px)] font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              onClick={handleToggleServe}
+              className={`min-h-[38px] px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
                 isDark
-                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
-                  : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
               }`}
             >
               <Clock className="w-3.5 h-3.5 text-orange-500 shrink-0" />
@@ -921,413 +1358,107 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
             <button
               type="button"
-              onClick={handleSwitchCourtSides}
-              className={`min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2 py-1 rounded-xl border text-[clamp(11px,2.7vw,12px)] font-bold inline-flex items-center justify-center whitespace-nowrap ${
+              onClick={handleSwitchCourtEnds}
+              className={`min-h-[38px] px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
                 isDark
-                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
-                  : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
               }`}
             >
-              Đổi sân
+              <ArrowLeftRight className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+              <span>Đổi sân</span>
             </button>
           </div>
 
-          {/* Hàng 2: Đội A thắng / Đội B thắng / Hòa 2-2 */}
-          <div className={`grid ${isTeam ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5`}>
+          {/* Finish Match Row: 2-col on Portrait Mobile, 3-col on Tablet/Desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => onCompleteMatch(activeMatch, 'A')}
-              className="min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+              onClick={() => handleFinishMatch('A')}
+              className="min-h-[38px] px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
             >
               <Flag className="w-3.5 h-3.5 shrink-0" />
-              <span>Đội A thắng</span>
+              <span className="truncate">Đội A thắng</span>
             </button>
 
             <button
               type="button"
-              onClick={() => onCompleteMatch(activeMatch, 'B')}
-              className="min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+              onClick={() => handleFinishMatch('B')}
+              className="min-h-[38px] px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
             >
               <Flag className="w-3.5 h-3.5 shrink-0" />
-              <span>Đội B thắng</span>
+              <span className="truncate">Đội B thắng</span>
             </button>
 
-            {isTeam && (
-              <button
-                type="button"
-                onClick={() => onCompleteMatch(activeMatch, '')}
-                className={`min-h-[34px] sm:min-h-[36px] [@media(orientation:landscape)_and_(max-height:540px)]:min-h-[28px] px-2 py-1 rounded-xl border text-[clamp(10px,2.6vw,12px)] font-bold inline-flex items-center justify-center whitespace-nowrap ${
-                  isDark
-                    ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
-                    : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
-                }`}
-              >
-                Hòa 2-2
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => handleFinishMatch('')}
+              className={`col-span-2 sm:col-span-1 min-h-[38px] px-2.5 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
+                isDark
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>Hòa 2–2</span>
+            </button>
           </div>
-        </section>
-      </div>
 
-      {/* POPUP TIME OUT */}
-      {timeoutModal && (
-        <div onClick={() => setTimeoutModal(null)} className={popupBackdrop}>
-          <div onClick={(e) => e.stopPropagation()} className={popupCard}>
-            <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-              <div>
-                <div className="text-[11px] font-extrabold uppercase tracking-wider text-amber-500">
-                  HỘI Ý KỸ THUẬT · SÂN {activeMatch.courtNumber}
-                </div>
-                <h3 className="font-display text-base sm:text-lg font-bold mt-0.5">
-                  Time out —{' '}
-                  {timeoutModal.team === 'A' ? activeMatch.teamAName : activeMatch.teamBName}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setTimeoutModal(null)}
-                className={`p-1.5 rounded-xl border ${subSurface} ${mutedText}`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+          {/* Secondary Utility Controls */}
+          <div className="pt-1 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() =>
+                requireStaffAction(
+                  'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đặt lại điểm trận đấu.',
+                  () =>
+                    onUpdateMatch(activeMatch.id, {
+                      scoreA: 0,
+                      scoreB: 0,
+                      servingTeam: 'A',
+                      serverNumber: 2,
+                      timeoutsA: 0,
+                      timeoutsB: 0,
+                      scoreHistory: [],
+                    }),
+                )
+              }
+              className={`min-h-[34px] px-3 py-1 rounded-lg font-semibold border inline-flex items-center gap-1.5 ${
+                isDark
+                  ? 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                  : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+              }`}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Đặt lại điểm 0–0</span>
+            </button>
 
-            <div className={`border rounded-2xl p-4 text-center space-y-1.5 ${subSurface}`}>
-              <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-500">
-                <Timer className="w-4 h-4" />
-                <span>Thời gian hội ý còn lại</span>
-              </div>
-              <div
-                className={`font-mono-num text-5xl font-extrabold tracking-tight ${
-                  timeoutModal.remainingSec <= 10 ? 'text-rose-500' : 'text-amber-500'
-                }`}
-              >
-                {formatCountdown(timeoutModal.remainingSec)}
-              </div>
-              <div className={`text-xs ${mutedText}`}>
-                Tỉ số hiện tại: <strong>{activeMatch.scoreA}</strong> -{' '}
-                <strong>{activeMatch.scoreB}</strong>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setTimeoutModal((prev) => (prev ? { ...prev, running: !prev.running } : null))
-                }
-                className={`min-h-[38px] px-2.5 py-2 rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 ${subSurface}`}
-              >
-                {timeoutModal.running ? (
-                  <>
-                    <PauseCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                    <span>Tạm dừng</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>Tiếp tục</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setTimeoutModal((prev) =>
-                    prev ? { ...prev, remainingSec: TIMEOUT_DURATION_SEC, running: true } : null,
-                  )
-                }
-                className={`min-h-[38px] px-2.5 py-2 rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 ${subSurface}`}
-              >
-                <RotateCcw className="w-4 h-4 shrink-0" />
-                <span>Đặt lại 60s</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTimeoutModal(null)}
-                className="min-h-[38px] px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-extrabold inline-flex items-center justify-center"
-              >
-                Đóng
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() =>
+                requireStaffAction(
+                  'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để chuyển trạng thái trận đấu.',
+                  () =>
+                    onUpdateMatch(activeMatch.id, {
+                      status: activeMatch.status === 'live' ? 'scheduled' : 'live',
+                      startedAtMs: activeMatch.startedAtMs || Date.now(),
+                    }),
+                )
+              }
+              className={`min-h-[34px] px-3 py-1 rounded-lg font-semibold border inline-flex items-center gap-1.5 ${
+                activeMatch.status === 'live'
+                  ? 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                  : isDark
+                  ? 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                  : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+              }`}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>{activeMatch.status === 'live' ? 'Đang Live' : 'Bắt đầu Live'}</span>
+            </button>
           </div>
         </div>
-      )}
-
-      {/* POPUP THAY VĐV */}
-      {showSubstituteModal && (
-        <div onClick={() => setShowSubstituteModal(false)} className={popupBackdrop}>
-          <form onSubmit={handleConfirmSubstitute} onClick={(e) => e.stopPropagation()} className={popupCard}>
-            <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-              <div>
-                <div className="text-[11px] font-extrabold uppercase tracking-wider text-orange-500">
-                  ĐIỀU CHỈNH ĐỘI HÌNH SÂN {activeMatch.courtNumber}
-                </div>
-                <h3 className="font-display text-base sm:text-lg font-bold mt-0.5">Thay VĐV trên sân</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowSubstituteModal(false)}
-                className={`p-1.5 rounded-xl border ${subSurface} ${mutedText}`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSubSide('A');
-                  setSubNameInput(
-                    subSlot === 1 ? activeMatch.teamAPlayer1 || '' : activeMatch.teamAPlayer2 || '',
-                  );
-                }}
-                className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-extrabold border truncate ${
-                  subSide === 'A' ? 'bg-orange-600 text-white border-orange-600' : subSurface
-                }`}
-              >
-                Đội A: {activeMatch.teamAName}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSubSide('B');
-                  setSubNameInput(
-                    subSlot === 1 ? activeMatch.teamBPlayer1 || '' : activeMatch.teamBPlayer2 || '',
-                  );
-                }}
-                className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-extrabold border truncate ${
-                  subSide === 'B' ? 'bg-sky-600 text-white border-sky-600' : subSurface
-                }`}
-              >
-                Đội B: {activeMatch.teamBName}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSubSlot(1);
-                  setSubNameInput(
-                    subSide === 'A'
-                      ? activeMatch.teamAPlayer1 || ''
-                      : activeMatch.teamBPlayer1 || '',
-                  );
-                }}
-                className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold border ${
-                  subSlot === 1 ? 'bg-orange-600 text-white border-orange-600' : subSurface
-                }`}
-              >
-                VĐV vị trí 1
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSubSlot(2);
-                  setSubNameInput(
-                    subSide === 'A'
-                      ? activeMatch.teamAPlayer2 || ''
-                      : activeMatch.teamBPlayer2 || '',
-                  );
-                }}
-                className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold border ${
-                  subSlot === 2 ? 'bg-orange-600 text-white border-orange-600' : subSurface
-                }`}
-              >
-                VĐV vị trí 2
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold mb-1">Tên VĐV vào sân *</label>
-              <input
-                type="text"
-                autoFocus
-                value={subNameInput}
-                onChange={(e) => setSubNameInput(e.target.value)}
-                placeholder="Nhập tên VĐV thay thế..."
-                className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-xl ${inputSurface}`}
-              />
-            </div>
-
-            {availablePlayersPool.length > 0 && (
-              <div className="space-y-1.5">
-                <div className={`text-[11px] font-semibold ${mutedText}`}>
-                  Chọn nhanh từ danh sách VĐV:
-                </div>
-                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-                  {availablePlayersPool.map((pName) => (
-                    <button
-                      key={pName}
-                      type="button"
-                      onClick={() => setSubNameInput(pName)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${subSurface} hover:border-orange-500`}
-                    >
-                      {pName}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setShowSubstituteModal(false)}
-                className={`min-h-[38px] px-4 py-2 rounded-xl text-xs font-bold border ${subSurface}`}
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                className="min-h-[38px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold"
-              >
-                Xác nhận thay VĐV
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* POPUP BỐC THĂM */}
-      {showCoinTossModal && (
-        <div onClick={() => setShowCoinTossModal(false)} className={popupBackdrop}>
-          <div onClick={(e) => e.stopPropagation()} className={popupCard}>
-            <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-              <div>
-                <div className="text-[11px] font-extrabold uppercase tracking-wider text-orange-500">
-                  BỐC THĂM TRẬN #{activeMatch.matchNumber} · SÂN {activeMatch.courtNumber}
-                </div>
-                <h3 className="font-display text-base sm:text-lg font-bold mt-0.5">
-                  Tung đồng xu · Chọn bóng & Sân
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCoinTossModal(false)}
-                className={`p-1.5 rounded-xl border ${subSurface} ${mutedText}`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className={`border rounded-2xl p-4 flex flex-col items-center gap-3 ${subSurface}`}>
-              <div
-                style={{
-                  transform: isFlippingCoin
-                    ? 'rotateY(1080deg) scale(1.06)'
-                    : 'rotateY(0deg) scale(1)',
-                  transition: 'transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)',
-                  transformStyle: 'preserve-3d',
-                }}
-                className="w-24 h-24 rounded-full border-4 bg-amber-400 border-amber-200 text-slate-950 flex flex-col items-center justify-center text-center shadow-lg"
-              >
-                <span className="text-[10px] font-extrabold uppercase">MẶT XU</span>
-                <span className="font-display text-lg font-black leading-tight">
-                  {coinResultTeam === 'A' ? 'ĐỘI A' : 'ĐỘI B'}
-                </span>
-              </div>
-
-              <div className="text-xs font-bold text-center">
-                {isFlippingCoin
-                  ? 'Đang tung đồng xu...'
-                  : `Kết quả xu: ${
-                      coinResultTeam === 'A' ? activeMatch.teamAName : activeMatch.teamBName
-                    }`}
-              </div>
-
-              <button
-                type="button"
-                disabled={isFlippingCoin}
-                onClick={handleFlipCoin}
-                className="min-h-[36px] px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-xs font-extrabold inline-flex items-center gap-1.5"
-              >
-                <Coins className="w-4 h-4" />
-                <span>{isFlippingCoin ? 'Đang quay...' : 'Quay đồng xu'}</span>
-              </button>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold">Chọn bóng (chỉ giao bóng):</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTossServeTeam('A')}
-                  className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-extrabold border truncate ${
-                    tossServeTeam === 'A' ? 'bg-orange-600 text-white border-orange-600' : subSurface
-                  }`}
-                >
-                  Đội A giao bóng
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTossServeTeam('B')}
-                  className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-extrabold border truncate ${
-                    tossServeTeam === 'B' ? 'bg-sky-600 text-white border-sky-600' : subSurface
-                  }`}
-                >
-                  Đội B giao bóng
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold">
-                Chọn sân cho {activeMatch.teamAName}:
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTossCourtSideA('left')}
-                  className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-extrabold border ${
-                    tossCourtSideA === 'left'
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : subSurface
-                  }`}
-                >
-                  Sân Trái
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTossCourtSideA('right')}
-                  className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-extrabold border ${
-                    tossCourtSideA === 'right'
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : subSurface
-                  }`}
-                >
-                  Sân Phải
-                </button>
-              </div>
-              <div className={`text-[11px] ${mutedText}`}>
-                {activeMatch.teamBName} sẽ đứng ở{' '}
-                <strong>{tossCourtSideA === 'left' ? 'Sân Phải' : 'Sân Trái'}</strong>.
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setShowCoinTossModal(false)}
-                className={`min-h-[38px] px-4 py-2 rounded-xl text-xs font-bold border ${subSurface}`}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleApplyCoinToss}
-                className="min-h-[38px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold"
-              >
-                Áp dụng bốc thăm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </section>
     </div>
   );
 };
