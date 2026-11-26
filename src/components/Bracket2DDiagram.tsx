@@ -74,7 +74,6 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
     return () => observer.disconnect();
   }, [division, syncFitZoom]);
 
-  // Direct two-finger pinch-to-zoom on the diagram canvas (non-passive so browser page zoom is suppressed)
   useEffect(() => {
     const vp = viewportRef.current;
     if (!vp) return;
@@ -117,7 +116,6 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
     };
   }, [clampZoom]);
 
-  // Ctrl/Cmd + Wheel or trackpad pinch zooms directly on the diagram
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -127,7 +125,6 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
     }
   };
 
-  // Double-tap / double-click directly on diagram toggles fit <-> zoomed view
   const handleToggleDirectZoom = () => {
     setZoom((prev) => {
       if (Math.abs(prev - fitZoom) < 0.08) {
@@ -197,19 +194,19 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
         onMouseEnter={() => setHighlightSeed(seedCode)}
         onMouseLeave={() => setHighlightSeed(null)}
         onClick={() => setHighlightSeed((prev) => (prev === seedCode ? null : seedCode))}
-        className={`absolute rounded-xl border bg-white px-3 py-2 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+        className={`absolute rounded-xl border bg-slate-900 px-3 py-2 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
           isHighlighted
-            ? 'border-orange-500 ring-2 ring-orange-200 bg-orange-50/40'
-            : 'border-slate-200 hover:border-slate-300'
+            ? 'border-orange-500 ring-2 ring-orange-500/30 bg-slate-800'
+            : 'border-slate-700 hover:border-slate-600'
         }`}
       >
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold text-slate-500 font-mono-num">
+          <div className="text-[11px] font-semibold text-slate-400 font-mono-num">
             Nhánh {seedCode}
           </div>
-          <div className="text-xs font-bold text-slate-900 truncate mt-0.5">{teamName}</div>
+          <div className="text-xs font-bold text-white truncate mt-0.5">{teamName}</div>
           {clubName && (
-            <div className="text-[10px] text-slate-500 truncate">{clubName}</div>
+            <div className="text-[10px] text-slate-400 truncate">{clubName}</div>
           )}
         </div>
       </div>
@@ -226,16 +223,16 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
       <div
         key={match.id}
         style={{ top: `${topPx}px`, left: '16px', width: '220px', height: '82px' }}
-        className="absolute rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col justify-between"
+        className="absolute rounded-xl border border-slate-700 bg-slate-900 overflow-hidden flex flex-col justify-between"
       >
-        <div className="px-2.5 py-1 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-700 font-semibold">
+        <div className="px-2.5 py-1 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-[10px] text-slate-300 font-semibold">
           <span className="font-mono-num">
             #{match.matchNumber} · {match.bracketSlot || fallbackTitle}
           </span>
           <button
             type="button"
             onClick={() => onOpenRefereeForMatch(match.id)}
-            className="text-orange-600 hover:text-orange-700 font-bold"
+            className="text-orange-400 hover:text-orange-300 font-bold"
           >
             Sân {match.courtNumber} →
           </button>
@@ -244,24 +241,24 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
           <div className="flex items-center justify-between gap-1.5">
             <span
               className={`truncate ${
-                winnerSide === 'A' ? 'font-bold text-slate-900' : 'text-slate-700'
+                winnerSide === 'A' ? 'font-bold text-white' : 'text-slate-300'
               }`}
             >
               {match.teamAName}
             </span>
-            <span className="font-mono-num font-bold text-slate-900 tabular-nums shrink-0">
+            <span className="font-mono-num font-bold text-white tabular-nums shrink-0">
               {match.scoreA}
             </span>
           </div>
           <div className="flex items-center justify-between gap-1.5">
             <span
               className={`truncate ${
-                winnerSide === 'B' ? 'font-bold text-slate-900' : 'text-slate-700'
+                winnerSide === 'B' ? 'font-bold text-white' : 'text-slate-300'
               }`}
             >
               {match.teamBName}
             </span>
-            <span className="font-mono-num font-bold text-slate-900 tabular-nums shrink-0">
+            <span className="font-mono-num font-bold text-white tabular-nums shrink-0">
               {match.scoreB}
             </span>
           </div>
@@ -296,12 +293,12 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
           width: `${widthPx}px`,
           height: `${heightPx}px`,
         }}
-        className={`absolute rounded-xl border bg-white overflow-hidden flex flex-col justify-between ${
+        className={`absolute rounded-xl border bg-slate-900 overflow-hidden flex flex-col justify-between ${
           isFinal
-            ? 'border-orange-500 ring-1 ring-orange-200'
+            ? 'border-orange-500 ring-1 ring-orange-500/40'
             : isBronze
-            ? 'border-amber-300'
-            : 'border-slate-200'
+            ? 'border-amber-500/60'
+            : 'border-slate-700'
         }`}
       >
         <div
@@ -309,8 +306,8 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
             isFinal
               ? 'bg-orange-600 text-white'
               : isBronze
-              ? 'bg-amber-50 text-amber-950 border-b border-amber-200'
-              : 'bg-slate-900 text-white'
+              ? 'bg-amber-950/80 text-amber-200 border-b border-amber-800/60'
+              : 'bg-slate-950 text-white border-b border-slate-800'
           }`}
         >
           <span className="font-mono-num font-bold flex items-center gap-1 truncate">
@@ -335,21 +332,21 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
             }
             className={`flex items-center justify-between gap-2 px-2 py-1 rounded-lg border text-[11px] cursor-pointer transition-colors ${
               isSeedAHighlighted
-                ? 'bg-orange-50 border-orange-500'
+                ? 'bg-orange-950/60 border-orange-500 text-white'
                 : match?.winnerSide === 'A'
-                ? 'bg-emerald-50 border-emerald-400 font-bold text-slate-900'
-                : 'bg-slate-50 border-slate-200 text-slate-800'
+                ? 'bg-emerald-950/60 border-emerald-500/60 font-bold text-white'
+                : 'bg-slate-950/80 border-slate-800 text-slate-200'
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-mono-num text-[10px] font-bold text-slate-500 shrink-0">
+              <span className="font-mono-num text-[10px] font-bold text-slate-400 shrink-0">
                 {seedALabel}
               </span>
               <span className="truncate font-semibold">
                 {match ? match.teamAName : fallbackTeamA}
               </span>
             </div>
-            <span className="font-mono-num text-xs font-extrabold text-slate-900 tabular-nums shrink-0">
+            <span className="font-mono-num text-xs font-extrabold text-white tabular-nums shrink-0">
               {match ? match.scoreA : 0}
             </span>
           </div>
@@ -362,34 +359,34 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
             }
             className={`flex items-center justify-between gap-2 px-2 py-1 rounded-lg border text-[11px] cursor-pointer transition-colors ${
               isSeedBHighlighted
-                ? 'bg-orange-50 border-orange-500'
+                ? 'bg-orange-950/60 border-orange-500 text-white'
                 : match?.winnerSide === 'B'
-                ? 'bg-emerald-50 border-emerald-400 font-bold text-slate-900'
-                : 'bg-slate-50 border-slate-200 text-slate-800'
+                ? 'bg-emerald-950/60 border-emerald-500/60 font-bold text-white'
+                : 'bg-slate-950/80 border-slate-800 text-slate-200'
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-mono-num text-[10px] font-bold text-slate-500 shrink-0">
+              <span className="font-mono-num text-[10px] font-bold text-slate-400 shrink-0">
                 {seedBLabel}
               </span>
               <span className="truncate font-semibold">
                 {match ? match.teamBName : fallbackTeamB}
               </span>
             </div>
-            <span className="font-mono-num text-xs font-extrabold text-slate-900 tabular-nums shrink-0">
+            <span className="font-mono-num text-xs font-extrabold text-white tabular-nums shrink-0">
               {match ? match.scoreB : 0}
             </span>
           </div>
         </div>
 
-        <div className="px-2.5 py-1 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between text-[10px]">
+        <div className="px-2.5 py-1 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-[10px]">
           <span
             className={`font-semibold ${
               match?.status === 'live'
-                ? 'text-emerald-600'
+                ? 'text-emerald-400'
                 : match?.status === 'completed'
-                ? 'text-slate-500'
-                : 'text-amber-600'
+                ? 'text-slate-400'
+                : 'text-amber-400'
             }`}
           >
             {match ? MATCH_STATUS_LABELS[match.status] : 'Chờ vòng trước'}
@@ -398,7 +395,7 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
             <button
               type="button"
               onClick={() => onOpenRefereeForMatch(match.id)}
-              className="font-bold text-orange-600 hover:text-orange-700 inline-flex items-center gap-1"
+              className="font-bold text-orange-400 hover:text-orange-300 inline-flex items-center gap-1"
             >
               <Gavel className="w-3 h-3" />
               Chấm điểm →
@@ -410,18 +407,17 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-3 sm:p-5 space-y-3">
-      {/* Clean Minimal Tree Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200">
+    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 sm:p-5 space-y-3 text-slate-100">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-800">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
-            <GitBranch className="w-4 h-4 text-orange-600" />
+          <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center shrink-0">
+            <GitBranch className="w-4 h-4 text-orange-500" />
           </div>
           <div className="min-w-0">
-            <h3 className="font-display text-sm sm:text-lg font-bold tracking-tight text-slate-900 uppercase truncate">
+            <h3 className="font-display text-sm sm:text-lg font-bold tracking-tight text-white uppercase truncate">
               {division ? `SƠ ĐỒ CÂY NHÁNH ĐẤU · ${division}` : 'SƠ ĐỒ CÂY NHÁNH ĐẤU'}
             </h3>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-400">
               Chụm/tách 2 ngón tay hoặc chạm đúp trực tiếp trên sơ đồ để thu phóng
             </p>
           </div>
@@ -439,14 +435,13 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
         )}
       </div>
 
-      {/* Direct Pinch / Wheel / Double-Tap Interactive Tree Diagram Canvas */}
       <div
         ref={viewportRef}
         onWheel={handleWheel}
         onDoubleClick={handleToggleDirectZoom}
         onTouchEnd={handleTouchTapEnd}
         style={{ touchAction: 'pan-x pan-y' }}
-        className="w-full overflow-auto rounded-xl bg-slate-50/70 border border-slate-200 p-2 select-none"
+        className="w-full overflow-auto rounded-xl bg-slate-900/90 border border-slate-800 p-2 select-none"
       >
         <div
           style={{
@@ -464,21 +459,19 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
             }}
             className="relative"
           >
-            {/* Subtle Tree Stage Column Headers */}
-            <div className="absolute top-0 left-4 w-[220px] text-center text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <div className="absolute top-0 left-4 w-[220px] text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
               {hasQuarterfinals ? 'Tứ kết' : 'Đội vào nhánh'}
             </div>
-            <div className="absolute top-0 left-[286px] w-[220px] text-center text-[11px] font-bold uppercase tracking-wider text-slate-700">
+            <div className="absolute top-0 left-[286px] w-[220px] text-center text-[11px] font-bold uppercase tracking-wider text-slate-300">
               Bán kết
             </div>
-            <div className="absolute top-0 left-[556px] w-[220px] text-center text-[11px] font-bold uppercase tracking-wider text-orange-600">
+            <div className="absolute top-0 left-[556px] w-[220px] text-center text-[11px] font-bold uppercase tracking-wider text-orange-400">
               Chung kết
             </div>
-            <div className="absolute top-0 left-[812px] w-[136px] text-center text-[11px] font-bold uppercase tracking-wider text-amber-700">
+            <div className="absolute top-0 left-[812px] w-[136px] text-center text-[11px] font-bold uppercase tracking-wider text-amber-400">
               Vinh danh
             </div>
 
-            {/* Orthogonal SVG Tree Connectors (Exact Pixel Alignment) */}
             <svg
               width={BASE_TREE_WIDTH}
               height={BASE_TREE_HEIGHT}
@@ -486,39 +479,34 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
               className="absolute inset-0 pointer-events-none"
               fill="none"
             >
-              {/* Branch 1: Top pair (y=57 & y=145) -> Semi 1 (y=101) */}
               <path
                 d="M 236 57 H 261 V 101 H 286"
-                stroke={highlightSeed === '1A' ? '#EA580C' : '#CBD5E1'}
+                stroke={highlightSeed === '1A' ? '#EA580C' : '#475569'}
                 strokeWidth={highlightSeed === '1A' ? 2.8 : 2}
                 strokeLinejoin="round"
               />
               <path
                 d="M 236 145 H 261 V 101"
-                stroke={highlightSeed === '2B' ? '#059669' : '#CBD5E1'}
+                stroke={highlightSeed === '2B' ? '#10B981' : '#475569'}
                 strokeWidth={highlightSeed === '2B' ? 2.8 : 2}
                 strokeLinejoin="round"
               />
-
-              {/* Branch 2: Bottom pair (y=257 & y=345) -> Semi 2 (y=301) */}
               <path
                 d="M 236 257 H 261 V 301 H 286"
-                stroke={highlightSeed === '1B' ? '#059669' : '#CBD5E1'}
+                stroke={highlightSeed === '1B' ? '#10B981' : '#475569'}
                 strokeWidth={highlightSeed === '1B' ? 2.8 : 2}
                 strokeLinejoin="round"
               />
               <path
                 d="M 236 345 H 261 V 301"
-                stroke={highlightSeed === '2A' ? '#EA580C' : '#CBD5E1'}
+                stroke={highlightSeed === '2A' ? '#EA580C' : '#475569'}
                 strokeWidth={highlightSeed === '2A' ? 2.8 : 2}
                 strokeLinejoin="round"
               />
-
-              {/* Branch 3: Semi 1 (y=101) & Semi 2 (y=301) -> Final (y=201) */}
               <path
                 d="M 506 101 H 531 V 201 H 556"
                 stroke={
-                  semi1?.winnerSide || highlightSeed === 'W-BK1' ? '#EA580C' : '#94A3B8'
+                  semi1?.winnerSide || highlightSeed === 'W-BK1' ? '#EA580C' : '#64748B'
                 }
                 strokeWidth={2.4}
                 strokeLinejoin="round"
@@ -526,29 +514,20 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
               <path
                 d="M 506 301 H 531 V 201"
                 stroke={
-                  semi2?.winnerSide || highlightSeed === 'W-BK2' ? '#EA580C' : '#94A3B8'
+                  semi2?.winnerSide || highlightSeed === 'W-BK2' ? '#EA580C' : '#64748B'
                 }
                 strokeWidth={2.4}
                 strokeLinejoin="round"
               />
-
-              {/* Branch 4: Final (y=201) -> Champion Card (y=201) */}
-              <path
-                d="M 776 201 H 812"
-                stroke="#EA580C"
-                strokeWidth={2.6}
-              />
-
-              {/* Branch 5: Third Place (y=358) -> Bronze Card (y=358) */}
+              <path d="M 776 201 H 812" stroke="#EA580C" strokeWidth={2.6} />
               <path
                 d="M 776 358 H 812"
-                stroke="#CBD5E1"
+                stroke="#475569"
                 strokeWidth={2}
                 strokeDasharray="4 4"
               />
             </svg>
 
-            {/* LEVEL 1: Quarterfinals (if 4 QFs exist) OR 4 Seeded Branch Leaves */}
             {hasQuarterfinals ? (
               <>
                 {renderQuarterfinalNode(quarterfinals[0], 'Tứ kết 1', 16)}
@@ -565,7 +544,6 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
               </>
             )}
 
-            {/* LEVEL 2: Semifinals */}
             {renderMatchTreeCard(
               semi1,
               'Bán kết 1',
@@ -592,8 +570,6 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
               220,
               114,
             )}
-
-            {/* LEVEL 3: Grand Final & Third Place */}
             {renderMatchTreeCard(
               finalMatch,
               'Chung kết',
@@ -607,7 +583,6 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
               220,
               122,
             )}
-
             {renderMatchTreeCard(
               thirdPlaceMatch,
               'Tranh Hạng Ba',
@@ -622,29 +597,28 @@ export const Bracket2DDiagram: React.FC<Bracket2DDiagramProps> = ({
               116,
             )}
 
-            {/* LEVEL 4: Champion & Bronze Honors */}
             <div
               style={{ left: '812px', top: '155px', width: '136px', height: '92px' }}
-              className="absolute rounded-xl border border-amber-400 bg-amber-50/70 p-2.5 flex flex-col items-center justify-center text-center gap-1"
+              className="absolute rounded-xl border border-amber-500/60 bg-amber-950/40 p-2.5 flex flex-col items-center justify-center text-center gap-1"
             >
               <div className="w-7 h-7 rounded-lg bg-orange-600 text-white flex items-center justify-center shrink-0">
                 <Crown className="w-4 h-4" />
               </div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-orange-700">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300">
                 Vô địch
               </div>
-              <div className="text-[11px] font-extrabold text-slate-900 truncate w-full">
+              <div className="text-[11px] font-extrabold text-white truncate w-full">
                 {championName}
               </div>
             </div>
 
             <div
               style={{ left: '812px', top: '320px', width: '136px', height: '76px' }}
-              className="absolute rounded-xl border border-slate-200 bg-white p-2.5 flex flex-col items-center justify-center text-center gap-1"
+              className="absolute rounded-xl border border-slate-700 bg-slate-900 p-2.5 flex flex-col items-center justify-center text-center gap-1"
             >
-              <Award className="w-4 h-4 text-amber-700 shrink-0" />
-              <div className="text-[10px] font-semibold text-slate-500">Hạng Ba</div>
-              <div className="text-[11px] font-bold text-slate-900 truncate w-full">
+              <Award className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="text-[10px] font-semibold text-slate-400">Hạng Ba</div>
+              <div className="text-[11px] font-bold text-white truncate w-full">
                 {bronzeName}
               </div>
             </div>
