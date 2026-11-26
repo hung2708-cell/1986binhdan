@@ -128,14 +128,17 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
     setCollapsedGroups((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
   };
 
+  const baseBracketWidth = 780;
+  const scaledBracketWidth = Math.round(baseBracketWidth * zoomScale);
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       {/* Thanh lọc nội dung & thao tác xếp lịch */}
-      <section className={`border rounded-2xl p-4 sm:p-5 space-y-4 ${cardSurface}`}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+      <section className={`border rounded-2xl p-3.5 sm:p-5 space-y-3.5 ${cardSurface}`}>
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <div
-              className={`inline-flex rounded-xl p-1 border ${
+              className={`inline-flex rounded-xl p-1 border shrink-0 ${
                 isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
               }`}
             >
@@ -148,7 +151,7 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
                   key={tab.id}
                   type="button"
                   onClick={() => setCompFilter(tab.id as 'all' | 'doubles' | 'team')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${
                     compFilter === tab.id
                       ? 'bg-orange-600 text-white'
                       : isDark
@@ -172,7 +175,7 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
                       setSelectedDivision(div);
                       setSelectedGroup('all');
                     }}
-                    className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
+                    className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors whitespace-nowrap ${
                       active
                         ? 'bg-orange-600 text-white border-orange-600'
                         : isDark
@@ -188,18 +191,18 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
           </div>
 
           {isAdmin && activeDivision && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
               {tournament.format !== 'round_robin' && (
                 <button
                   type="button"
                   onClick={() => onSyncKnockoutFromGroups(activeDivision)}
-                  className={`min-h-[38px] px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors inline-flex items-center gap-1.5 ${
+                  className={`min-h-[38px] px-3 py-2 rounded-xl text-xs font-bold border transition-colors inline-flex items-center gap-1.5 whitespace-nowrap ${
                     isDark
                       ? 'bg-slate-950 hover:bg-slate-800 text-amber-300 border-slate-700'
                       : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300'
                   }`}
                 >
-                  <Trophy className="w-4 h-4 text-amber-500" />
+                  <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
                   <span>Cập nhật nhánh Knockout</span>
                 </button>
               )}
@@ -207,9 +210,9 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
               <button
                 type="button"
                 onClick={() => onGenerateSchedule(activeDivision)}
-                className="min-h-[38px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                className="min-h-[38px] px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition-colors inline-flex items-center gap-1.5 whitespace-nowrap"
               >
-                <Shuffle className="w-4 h-4" />
+                <Shuffle className="w-4 h-4 shrink-0" />
                 <span>
                   Chia bảng & Xếp lịch ({divRegistrations.length} đội)
                 </span>
@@ -219,11 +222,11 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
         </div>
 
         {groupNames.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             <button
               type="button"
               onClick={() => setSelectedGroup('all')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold border ${
+              className={`px-3 py-1 rounded-lg text-xs font-bold border whitespace-nowrap ${
                 selectedGroup === 'all'
                   ? 'bg-orange-600 text-white border-orange-600'
                   : isDark
@@ -238,7 +241,7 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
                 key={g}
                 type="button"
                 onClick={() => setSelectedGroup(g)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold border ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold border whitespace-nowrap ${
                   selectedGroup === g
                     ? 'bg-orange-600 text-white border-orange-600'
                     : isDark
@@ -267,7 +270,7 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {groupNames
                 .filter((g) => selectedGroup === 'all' || g === selectedGroup)
                 .map((gName) => {
@@ -370,11 +373,11 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
 
       {/* Nội dung Lịch thi đấu vòng bảng */}
       {mode === 'schedule' && (
-        <section className={`border rounded-2xl p-4 sm:p-5 space-y-4 ${cardSurface}`}>
+        <section className={`border rounded-2xl p-3.5 sm:p-5 space-y-4 ${cardSurface}`}>
           <div className="flex items-center justify-between gap-2">
             <div>
               <h2 className="font-display text-base sm:text-lg font-bold uppercase tracking-tight flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-orange-500" />
+                <Calendar className="w-4 h-4 text-orange-500 shrink-0" />
                 <span>LỊCH THI ĐẤU VÒNG BẢNG · {activeDivision || 'NỘI DUNG'}</span>
               </h2>
               <p className={`text-xs ${mutedText}`}>
@@ -392,7 +395,7 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
               {groupMatches.map((m) => (
                 <div
                   key={m.id}
-                  className={`border rounded-xl p-3.5 space-y-2.5 ${subSurface}`}
+                  className={`border rounded-xl p-3.5 space-y-2.5 min-w-0 ${subSurface}`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-2 font-mono-num">
@@ -434,7 +437,7 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
                       isDark ? 'border-slate-800' : 'border-slate-200'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <label className={mutedText}>Sân:</label>
                       <select
                         disabled={!isAdmin}
@@ -476,7 +479,7 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
                     <button
                       type="button"
                       onClick={() => onOpenRefereeForMatch(m.id)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-orange-600 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-orange-600 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors whitespace-nowrap"
                     >
                       <Play className="w-3 h-3" />
                       <span>Vào sân</span>
@@ -491,11 +494,11 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
 
       {/* Sơ đồ cây nhánh đấu Knockout */}
       {tournament.format !== 'round_robin' && (
-        <section className={`border rounded-2xl p-4 sm:p-5 space-y-4 ${cardSurface}`}>
+        <section className={`border rounded-2xl p-3.5 sm:p-5 space-y-4 ${cardSurface}`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-base sm:text-lg font-bold uppercase tracking-tight flex items-center gap-2">
-                <GitBranch className="w-4 h-4 text-orange-500" />
+                <GitBranch className="w-4 h-4 text-orange-500 shrink-0" />
                 <span>SƠ ĐỒ CÂY NHÁNH ĐẤU · {activeDivision || 'NỘI DUNG'}</span>
               </h2>
               <p className={`text-xs ${mutedText}`}>
@@ -503,7 +506,7 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
               </p>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setZoomScale((z) => Math.max(0.75, Number((z - 0.1).toFixed(2))))}
@@ -521,7 +524,7 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
               </span>
               <button
                 type="button"
-                onClick={() => setZoomScale((z) => Math.min(1.35, Number((z + 0.1).toFixed(2))))}
+                onClick={() => setZoomScale((z) => Math.min(1.25, Number((z + 0.1).toFixed(2))))}
                 className={`p-2 rounded-lg border ${
                   isDark
                     ? 'bg-slate-950 border-slate-700 text-slate-200 hover:bg-slate-800'
@@ -535,9 +538,9 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
                 <button
                   type="button"
                   onClick={() => onSyncKnockoutFromGroups(activeDivision)}
-                  className="min-h-[34px] px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5"
+                  className="min-h-[34px] px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className="w-3.5 h-3.5 shrink-0" />
                   <span>Đồng bộ nhánh</span>
                 </button>
               )}
@@ -545,13 +548,17 @@ export const ScheduleAndStandingsView: React.FC<ScheduleAndStandingsViewProps> =
           </div>
 
           <div
-            className={`border rounded-2xl p-4 overflow-x-auto ${
+            className={`border rounded-2xl p-3 sm:p-4 overflow-x-auto ${
               isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
             }`}
           >
             <div
-              style={{ transform: `scale(${zoomScale})`, transformOrigin: 'top left' }}
-              className="min-w-[780px] grid grid-cols-12 gap-4 items-center"
+              style={{
+                width: `${scaledBracketWidth}px`,
+                transform: `scale(${zoomScale})`,
+                transformOrigin: 'top left',
+              }}
+              className="grid grid-cols-12 gap-3.5 items-center"
             >
               {/* Cột 1: Đội vào nhánh */}
               <div className="col-span-3 space-y-3">
