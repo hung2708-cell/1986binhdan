@@ -8,7 +8,6 @@ import {
   ArrowLeftRight,
   Award,
   CheckCircle2,
-  ClipboardCheck,
   Clock,
   Flag,
   Gavel,
@@ -18,7 +17,6 @@ import {
   RefreshCw,
   RotateCcw,
   Shuffle,
-  Sparkles,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -30,11 +28,7 @@ import {
   type TeamLineupSlot,
   type Tournament,
 } from '../types/tournament';
-import {
-  formatScoreCallout,
-  isTeamDivision,
-  toggleServeAndSide,
-} from '../utils/pickleballEngine';
+import { formatScoreCallout, isTeamDivision } from '../utils/pickleballEngine';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -59,8 +53,14 @@ function getDefaultLineupSlots(match: Match): TeamLineupSlot[] {
   if (Array.isArray(match.teamLineupSlots) && match.teamLineupSlots.length > 0) {
     return match.teamLineupSlots;
   }
-  const aParts = (match.teamAName || '').split('/').map((s) => s.trim()).filter(Boolean);
-  const bParts = (match.teamBName || '').split('/').map((s) => s.trim()).filter(Boolean);
+  const aParts = (match.teamAName || '')
+    .split('/')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const bParts = (match.teamBName || '')
+    .split('/')
+    .map((s) => s.trim())
+    .filter(Boolean);
   const a1 = match.teamAPlayer1 || aParts[0] || 'VĐV A1';
   const a2 = match.teamAPlayer2 || aParts[1] || 'VĐV A2';
   const b1 = match.teamBPlayer1 || bParts[0] || 'VĐV B1';
@@ -189,9 +189,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
   const requireStaffAction = (reason: string, action: () => void) => {
     if (!isStaff) {
-      if (onRequestLogin) {
-        onRequestLogin(reason);
-      }
+      onRequestLogin?.(reason);
       return;
     }
     action();
@@ -199,9 +197,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
   const requireAdminAction = (reason: string, action: () => void) => {
     if (!isAdmin) {
-      if (onRequestLogin) {
-        onRequestLogin(reason);
-      }
+      onRequestLogin?.(reason);
       return;
     }
     action();
@@ -322,35 +318,32 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   };
 
   const handleToggleServe = () => {
-  if (!activeMatch) return;
-  requireStaffAction(
-    'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đổi lượt giao bóng.',
-    () => {
-      const currentServer = activeMatch.serverNumber || 2;
-      if (activeMatch.scoringMode === 'rally') {
-        const nextServingTeam = activeMatch.servingTeam === 'A' ? 'B' : 'A';
-        onUpdateMatch(activeMatch.id, {
-          servingTeam: nextServingTeam,
-          serverNumber: 1,
-        });
-        return;
-      }
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đổi lượt giao bóng.',
+      () => {
+        const currentServer = activeMatch.serverNumber || 2;
+        if (activeMatch.scoringMode === 'rally') {
+          const nextServingTeam = activeMatch.servingTeam === 'A' ? 'B' : 'A';
+          onUpdateMatch(activeMatch.id, {
+            servingTeam: nextServingTeam,
+            serverNumber: 1,
+          });
+          return;
+        }
 
-      // Luật truyền thống (side-out): Người 1 -> Người 2 -> đổi đội giao (Người 2)
-      if (currentServer === 1) {
-        onUpdateMatch(activeMatch.id, {
-          serverNumber: 2,
-        });
-      } else {
-        const nextServingTeam = activeMatch.servingTeam === 'A' ? 'B' : 'A';
-        onUpdateMatch(activeMatch.id, {
-          servingTeam: nextServingTeam,
-          serverNumber: 2,
-        });
-      }
-    },
-  );
-};
+        if (currentServer === 1) {
+          onUpdateMatch(activeMatch.id, { serverNumber: 2 });
+        } else {
+          const nextServingTeam = activeMatch.servingTeam === 'A' ? 'B' : 'A';
+          onUpdateMatch(activeMatch.id, {
+            servingTeam: nextServingTeam,
+            serverNumber: 2,
+          });
+        }
+      },
+    );
+  };
 
   const handleSwitchCourtEnds = () => {
     if (!activeMatch) return;
@@ -372,9 +365,13 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để bấm Timeout hội ý.',
       () => {
         if (side === 'A') {
-          onUpdateMatch(activeMatch.id, { timeoutsA: activeMatch.timeoutsA >= 2 ? 0 : activeMatch.timeoutsA + 1 });
+          onUpdateMatch(activeMatch.id, {
+            timeoutsA: activeMatch.timeoutsA >= 2 ? 0 : activeMatch.timeoutsA + 1,
+          });
         } else {
-          onUpdateMatch(activeMatch.id, { timeoutsB: activeMatch.timeoutsB >= 2 ? 0 : activeMatch.timeoutsB + 1 });
+          onUpdateMatch(activeMatch.id, {
+            timeoutsB: activeMatch.timeoutsB >= 2 ? 0 : activeMatch.timeoutsB + 1,
+          });
         }
       },
     );
@@ -502,7 +499,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để phát thông báo gọi VĐV vào sân.',
       () => {
         onAnnounceCourtCall(activeMatch);
-        setDrawNotice(`Đã phát thông báo gọi VĐV vào Sân ${activeMatch.courtNumber} cho Trận #${activeMatch.matchNumber}.`);
+        setDrawNotice(
+          `Đã phát thông báo gọi VĐV vào Sân ${activeMatch.courtNumber} cho Trận #${activeMatch.matchNumber}.`,
+        );
       },
     );
   };
@@ -517,7 +516,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         } else {
           onAnnounceCourtCall(activeMatch);
         }
-        setDrawNotice(`Đã báo Sân ${activeMatch.courtNumber} trống và gửi thông báo mời VĐV trận tiếp theo vào sân.`);
+        setDrawNotice(
+          `Đã báo Sân ${activeMatch.courtNumber} trống và gửi thông báo mời VĐV trận tiếp theo vào sân.`,
+        );
       },
     );
   };
@@ -539,7 +540,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 }
               : slot,
           );
-          const nextUnfinished = nextSlots.find((s) => !s.completed && s.slotOrder !== activeSlotOrder);
+          const nextUnfinished = nextSlots.find(
+            (s) => !s.completed && s.slotOrder !== activeSlotOrder,
+          );
           if (nextUnfinished) {
             onUpdateMatch(activeMatch.id, {
               status: 'live',
@@ -603,9 +606,11 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const serverNum = activeMatch.serverNumber || 2;
   const isOddScore = (activeMatch.scoreA + activeMatch.scoreB) % 2 !== 0;
 
-  const leftIsServing = (leftSideIsA && servingSide === 'A') || (!leftSideIsA && servingSide === 'B');
+  const leftIsServing =
+    (leftSideIsA && servingSide === 'A') || (!leftSideIsA && servingSide === 'B');
   const rightIsServing = !leftIsServing;
 
+  // Chuẩn Pickleball: điểm chẵn giao ô Phải, điểm lẻ giao ô Trái (theo góc nhìn người giao)
   const leftTopServing = leftIsServing && (serverNum === 1 ? !isOddScore : isOddScore);
   const leftBottomServing = leftIsServing && !leftTopServing;
   const rightTopServing = rightIsServing && (serverNum === 1 ? isOddScore : !isOddScore);
@@ -619,6 +624,21 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     servingSide === 'A'
       ? activeMatch.teamBPlayer1 || activeMatch.teamBName
       : activeMatch.teamAPlayer1 || activeMatch.teamAName;
+
+  // Tọa độ mũi tên giao chéo trên SVG viewBox 600x260
+  const arrowCoords = leftIsServing
+    ? {
+        x1: 112,
+        y1: leftTopServing ? 65 : 195,
+        x2: 488,
+        y2: leftTopServing ? 195 : 65,
+      }
+    : {
+        x1: 488,
+        y1: rightTopServing ? 65 : 195,
+        x2: 112,
+        y2: rightTopServing ? 195 : 65,
+      };
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -730,11 +750,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         )}
       </section>
 
-      {/* MAIN CONSOLE GRID: Left (Match Selector + 4 Action Buttons + 3D Court) | Right (Scoreboard) */}
+      {/* MAIN CONSOLE GRID */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
-        {/* LEFT COLUMN */}
+        {/* LEFT COLUMN: MATCH SELECTOR + 4 ACTION BUTTONS + STANDARD 3D PICKLEBALL COURT */}
         <div className="lg:col-span-6 space-y-3.5">
-          {/* Match Selector + 4 Core Court Buttons */}
           <div className={`border rounded-2xl p-3 sm:p-4 space-y-3 ${surfaceCard}`}>
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-1.5 font-bold text-orange-500">
@@ -772,7 +791,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               ))}
             </select>
 
-            {/* 4 Primary Action Buttons: 2x2 on Portrait Mobile, Row on Tablet/Desktop & Landscape */}
+            {/* 4 Core Court Buttons: 2x2 on Portrait Mobile, 4-Col Row on Tablet/Desktop & Landscape */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
@@ -845,7 +864,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
             )}
 
-            {/* Lineup Editor Drawer when "Thay VĐV" is opened */}
+            {/* Lineup Editor Drawer */}
             {showLineupEditor && (
               <form
                 onSubmit={handleSaveLineup}
@@ -855,7 +874,8 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-bold">
-                    Cập nhật / Thay đổi VĐV ra sân ({activeMatch.teamSubCategory || activeMatch.division})
+                    Cập nhật / Thay đổi VĐV ra sân (
+                    {activeMatch.teamSubCategory || activeMatch.division})
                   </span>
                   <button
                     type="button"
@@ -1009,187 +1029,225 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             )}
           </div>
 
-          {/* 3D PICKLEBALL COURT DIAGRAM */}
+          {/* STANDARD 3D PICKLEBALL COURT DIAGRAM (MOBILE OPTIMIZED) */}
           <div className={`border rounded-2xl p-3 sm:p-4 space-y-2.5 ${surfaceCard}`}>
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="font-mono-num font-extrabold uppercase">
+            {/* Court Header Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-mono-num font-extrabold tracking-tight uppercase">
                   SÂN 3D #{activeMatch.courtNumber} · {isOddScore ? 'LẺ' : 'CHẴN'} · N{serverNum}
                 </span>
-                <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[10px] font-extrabold">
+                <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-extrabold">
                   Phát
                 </span>
-                <span className="px-2 py-0.5 rounded-md bg-cyan-400 text-slate-950 text-[10px] font-extrabold">
+                <span className="px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 text-[10px] font-extrabold">
                   Đỡ
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold">
-                <span className="px-2 py-0.5 rounded-md bg-orange-500/15 text-orange-500 truncate max-w-[115px]">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 truncate max-w-[110px]">
                   T: {serverDisplayName}
                 </span>
-                <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-500 truncate max-w-[115px]">
+                <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-500 truncate max-w-[110px]">
                   P: {receiverDisplayName}
                 </span>
               </div>
             </div>
 
-            <div className="relative rounded-2xl overflow-hidden border border-emerald-900/40 bg-gradient-to-b from-emerald-700 to-emerald-800 p-2 sm:p-3 shadow-inner max-h-[42vh] sm:max-h-none">
-              <div className="relative w-full aspect-[16/9] max-h-[36vh] sm:max-h-[260px] mx-auto rounded-xl border-2 border-white/95 bg-emerald-600/90 grid grid-cols-12 overflow-hidden select-none">
-                {/* Left Service Boxes */}
-                <div className="col-span-3 grid grid-rows-2 border-r-2 border-white/95">
-                  <div
-                    className={`p-1.5 sm:p-2 border-b border-white/80 flex items-center justify-between gap-1 ${
-                      leftTopServing ? 'bg-amber-300/25' : ''
-                    }`}
-                  >
-                    <span
-                      className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate ${
-                        leftTopServing
-                          ? 'bg-amber-400 text-slate-950 shadow-xs'
-                          : leftIsServing
-                          ? 'bg-sky-500/90 text-white'
-                          : 'bg-slate-900/75 text-white'
+            {/* 3D Perspective Court Container */}
+            <div
+              className={`relative rounded-xl border p-2 sm:p-2.5 overflow-hidden ${
+                isDark
+                  ? 'bg-slate-950/90 border-slate-800'
+                  : 'bg-slate-900 border-slate-800'
+              }`}
+            >
+              {/* Outer Apron / Surrounds with subtle 3D tilt */}
+              <div
+                className="relative w-full max-h-[34vh] sm:max-h-[245px] aspect-[22/10] mx-auto rounded-lg bg-[#166534] border-[2.5px] border-white shadow-[0_10px_24px_rgba(0,0,0,0.45)] overflow-hidden select-none"
+                style={{
+                  transform: 'perspective(900px) rotateX(8deg)',
+                  transformOrigin: 'center bottom',
+                }}
+              >
+                {/* Court Layout Grid: Left Service (3) | Left NVZ 7ft (2) | Net (2) | Right NVZ 7ft (2) | Right Service (3) */}
+                <div className="w-full h-full grid grid-cols-12">
+                  {/* LEFT HALF: TOP & BOTTOM SERVICE COURTS */}
+                  <div className="col-span-3 grid grid-rows-2 border-r-2 border-white">
+                    {/* Left Top Box */}
+                    <div
+                      className={`relative px-1.5 py-1 border-b border-white/90 flex items-center justify-start transition-colors ${
+                        leftTopServing ? 'bg-amber-400/25' : 'bg-[#15803d]/60'
                       }`}
                     >
-                      {pLeftTop}
-                      {leftTopServing ? ' · PHÁT' : ''}
+                      <span
+                        style={{ fontSize: 'clamp(9.5px, 2.3vw, 12px)' }}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold leading-tight truncate max-w-full shadow-xs ${
+                          leftTopServing
+                            ? 'bg-amber-400 text-slate-950 ring-2 ring-white/90'
+                            : leftIsServing
+                            ? 'bg-cyan-500/95 text-slate-950'
+                            : 'bg-slate-950/75 text-white'
+                        }`}
+                      >
+                        <span className="truncate">{pLeftTop}</span>
+                        {leftTopServing && <span className="text-[9px] font-black shrink-0">· PHÁT</span>}
+                      </span>
+                    </div>
+
+                    {/* Left Bottom Box */}
+                    <div
+                      className={`relative px-1.5 py-1 flex items-center justify-start transition-colors ${
+                        leftBottomServing ? 'bg-amber-400/25' : 'bg-[#15803d]/60'
+                      }`}
+                    >
+                      <span
+                        style={{ fontSize: 'clamp(9.5px, 2.3vw, 12px)' }}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold leading-tight truncate max-w-full shadow-xs ${
+                          leftBottomServing
+                            ? 'bg-amber-400 text-slate-950 ring-2 ring-white/90'
+                            : leftIsServing
+                            ? 'bg-cyan-500/95 text-slate-950'
+                            : 'bg-slate-950/75 text-white'
+                        }`}
+                      >
+                        <span className="truncate">{pLeftBottom}</span>
+                        {leftBottomServing && (
+                          <span className="text-[9px] font-black shrink-0">· PHÁT</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* LEFT NON-VOLLEY ZONE (NVZ / KITCHEN 7FT) */}
+                  <div className="col-span-2 border-r-2 border-white bg-[#14532d]/85 flex items-center justify-center relative">
+                    <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-white/80 -rotate-90 whitespace-nowrap">
+                      NVZ 7FT
                     </span>
                   </div>
 
-                  <div
-                    className={`p-1.5 sm:p-2 flex items-center justify-between gap-1 ${
-                      leftBottomServing ? 'bg-amber-300/25' : ''
-                    }`}
-                  >
-                    <span
-                      className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate ${
-                        leftBottomServing
-                          ? 'bg-amber-400 text-slate-950 shadow-xs'
-                          : leftIsServing
-                          ? 'bg-sky-500/90 text-white'
-                          : 'bg-slate-900/75 text-white'
-                      }`}
-                    >
-                      {pLeftBottom}
-                      {leftBottomServing ? ' · PHÁT' : ''}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Left Non-Volley Zone (Kitchen 7FT) */}
-                <div className="col-span-2 border-r-2 border-white/95 bg-emerald-700/45 flex items-center justify-center">
-                  <span className="text-[10px] font-extrabold tracking-widest text-white/75 -rotate-90 whitespace-nowrap">
-                    NVZ 7FT
-                  </span>
-                </div>
-
-                {/* Center Net Line */}
-                <div className="col-span-2 relative flex items-center justify-center">
-                  <div className="w-1 h-full bg-slate-950/90 shadow-md" />
-                  <span className="absolute px-1.5 py-0.5 rounded bg-slate-950 text-white text-[9px] font-extrabold tracking-wider">
-                    LƯỚI 3D
-                  </span>
-                </div>
-
-                {/* Right Non-Volley Zone (Kitchen 7FT) */}
-                <div className="col-span-2 border-l-2 border-white/95 bg-emerald-700/45 flex items-center justify-center">
-                  <span className="text-[10px] font-extrabold tracking-widest text-white/75 rotate-90 whitespace-nowrap">
-                    NVZ 7FT
-                  </span>
-                </div>
-
-                {/* Right Service Boxes */}
-                <div className="col-span-3 grid grid-rows-2 border-l-2 border-white/95">
-                  <div
-                    className={`p-1.5 sm:p-2 border-b border-white/80 flex items-center justify-end gap-1 ${
-                      rightTopServing ? 'bg-amber-300/25' : ''
-                    }`}
-                  >
-                    <span
-                      className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate ${
-                        rightTopServing
-                          ? 'bg-amber-400 text-slate-950 shadow-xs'
-                          : rightIsServing
-                          ? 'bg-sky-500/90 text-white'
-                          : 'bg-slate-900/75 text-white'
-                      }`}
-                    >
-                      {pRightTop}
-                      {rightTopServing ? ' · PHÁT' : ''}
+                  {/* CENTER NET & POSTS */}
+                  <div className="col-span-2 relative flex items-center justify-center bg-black/15">
+                    {/* Top & Bottom Net Posts */}
+                    <span className="absolute top-0.5 w-2.5 h-2.5 rounded-full bg-slate-200 border border-slate-900 z-20" />
+                    <span className="absolute bottom-0.5 w-2.5 h-2.5 rounded-full bg-slate-200 border border-slate-900 z-20" />
+                    {/* Net Tape */}
+                    <div className="w-[3px] h-full bg-white shadow-[0_0_8px_rgba(0,0,0,0.7)] z-10" />
+                    <span className="z-20 px-1.5 py-0.5 rounded bg-slate-950/90 text-white text-[8px] sm:text-[9px] font-extrabold tracking-wider border border-white/30 whitespace-nowrap">
+                      LƯỚI
                     </span>
                   </div>
 
-                  <div
-                    className={`p-1.5 sm:p-2 flex items-center justify-end gap-1 ${
-                      rightBottomServing ? 'bg-amber-300/25' : ''
-                    }`}
-                  >
-                    <span
-                      className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold truncate ${
-                        rightBottomServing
-                          ? 'bg-amber-400 text-slate-950 shadow-xs'
-                          : rightIsServing
-                          ? 'bg-sky-500/90 text-white'
-                          : 'bg-slate-900/75 text-white'
+                  {/* RIGHT NON-VOLLEY ZONE (NVZ / KITCHEN 7FT) */}
+                  <div className="col-span-2 border-l-2 border-white bg-[#14532d]/85 flex items-center justify-center relative">
+                    <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-white/80 rotate-90 whitespace-nowrap">
+                      NVZ 7FT
+                    </span>
+                  </div>
+
+                  {/* RIGHT HALF: TOP & BOTTOM SERVICE COURTS */}
+                  <div className="col-span-3 grid grid-rows-2 border-l-2 border-white">
+                    {/* Right Top Box */}
+                    <div
+                      className={`relative px-1.5 py-1 border-b border-white/90 flex items-center justify-end transition-colors ${
+                        rightTopServing ? 'bg-amber-400/25' : 'bg-[#15803d]/60'
                       }`}
                     >
-                      {pRightBottom}
-                      {rightBottomServing ? ' · PHÁT' : ''}
-                    </span>
+                      <span
+                        style={{ fontSize: 'clamp(9.5px, 2.3vw, 12px)' }}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold leading-tight truncate max-w-full shadow-xs ${
+                          rightTopServing
+                            ? 'bg-amber-400 text-slate-950 ring-2 ring-white/90'
+                            : rightIsServing
+                            ? 'bg-cyan-500/95 text-slate-950'
+                            : 'bg-slate-950/75 text-white'
+                        }`}
+                      >
+                        <span className="truncate">{pRightTop}</span>
+                        {rightTopServing && (
+                          <span className="text-[9px] font-black shrink-0">· PHÁT</span>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Right Bottom Box */}
+                    <div
+                      className={`relative px-1.5 py-1 flex items-center justify-end transition-colors ${
+                        rightBottomServing ? 'bg-amber-400/25' : 'bg-[#15803d]/60'
+                      }`}
+                    >
+                      <span
+                        style={{ fontSize: 'clamp(9.5px, 2.3vw, 12px)' }}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold leading-tight truncate max-w-full shadow-xs ${
+                          rightBottomServing
+                            ? 'bg-amber-400 text-slate-950 ring-2 ring-white/90'
+                            : rightIsServing
+                            ? 'bg-cyan-500/95 text-slate-950'
+                            : 'bg-slate-950/75 text-white'
+                        }`}
+                      >
+                        <span className="truncate">{pRightBottom}</span>
+                        {rightBottomServing && (
+                          <span className="text-[9px] font-black shrink-0">· PHÁT</span>
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Diagonal Serve Trajectory Arrow */}
+                {/* DIAGONAL SERVE TRAJECTORY OVERLAY */}
                 <svg
-                  viewBox="0 0 400 180"
-                  className="pointer-events-none absolute inset-0 w-full h-full"
+                  viewBox="0 0 600 260"
+                  className="pointer-events-none absolute inset-0 w-full h-full z-10"
                   preserveAspectRatio="none"
                 >
                   <defs>
                     <marker
-                      id="serveArrowHead3D"
-                      markerWidth="7"
-                      markerHeight="7"
-                      refX="5"
-                      refY="3.5"
+                      id="pickleballServeArrow"
+                      markerWidth="8"
+                      markerHeight="8"
+                      refX="6"
+                      refY="4"
                       orient="auto"
                     >
-                      <polygon points="0 0, 7 3.5, 0 7" fill="#FACC15" />
+                      <polygon points="0 0, 8 4, 0 8" fill="#FACC15" />
                     </marker>
                   </defs>
-                  {leftIsServing ? (
-                    <line
-                      x1="75"
-                      y1={leftTopServing ? '45' : '135'}
-                      x2="325"
-                      y2={leftTopServing ? '135' : '45'}
-                      stroke="#FACC15"
-                      strokeWidth="3"
-                      strokeDasharray="6 4"
-                      markerEnd="url(#serveArrowHead3D)"
-                    />
-                  ) : (
-                    <line
-                      x1="325"
-                      y1={rightTopServing ? '45' : '135'}
-                      x2="75"
-                      y2={rightTopServing ? '135' : '45'}
-                      stroke="#FACC15"
-                      strokeWidth="3"
-                      strokeDasharray="6 4"
-                      markerEnd="url(#serveArrowHead3D)"
-                    />
-                  )}
+                  <line
+                    x1={arrowCoords.x1}
+                    y1={arrowCoords.y1}
+                    x2={arrowCoords.x2}
+                    y2={arrowCoords.y2}
+                    stroke="#0F172A"
+                    strokeWidth="5.5"
+                    strokeOpacity="0.45"
+                  />
+                  <line
+                    x1={arrowCoords.x1}
+                    y1={arrowCoords.y1}
+                    x2={arrowCoords.x2}
+                    y2={arrowCoords.y2}
+                    stroke="#FACC15"
+                    strokeWidth="3"
+                    strokeDasharray="7 5"
+                    markerEnd="url(#pickleballServeArrow)"
+                  />
                 </svg>
+              </div>
+
+              {/* Compact Side Legend Strip */}
+              <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-300 px-1">
+                <span className="truncate font-semibold text-amber-300">{leftTeamName}</span>
+                <span className="text-slate-400 shrink-0">Giao chéo sân</span>
+                <span className="truncate font-semibold text-cyan-300 text-right">{rightTeamName}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: LIVE SCOREBOARD + CONTROLS */}
+        {/* RIGHT COLUMN: LIVE SCOREBOARD + MATCH CONTROLS */}
         <div className={`lg:col-span-6 border rounded-2xl p-3 sm:p-4 space-y-3 ${surfaceCard}`}>
-          {/* Top Match Meta & Callout */}
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-1.5 font-mono-num font-bold">
               <span className="px-2 py-0.5 rounded-md bg-orange-500/15 text-orange-500">
@@ -1205,7 +1263,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
           </div>
 
-          {/* Two Team Score Cards (Stack on Narrow Portrait, 2-Col on Wider/Landscape) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {/* LEFT CARD */}
             <div
@@ -1358,7 +1415,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
           </div>
 
-          {/* Serve & Switch Side Row */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -1387,7 +1443,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </button>
           </div>
 
-          {/* Finish Match Row: 2-col on Portrait Mobile, 3-col on Tablet/Desktop */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <button
               type="button"
@@ -1421,7 +1476,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </button>
           </div>
 
-          {/* Secondary Utility Controls */}
           <div className="pt-1 flex flex-wrap items-center justify-between gap-2 text-xs">
             <button
               type="button"
