@@ -78,6 +78,24 @@ const SAMPLE_ATHLETES: Array<{ name: string; gender: AthleteGender; tier: SkillT
   { name: 'Lý Mai Anh', gender: 'Nữ', tier: 'Trình C' },
 ];
 
+const DARK_PANEL_STYLE: React.CSSProperties = {
+  backgroundColor: '#0b101b',
+  color: '#f8fafc',
+  borderColor: '#1e293b',
+};
+
+const DARK_SUBCARD_STYLE: React.CSSProperties = {
+  backgroundColor: '#111827',
+  color: '#f8fafc',
+  borderColor: '#1f2937',
+};
+
+const DARK_INPUT_STYLE: React.CSSProperties = {
+  backgroundColor: '#090d16',
+  color: '#f8fafc',
+  borderColor: '#334155',
+};
+
 function shuffleArray<T>(items: T[]): T[] {
   const arr = [...items];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -100,20 +118,23 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
   const isAdmin = currentAccount?.role === 'admin';
   const isStaff = isAdmin || currentAccount?.role === 'referee';
 
-  // Step 1: Add Division (Doubles or Team)
-  const [compType, setCompType] = useState<'doubles' | 'team'>('team');
+  const [compType, setCompType] = useState<'doubles' | 'team'>('doubles');
   const [newDivisionName, setNewDivisionName] = useState('');
 
-  // Quick add individual male/female athletes
+  const visibleDivisions = useMemo(() => {
+    return tournament.divisions.filter((div) =>
+      compType === 'team' ? isTeamDivision(div, 'team') : !isTeamDivision(div, 'doubles'),
+    );
+  }, [tournament.divisions, compType]);
+
   const [singleGender, setSingleGender] = useState<AthleteGender>('Nam');
   const [singleTier, setSingleTier] = useState<SkillTier>('Trình B');
   const [singleGroup, setSingleGroup] = useState<string>('Bảng A');
   const [singleAthleteName, setSingleAthleteName] = useState<string>('');
   const [rosterAthletes, setRosterAthletes] = useState<IndividualAthlete[]>([]);
 
-  // Step 2: Add Team / Pair & Assign Group
   const [selectedDivision, setSelectedDivision] = useState<string>(
-    tournament.divisions[0] || 'Đồng Đội - Team 1',
+    visibleDivisions[0] || tournament.divisions[0] || 'Đôi Nam',
   );
   const [genderFilter, setGenderFilter] = useState<'Nam' | 'Nữ'>('Nam');
   const [skillTier, setSkillTier] = useState<SkillTier>('Trình B');
@@ -123,16 +144,26 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
   const [squadInput, setSquadInput] = useState('');
   const [targetGroup, setTargetGroup] = useState('Bảng A');
 
-  // Filter for Step 3 list
   const [filterDivision, setFilterDivision] = useState<string>('ALL');
   const [filterGroup, setFilterGroup] = useState<string>('ALL');
 
   const activeDivision = useMemo(() => {
-    if (tournament.divisions.includes(selectedDivision)) return selectedDivision;
-    return tournament.divisions[0] || 'Đồng Đội - Team 1';
-  }, [tournament.divisions, selectedDivision]);
+    if (visibleDivisions.includes(selectedDivision)) return selectedDivision;
+    return visibleDivisions[0] || (compType === 'team' ? 'Đồng Đội - Team 1' : 'Đôi Nam');
+  }, [visibleDivisions, selectedDivision, compType]);
 
   const activeIsTeam = isTeamDivision(activeDivision, compType);
+
+  const handleSwitchCompType = (nextType: 'doubles' | 'team') => {
+    setCompType(nextType);
+    const matching = tournament.divisions.filter((div) =>
+      nextType === 'team' ? isTeamDivision(div, 'team') : !isTeamDivision(div, 'doubles'),
+    );
+    setSelectedDivision(
+      matching[0] || (nextType === 'team' ? 'Đồng Đội - Team 1' : 'Đôi Nam'),
+    );
+    setFilterDivision('ALL');
+  };
 
   const handleCreateDivision = (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,7 +240,6 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
       return;
     }
 
-    // 1. Random lại Bảng A / B / C cho danh sách VĐV lẻ hiện có (nếu chưa có thì lấy danh sách mẫu)
     const sourceAthletes: IndividualAthlete[] =
       rosterAthletes.length > 0
         ? rosterAthletes
@@ -229,9 +259,11 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
     }));
     setRosterAthletes(shuffledAthletes);
 
-    // 2. Random chia đều vào Bảng A / B / C cho các đăng ký hiện có của nội dung đang chọn (hoặc toàn giải)
-    const divRegs = registrations.filter((r) => r.division === activeDivision);
-    const targetRegs = divRegs.length > 0 ? divRegs : registrations;
+    const modeRegs = registrations.filter((r) =>
+      compType === 'team' ? isTeamDivision(r.division, 'team') : !isTeamDivision(r.division, 'doubles'),
+    );
+    const divRegs = modeRegs.filter((r) => r.division === activeDivision);
+    const targetRegs = divRegs.length > 0 ? divRegs : modeRegs;
     if (targetRegs.length > 0) {
       const shuffledRegs = shuffleArray(targetRegs);
       shuffledRegs.forEach((reg, idx) => {
@@ -301,7 +333,6 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
 
     const rosterFromSlots = [player1Name.trim(), player2Name.trim()].filter(Boolean);
     const finalSquad = Array.from(new Set([...rosterFromSlots, ...parsedSquad]));
-
     const resolvedClub = clubName.trim() || `${genderFilter} · ${skillTier}`;
 
     onAddRegistration({
@@ -319,72 +350,109 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
     setSquadInput('');
   };
 
+  const modeFilteredRegistrations = useMemo(() => {
+    return registrations.filter((r) =>
+      compType === 'team' ? isTeamDivision(r.division, 'team') : !isTeamDivision(r.division, 'doubles'),
+    );
+  }, [registrations, compType]);
+
   const availableGroups = useMemo(() => {
     const set = new Set<string>(['Bảng A', 'Bảng B', 'Bảng C', 'Bảng D']);
-    registrations.forEach((r) => {
+    modeFilteredRegistrations.forEach((r) => {
       if (r.groupName) set.add(r.groupName);
     });
     rosterAthletes.forEach((a) => {
       if (a.groupName) set.add(a.groupName);
     });
     return Array.from(set);
-  }, [registrations, rosterAthletes]);
+  }, [modeFilteredRegistrations, rosterAthletes]);
 
   const filteredRegistrations = useMemo(() => {
-    return registrations.filter((r) => {
+    return modeFilteredRegistrations.filter((r) => {
       if (filterDivision !== 'ALL' && r.division !== filterDivision) return false;
       if (filterGroup !== 'ALL' && (r.groupName || 'Chưa xếp bảng') !== filterGroup) return false;
       return true;
     });
-  }, [registrations, filterDivision, filterGroup]);
+  }, [modeFilteredRegistrations, filterDivision, filterGroup]);
 
   const maleCount = rosterAthletes.filter((a) => a.gender === 'Nam').length;
   const femaleCount = rosterAthletes.filter((a) => a.gender === 'Nữ').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-slate-100">
       {/* Banner */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+      <section style={DARK_PANEL_STYLE} className="border rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-orange-600">
+          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-orange-400">
             <Users className="w-4 h-4" />
             <span>QUẢN LÝ VĐV, NỘI DUNG & SẮP XẾP BẢNG THI ĐẤU</span>
           </div>
-          <h1 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">
-            Thêm từng VĐV Nam/Nữ, Đội & Chia 3 Bảng — {tournament.name}
+          <h1 className="font-display text-xl sm:text-2xl font-extrabold text-white mt-0.5">
+            {compType === 'team' ? 'Đồng đội (Ẩn Đôi)' : 'Đôi (Ẩn Đồng đội)'} — {tournament.name}
           </h1>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs font-mono-num">
+          <div style={DARK_SUBCARD_STYLE} className="inline-flex items-center gap-1 border p-1 rounded-lg font-sans">
+            <button
+              type="button"
+              onClick={() => handleSwitchCompType('doubles')}
+              style={
+                compType === 'doubles'
+                  ? { backgroundColor: '#ea580c', color: '#ffffff' }
+                  : { backgroundColor: 'transparent', color: '#cbd5e1' }
+              }
+              className="px-2.5 py-1 rounded-md text-xs font-bold transition-colors"
+            >
+              Đôi
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchCompType('team')}
+              style={
+                compType === 'team'
+                  ? { backgroundColor: '#ea580c', color: '#ffffff' }
+                  : { backgroundColor: 'transparent', color: '#cbd5e1' }
+              }
+              className="px-2.5 py-1 rounded-md text-xs font-bold transition-colors"
+            >
+              Đồng đội
+            </button>
+          </div>
+
           {isAdmin && (
             <button
               type="button"
               onClick={handleRandomizeThreeGroups}
-              className="min-h-[34px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-600 text-white font-sans font-bold inline-flex items-center gap-1.5 transition-colors"
+              style={{ backgroundColor: '#ea580c', color: '#ffffff' }}
+              className="min-h-[34px] px-3 py-1.5 rounded-lg font-sans font-bold inline-flex items-center gap-1.5 transition-colors"
             >
               <Shuffle className="w-3.5 h-3.5" />
               <span>Random 3 bảng (A/B/C)</span>
             </button>
           )}
-          <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 font-bold border border-blue-200">
+          <span style={DARK_SUBCARD_STYLE} className="px-3 py-1.5 rounded-lg border text-sky-300 font-bold">
             Nam: {maleCount}
           </span>
-          <span className="px-3 py-1.5 rounded-lg bg-pink-50 text-pink-800 font-bold border border-pink-200">
+          <span style={DARK_SUBCARD_STYLE} className="px-3 py-1.5 rounded-lg border text-pink-300 font-bold">
             Nữ: {femaleCount}
           </span>
-          <span className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-800 font-bold">
-            Tổng đội: {registrations.length}
+          <span style={DARK_SUBCARD_STYLE} className="px-3 py-1.5 rounded-lg border text-slate-200 font-bold">
+            Tổng đội: {modeFilteredRegistrations.length}
           </span>
-          <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-            Check-in: {registrations.filter((r) => r.checkedIn).length}/{registrations.length}
+          <span style={DARK_SUBCARD_STYLE} className="px-3 py-1.5 rounded-lg border text-emerald-400 font-bold">
+            Check-in: {modeFilteredRegistrations.filter((r) => r.checkedIn).length}/{modeFilteredRegistrations.length}
           </span>
         </div>
       </section>
 
       {!isAdmin && (
-        <section className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 text-xs text-amber-950">
-            <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+        <section
+          style={{ backgroundColor: '#1f1608', borderColor: '#854d0e', color: '#fef08a' }}
+          className="border rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-2.5 text-xs">
+            <Lock className="w-4 h-4 text-amber-400 shrink-0" />
             <span>
               <strong>Chế độ xem / Trọng tài:</strong> Chỉ tài khoản{' '}
               <strong>Ban Tổ Chức (Admin)</strong> mới có quyền thêm từng VĐV Nam/Nữ, tạo nội dung
@@ -398,7 +466,8 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                 'Vui lòng đăng nhập tài khoản Ban Tổ Chức (Admin) để quản lý VĐV và sắp xếp bảng.',
               )
             }
-            className="min-h-[36px] px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold"
+            style={{ backgroundColor: '#ea580c', color: '#ffffff' }}
+            className="min-h-[36px] px-3.5 py-1.5 rounded-lg text-xs font-bold"
           >
             Đăng nhập Admin
           </button>
@@ -406,53 +475,54 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left column: Step 1 + Step 2 */}
         <div className="lg:col-span-5 space-y-5">
-          {/* STEP 1: Add Division */}
+          {/* STEP 1 */}
           <form
             onSubmit={handleCreateDivision}
-            className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4"
+            style={DARK_PANEL_STYLE}
+            className="border rounded-2xl p-4 sm:p-5 space-y-4"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FolderPlus className="w-4 h-4 text-orange-600" />
-                <h2 className="font-display text-sm sm:text-base font-bold uppercase text-slate-900">
-                  1. THÊM NỘI DUNG THI ĐẤU (ĐÔI / ĐỒNG ĐỘI)
+                <FolderPlus className="w-4 h-4 text-orange-500" />
+                <h2 className="font-display text-sm sm:text-base font-bold uppercase text-white">
+                  1. THÊM NỘI DUNG ({compType === 'team' ? 'ĐỒNG ĐỘI' : 'ĐÔI'})
                 </h2>
               </div>
               {isAdmin && (
-                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                <span
+                  style={{ backgroundColor: '#064e3b', color: '#6ee7b7', borderColor: '#047857' }}
+                  className="text-[11px] font-semibold border px-2 py-0.5 rounded-md inline-flex items-center gap-1"
+                >
                   <ShieldCheck className="w-3.5 h-3.5" /> Admin
                 </span>
               )}
             </div>
 
-            <p className="text-xs text-slate-500">
-              Chọn hình thức Đôi hoặc Đồng đội và nhập tên nội dung mới.
-            </p>
-
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setCompType('doubles')}
-                className={`min-h-[38px] rounded-xl text-xs font-bold transition-colors ${
+                onClick={() => handleSwitchCompType('doubles')}
+                style={
                   compType === 'doubles'
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
+                    ? { backgroundColor: '#ea580c', color: '#ffffff' }
+                    : DARK_SUBCARD_STYLE
+                }
+                className="min-h-[38px] rounded-xl border text-xs font-bold transition-colors"
               >
-                Nội dung Đôi
+                Đôi (Ẩn Đồng đội)
               </button>
               <button
                 type="button"
-                onClick={() => setCompType('team')}
-                className={`min-h-[38px] rounded-xl text-xs font-bold transition-colors ${
+                onClick={() => handleSwitchCompType('team')}
+                style={
                   compType === 'team'
-                    ? 'bg-orange-600 text-white'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
+                    ? { backgroundColor: '#ea580c', color: '#ffffff' }
+                    : DARK_SUBCARD_STYLE
+                }
+                className="min-h-[38px] rounded-xl border text-xs font-bold transition-colors"
               >
-                Nội dung Đồng đội
+                Đồng đội (Ẩn Đôi)
               </button>
             </div>
 
@@ -461,16 +531,18 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                 type="text"
                 value={newDivisionName}
                 onChange={(e) => setNewDivisionName(e.target.value)}
+                style={DARK_INPUT_STYLE}
                 placeholder={
                   compType === 'team'
                     ? 'VD: Đồng Đội CLB 1986'
                     : 'VD: Đôi Nam Nữ 4.5'
                 }
-                className="flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                className="flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border rounded-lg"
               />
               <button
                 type="submit"
-                className="min-h-[38px] px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-600 text-white text-xs font-bold inline-flex items-center gap-1 shrink-0 transition-colors"
+                style={{ backgroundColor: '#ea580c', color: '#ffffff' }}
+                className="min-h-[38px] px-3.5 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Thêm
@@ -478,16 +550,17 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
             </div>
 
             <div className="flex flex-wrap gap-1.5 pt-1">
-              {tournament.divisions.map((div) => (
+              {visibleDivisions.map((div) => (
                 <button
                   key={div}
                   type="button"
                   onClick={() => setSelectedDivision(div)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${
+                  style={
                     activeDivision === div
-                      ? 'bg-orange-50 text-orange-800 border-orange-300'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
+                      ? { backgroundColor: '#431407', color: '#fdba74', borderColor: '#f97316' }
+                      : DARK_SUBCARD_STYLE
+                  }
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors"
                 >
                   {div}
                 </button>
@@ -495,23 +568,25 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
             </div>
           </form>
 
-          {/* STEP 2: Add Individual Male/Female Athletes + Random 3 Groups */}
+          {/* STEP 2 */}
           <form
             onSubmit={handleSubmitRegistration}
-            className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4"
+            style={DARK_PANEL_STYLE}
+            className="border rounded-2xl p-4 sm:p-5 space-y-4"
           >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <UserPlus className="w-4 h-4 text-orange-600" />
-                <h2 className="font-display text-sm sm:text-base font-bold uppercase text-slate-900">
-                  2. NHẬP TỪNG VĐV NAM / NỮ & RANDOM 3 BẢNG
+                <UserPlus className="w-4 h-4 text-orange-500" />
+                <h2 className="font-display text-sm sm:text-base font-bold uppercase text-white">
+                  2. NHẬP VĐV NAM / NỮ & RANDOM 3 BẢNG
                 </h2>
               </div>
               {isAdmin && (
                 <button
                   type="button"
                   onClick={handleRandomizeThreeGroups}
-                  className="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200 text-[11px] font-extrabold inline-flex items-center gap-1 shrink-0"
+                  style={{ backgroundColor: '#1e293b', color: '#fb923c', borderColor: '#334155' }}
+                  className="px-2.5 py-1 rounded-lg border text-[11px] font-extrabold inline-flex items-center gap-1 shrink-0"
                 >
                   <Shuffle className="w-3 h-3" />
                   Random 3 bảng
@@ -520,30 +595,34 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Nội dung thi đấu *
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Nội dung {compType === 'team' ? 'Đồng đội' : 'Đôi'} *
               </label>
               <select
                 value={activeDivision}
                 onChange={(e) => setSelectedDivision(e.target.value)}
-                className="w-full min-h-[38px] px-3 py-1.5 text-xs font-semibold border border-slate-300 rounded-lg bg-white"
+                style={DARK_INPUT_STYLE}
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs font-semibold border rounded-lg"
               >
-                {tournament.divisions.map((div) => (
-                  <option key={div} value={div}>
-                    {div}
-                  </option>
-                ))}
+                {visibleDivisions.length > 0 ? (
+                  visibleDivisions.map((div) => (
+                    <option key={div} value={div}>
+                      {div}
+                    </option>
+                  ))
+                ) : (
+                  <option value={activeDivision}>{activeDivision}</option>
+                )}
               </select>
             </div>
 
-            {/* Khối thêm từng VĐV Nam hoặc Nữ riêng lẻ */}
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div style={DARK_SUBCARD_STYLE} className="p-3.5 rounded-xl border space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-extrabold text-slate-900">
+                <span className="text-xs font-extrabold text-white">
                   Thêm từng VĐV riêng lẻ (Nam / Nữ)
                 </span>
-                <span className="text-[11px] text-slate-500">
-                  1 tên hoặc nhiều tên cách dấu phẩy
+                <span className="text-[11px] text-slate-400">
+                  Cách nhau dấu phẩy
                 </span>
               </div>
 
@@ -554,11 +633,12 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                     setSingleGender('Nam');
                     setGenderFilter('Nam');
                   }}
-                  className={`min-h-[36px] rounded-xl text-xs font-extrabold transition-colors ${
+                  style={
                     singleGender === 'Nam'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
-                  }`}
+                      ? { backgroundColor: '#0284c7', color: '#ffffff' }
+                      : DARK_INPUT_STYLE
+                  }
+                  className="min-h-[36px] rounded-xl border text-xs font-extrabold transition-colors"
                 >
                   + VĐV Nam
                 </button>
@@ -568,11 +648,12 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                     setSingleGender('Nữ');
                     setGenderFilter('Nữ');
                   }}
-                  className={`min-h-[36px] rounded-xl text-xs font-extrabold transition-colors ${
+                  style={
                     singleGender === 'Nữ'
-                      ? 'bg-pink-600 text-white'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
-                  }`}
+                      ? { backgroundColor: '#db2777', color: '#ffffff' }
+                      : DARK_INPUT_STYLE
+                  }
+                  className="min-h-[36px] rounded-xl border text-xs font-extrabold transition-colors"
                 >
                   + VĐV Nữ
                 </button>
@@ -587,11 +668,12 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                       setSingleTier(tier);
                       setSkillTier(tier);
                     }}
-                    className={`min-h-[32px] rounded-lg text-[11px] font-bold transition-colors ${
+                    style={
                       singleTier === tier
-                        ? 'bg-orange-600 text-white'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
+                        ? { backgroundColor: '#ea580c', color: '#ffffff' }
+                        : DARK_INPUT_STYLE
+                    }
+                    className="min-h-[32px] rounded-lg border text-[11px] font-bold transition-colors"
                   >
                     {tier}
                   </button>
@@ -602,7 +684,8 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                     setSingleGroup(e.target.value);
                     setTargetGroup(e.target.value);
                   }}
-                  className="min-h-[32px] px-2 text-xs font-semibold border border-slate-300 rounded-lg bg-white"
+                  style={DARK_INPUT_STYLE}
+                  className="min-h-[32px] px-2 text-xs font-semibold border rounded-lg"
                 >
                   {THREE_GROUPS.map((grp) => (
                     <option key={grp} value={grp}>
@@ -623,32 +706,34 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                       handleAddSingleAthletes();
                     }
                   }}
+                  style={DARK_INPUT_STYLE}
                   placeholder={
                     singleGender === 'Nam'
                       ? 'Tên VĐV Nam (VD: Anh Dũng, Minh Khang)'
                       : 'Tên VĐV Nữ (VD: Thùy Dương, Mai)'
                   }
-                  className="flex-1 min-w-0 min-h-[36px] px-3 py-1 text-xs border border-slate-300 rounded-lg bg-white"
+                  className="flex-1 min-w-0 min-h-[36px] px-3 py-1 text-xs border rounded-lg"
                 />
                 <button
                   type="button"
                   onClick={handleAddSingleAthletes}
-                  className="min-h-[36px] px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shrink-0"
+                  style={{ backgroundColor: '#059669', color: '#ffffff' }}
+                  className="min-h-[36px] px-3 py-1 rounded-lg text-xs font-bold shrink-0"
                 >
                   Thêm {singleGender}
                 </button>
               </div>
 
               {rosterAthletes.length > 0 && (
-                <div className="space-y-2 pt-1 border-t border-slate-200/80">
+                <div className="space-y-2 pt-2 border-t border-slate-800">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-bold text-slate-600">
-                      Danh sách VĐV đã thêm ({rosterAthletes.length}):
+                    <span className="text-[11px] font-bold text-slate-400">
+                      VĐV đã thêm ({rosterAthletes.length}):
                     </span>
                     <button
                       type="button"
                       onClick={handleRandomizeThreeGroups}
-                      className="text-[11px] font-bold text-orange-700 hover:text-orange-800 inline-flex items-center gap-1"
+                      className="text-[11px] font-bold text-orange-400 hover:text-orange-300 inline-flex items-center gap-1"
                     >
                       <Shuffle className="w-3 h-3" /> Chia ngẫu nhiên 3 bảng
                     </button>
@@ -658,27 +743,24 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                     {rosterAthletes.map((ath) => (
                       <div
                         key={ath.id}
-                        className={`p-2 rounded-lg border flex flex-wrap items-center justify-between gap-1.5 text-xs ${
-                          ath.gender === 'Nam'
-                            ? 'bg-blue-50/80 border-blue-200 text-slate-900'
-                            : 'bg-pink-50/80 border-pink-200 text-slate-900'
-                        }`}
+                        style={DARK_INPUT_STYLE}
+                        className="p-2 rounded-lg border text-white flex flex-wrap items-center justify-between gap-1.5 text-xs"
                       >
                         <div className="min-w-0">
                           <span
-                            className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold mr-1.5 ${
-                              ath.gender === 'Nam'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-pink-600 text-white'
-                            }`}
+                            style={{
+                              backgroundColor: ath.gender === 'Nam' ? '#0284c7' : '#db2777',
+                              color: '#ffffff',
+                            }}
+                            className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold mr-1.5"
                           >
                             {ath.gender}
                           </span>
                           <span className="font-bold">{ath.name}</span>
-                          <span className="text-[11px] font-bold text-orange-800 ml-1.5">
+                          <span className="text-[11px] font-bold text-orange-400 ml-1.5">
                             · {ath.groupName}
                           </span>
-                          <span className="text-[11px] text-slate-600 ml-1">
+                          <span className="text-[11px] text-slate-400 ml-1">
                             ({ath.tier})
                           </span>
                         </div>
@@ -687,32 +769,31 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                           <button
                             type="button"
                             onClick={() => handleApplyAthleteToSlot(ath, 'p1')}
-                            className="px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-300 text-[10px] font-bold text-slate-800"
-                            title="Gán làm VĐV 1 / Đội trưởng"
+                            style={{ backgroundColor: '#1e293b', color: '#e2e8f0' }}
+                            className="px-2 py-0.5 rounded text-[10px] font-bold"
                           >
                             VĐV 1
                           </button>
                           <button
                             type="button"
                             onClick={() => handleApplyAthleteToSlot(ath, 'p2')}
-                            className="px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-300 text-[10px] font-bold text-slate-800"
-                            title="Gán làm VĐV 2 / Đội phó"
+                            style={{ backgroundColor: '#1e293b', color: '#e2e8f0' }}
+                            className="px-2 py-0.5 rounded text-[10px] font-bold"
                           >
                             VĐV 2
                           </button>
                           <button
                             type="button"
                             onClick={() => handleSaveSingleAthleteAsEntry(ath)}
-                            className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold"
-                            title="Lưu thành 1 mục thi đấu riêng"
+                            style={{ backgroundColor: '#059669', color: '#ffffff' }}
+                            className="px-2 py-0.5 rounded text-[10px] font-bold"
                           >
                             + Giải
                           </button>
                           <button
                             type="button"
                             onClick={() => handleRemoveRosterAthlete(ath.id)}
-                            className="p-1 text-rose-600 hover:text-rose-800"
-                            title="Xóa VĐV"
+                            className="p-1 text-rose-400 hover:text-rose-300"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -724,9 +805,8 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
               )}
             </div>
 
-            {/* Giới tính đội / cặp */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
                 Giới tính (Đội / Cặp) *
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -735,11 +815,12 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                     key={g}
                     type="button"
                     onClick={() => setGenderFilter(g)}
-                    className={`min-h-[36px] rounded-xl text-xs font-bold transition-colors ${
+                    style={
                       genderFilter === g
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
+                        ? { backgroundColor: '#ea580c', color: '#ffffff' }
+                        : DARK_SUBCARD_STYLE
+                    }
+                    className="min-h-[36px] rounded-xl border text-xs font-bold transition-colors"
                   >
                     {g}
                   </button>
@@ -747,9 +828,8 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
               </div>
             </div>
 
-            {/* Hạng trình */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
                 Hạng trình *
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -758,11 +838,12 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                     key={tier}
                     type="button"
                     onClick={() => setSkillTier(tier)}
-                    className={`min-h-[36px] rounded-xl text-xs font-bold transition-colors ${
+                    style={
                       skillTier === tier
-                        ? 'bg-orange-600 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
+                        ? { backgroundColor: '#ea580c', color: '#ffffff' }
+                        : DARK_SUBCARD_STYLE
+                    }
+                    className="min-h-[36px] rounded-xl border text-xs font-bold transition-colors"
                   >
                     {tier}
                   </button>
@@ -771,62 +852,66 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
                 {activeIsTeam ? 'Tên Đội / Đội trưởng *' : 'VĐV 1 *'}
               </label>
               <input
                 type="text"
                 value={player1Name}
                 onChange={(e) => setPlayer1Name(e.target.value)}
+                style={DARK_INPUT_STYLE}
                 placeholder={activeIsTeam ? 'VD: CLB Bính Dần · Duy' : 'VD: Nguyễn Văn A'}
-                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
                 {activeIsTeam ? 'Đội phó / VĐV chủ lực 2' : 'VĐV 2'}
               </label>
               <input
                 type="text"
                 value={player2Name}
                 onChange={(e) => setPlayer2Name(e.target.value)}
+                style={DARK_INPUT_STYLE}
                 placeholder={activeIsTeam ? 'VD: Trọng' : 'VD: Trần Thị B'}
-                className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg"
               />
             </div>
 
             {activeIsTeam && (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
                   Danh sách VĐV thành viên Đồng đội (cách nhau dấu phẩy)
                 </label>
                 <input
                   type="text"
                   value={squadInput}
                   onChange={(e) => setSquadInput(e.target.value)}
+                  style={DARK_INPUT_STYLE}
                   placeholder="VD: Duy, Trọng, Hương, Minh, Lan"
-                  className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                  className="w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg"
                 />
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
                   CLB / Đơn vị
                 </label>
                 <input
                   type="text"
                   value={clubName}
                   onChange={(e) => setClubName(e.target.value)}
+                  style={DARK_INPUT_STYLE}
                   placeholder="VD: CLB Cao Bằng"
-                  className="w-full min-h-[38px] px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                  className="w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
                   Xếp vào Bảng
                 </label>
                 <input
@@ -834,8 +919,9 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                   list="group-suggestions"
                   value={targetGroup}
                   onChange={(e) => setTargetGroup(e.target.value)}
+                  style={DARK_INPUT_STYLE}
                   placeholder="VD: Bảng A"
-                  className="w-full min-h-[38px] px-3 py-1.5 text-xs font-semibold border border-slate-300 rounded-lg bg-white"
+                  className="w-full min-h-[38px] px-3 py-1.5 text-xs font-semibold border rounded-lg"
                 />
                 <datalist id="group-suggestions">
                   {availableGroups.map((grp) => (
@@ -847,7 +933,8 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
 
             <button
               type="submit"
-              className="w-full min-h-[42px] px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-colors"
+              style={{ backgroundColor: '#ea580c', color: '#ffffff' }}
+              className="w-full min-h-[42px] px-4 py-2 rounded-xl text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-colors"
             >
               <UserPlus className="w-4 h-4" />
               <span>Thêm VĐV / Đội & Xếp Bảng</span>
@@ -856,12 +943,12 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
         </div>
 
         {/* Right column: Step 3 Roster & Group Assignment */}
-        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+        <div style={DARK_PANEL_STYLE} className="lg:col-span-7 border rounded-2xl overflow-hidden">
+          <div style={DARK_SUBCARD_STYLE} className="px-4 sm:px-5 py-3.5 border-b flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-orange-600" />
-              <h2 className="font-display text-sm sm:text-base font-bold uppercase text-slate-900">
-                3. DANH SÁCH VĐV / ĐỘI & PHÂN BẢNG THI ĐẤU ({filteredRegistrations.length})
+              <Layers className="w-4 h-4 text-orange-500" />
+              <h2 className="font-display text-sm sm:text-base font-bold uppercase text-white">
+                3. DANH SÁCH {compType === 'team' ? 'ĐỒNG ĐỘI' : 'ĐÔI'} & PHÂN BẢNG ({filteredRegistrations.length})
               </h2>
             </div>
 
@@ -870,7 +957,8 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                 <button
                   type="button"
                   onClick={handleRandomizeThreeGroups}
-                  className="min-h-[34px] px-2.5 py-1 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1"
+                  style={{ backgroundColor: '#ea580c', color: '#ffffff' }}
+                  className="min-h-[34px] px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1"
                 >
                   <Shuffle className="w-3.5 h-3.5" />
                   <span>Random 3 bảng</span>
@@ -880,10 +968,11 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
               <select
                 value={filterDivision}
                 onChange={(e) => setFilterDivision(e.target.value)}
-                className="min-h-[34px] px-2.5 py-1 text-xs font-semibold border border-slate-300 rounded-lg bg-slate-50"
+                style={DARK_INPUT_STYLE}
+                className="min-h-[34px] px-2.5 py-1 text-xs font-semibold border rounded-lg"
               >
-                <option value="ALL">Tất cả nội dung</option>
-                {tournament.divisions.map((div) => (
+                <option value="ALL">Tất cả nội dung ({compType === 'team' ? 'Đồng đội' : 'Đôi'})</option>
+                {visibleDivisions.map((div) => (
                   <option key={div} value={div}>
                     {div}
                   </option>
@@ -893,7 +982,8 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
               <select
                 value={filterGroup}
                 onChange={(e) => setFilterGroup(e.target.value)}
-                className="min-h-[34px] px-2.5 py-1 text-xs font-semibold border border-slate-300 rounded-lg bg-slate-50"
+                style={DARK_INPUT_STYLE}
+                className="min-h-[34px] px-2.5 py-1 text-xs font-semibold border rounded-lg"
               >
                 <option value="ALL">Tất cả bảng</option>
                 {availableGroups.map((grp) => (
@@ -906,42 +996,48 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
           </div>
 
           {filteredRegistrations.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-500">
+            <div className="p-8 text-center text-xs text-slate-400">
               Chưa có VĐV hoặc đội nào trong danh sách lọc hiện tại.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-800">
               {filteredRegistrations.map((reg, index) => (
                 <div
                   key={reg.id}
-                  className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors"
+                  className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="space-y-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-mono-num text-xs font-bold text-slate-400">
+                      <span className="font-mono-num text-xs font-bold text-slate-500">
                         #{index + 1}
                       </span>
-                      <span className="text-sm font-bold text-slate-900 truncate">
+                      <span className="text-sm font-bold text-white truncate">
                         {reg.teamName}
                       </span>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-50 text-orange-800 border border-orange-200">
+                      <span
+                        style={{ backgroundColor: '#431407', color: '#fdba74', borderColor: '#9a3412' }}
+                        className="px-2 py-0.5 rounded-md text-[10px] font-bold border"
+                      >
                         {reg.division}
                       </span>
                       {reg.checkedIn && (
-                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span
+                          style={{ backgroundColor: '#064e3b', color: '#6ee7b7', borderColor: '#047857' }}
+                          className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold border"
+                        >
                           <CheckCircle2 className="w-3 h-3" /> Đã check-in
                         </span>
                       )}
                     </div>
 
-                    <div className="text-xs text-slate-600 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <div className="text-xs text-slate-400 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                       <span>CLB / Trình: {reg.club || 'Tự do'}</span>
                       <span>·</span>
                       <span className="font-mono-num">Rating: {reg.combinedRating}</span>
                       {reg.squadRoster && reg.squadRoster.length > 0 && (
                         <>
                           <span>·</span>
-                          <span className="text-slate-700 font-medium">
+                          <span className="text-slate-300 font-medium">
                             Thành viên: {reg.squadRoster.join(', ')}
                           </span>
                         </>
@@ -954,7 +1050,8 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                       value={reg.groupName || 'Bảng A'}
                       disabled={!isAdmin}
                       onChange={(e) => onAssignRegistrationGroup(reg.id, e.target.value)}
-                      className="min-h-[34px] px-2.5 py-1 text-xs font-bold border border-slate-300 rounded-lg bg-white disabled:bg-slate-100"
+                      style={DARK_INPUT_STYLE}
+                      className="min-h-[34px] px-2.5 py-1 text-xs font-bold border rounded-lg disabled:opacity-50"
                     >
                       {availableGroups.map((grp) => (
                         <option key={grp} value={grp}>
@@ -967,12 +1064,12 @@ export const MembersAndPaymentsView: React.FC<MembersAndPaymentsViewProps> = ({
                       <button
                         type="button"
                         onClick={() => onToggleCheckIn(reg.id)}
-                        className={`min-h-[34px] px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors ${
+                        style={
                           reg.checkedIn
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                        title="Điểm danh Check-in"
+                            ? { backgroundColor: '#059669', color: '#ffffff' }
+                            : { backgroundColor: '#1e293b', color: '#e2e8f0' }
+                        }
+                        className="min-h-[34px] px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors"
                       >
                         <ClipboardCheck className="w-3.5 h-3.5" />
                         <span>{reg.checkedIn ? 'Check-in' : 'Điểm danh'}</span>
