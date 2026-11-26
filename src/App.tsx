@@ -73,8 +73,7 @@ type ActiveTab =
   | 'referee'
   | 'standings'
   | 'members'
-  | 'reports'
-  | 'admin';
+  | 'reports';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -122,10 +121,9 @@ const VALID_TABS: ActiveTab[] = [
   'standings',
   'members',
   'reports',
-  'admin',
 ];
 
-const STAFF_ONLY_TABS: ActiveTab[] = ['referee', 'members', 'reports', 'admin'];
+const STAFF_ONLY_TABS: ActiveTab[] = ['referee', 'members', 'reports'];
 
 function isStaffRole(role: unknown): role is 'admin' | 'referee' {
   return role === 'admin' || role === 'referee';
@@ -495,56 +493,7 @@ export default function App() {
         compressed.push(dataUrl);
       }
       setPostDraftImages((prev) => [...prev, ...compressed]);
-      showToast(`Đã thêm ${compressed.length} ảnh`, 'Hình ảnh đã sẵn sàng cho bài đăng giải đấu.');
-    } catch {
-      showToast('Không thể đọc ảnh', 'Vui lòng chọn tệp ảnh khác hoặc dán đường dẫn URL ảnh.');
-    } finally {
-      e.target.value = '';
-    }
-  };
-
-  const handleAddPostUrlImage = () => {
-    const clean = postUrlInput.trim();
-    if (!clean) return;
-    setPostDraftImages((prev) => [...prev, clean]);
-    setPostUrlInput('');
-  };
-
-  const handleRemovePostDraftImage = (idx: number) => {
-    setPostDraftImages((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const handleSavePost = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isAdmin || !currentAccount) {
-      openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để lưu thông tin giải đấu.');
-      return;
-    }
-
-    const cleanTitle = postTitle.trim();
-    if (!cleanTitle) {
-      showToast('Thiếu tiêu đề', 'Vui lòng nhập tiêu đề thông tin giải đấu.');
-      return;
-    }
-
-    const pendingUrl = postUrlInput.trim();
-    const finalImages = pendingUrl ? [...postDraftImages, pendingUrl] : [...postDraftImages];
-    const cleanLinkUrl = normalizeExternalUrl(postLinkUrl);
-    const cleanLinkLabel = cleanLinkUrl
-      ? postLinkLabel.trim() || 'Xem liên kết'
-      : undefined;
-
-    if (editingPostId) {
-      const updated = posts.map((p) =>
-        p.id === editingPostId
-          ? {
-              ...p,
-              title: cleanTitle,
-              badge: postBadge.trim() || 'Thông báo BTC',
-              summary: postSummary.trim(),
-              detail: postDetail.trim(),
-              linkLabel: cleanLinkLabel,
-              linkUrl: cleanLinkUrl || undefined,
+      showToast(`Đã thêm ${compressed.length} ảnh`, 'Hình ảnh đã sẵn sàng cho bài đăng giải đấu.'); } catch { showToast('Không thể đọc ảnh', 'Vui lòng chọn tệp ảnh khác hoặc dán đường dẫn URL ảnh.'); } finally { e.target.value = ''; } };  const handleAddPostUrlImage = () => { const clean = postUrlInput.trim(); if (!clean) return; setPostDraftImages((prev) => [...prev, clean]); setPostUrlInput(''); };  const handleRemovePostDraftImage = (idx: number) => { setPostDraftImages((prev) => prev.filter((_, i) => i !== idx)); };  const handleSavePost = (e: React.FormEvent) => { e.preventDefault(); if (!isAdmin \vert{}\vert{} !currentAccount) { openLoginWithReason('Vui lòng đăng nhập tài khoản Admin để lưu thông tin giải đấu.'); return; }  const cleanTitle = postTitle.trim(); if (!cleanTitle) { showToast('Thiếu tiêu đề', 'Vui lòng nhập tiêu đề thông tin giải đấu.'); return; }  const pendingUrl = postUrlInput.trim(); const finalImages = pendingUrl ? [...postDraftImages, pendingUrl] : [...postDraftImages]; const cleanLinkUrl = normalizeExternalUrl(postLinkUrl); const cleanLinkLabel = cleanLinkUrl ? postLinkLabel.trim() \vert{}\vert{} 'Xem liên kết' : undefined;  if (editingPostId) { const updated = posts.map((p) => p.id === editingPostId ? { ...p, title: cleanTitle, badge: postBadge.trim() \vert{}\vert{} 'Thông báo BTC', summary: postSummary.trim(), detail: postDetail.trim(), linkLabel: cleanLinkLabel, linkUrl: cleanLinkUrl \vert{}\vert{} undefined,
               images: finalImages,
             }
           : p,
@@ -560,19 +509,7 @@ export default function App() {
         year: 'numeric',
       });
       const newPost: TournamentPost = {
-        id: `post_${Date.now().toString(36)}`,
-        tournamentId: currentTournament?.id || '',
-        title: cleanTitle,
-        badge: postBadge.trim() || 'Thông báo BTC',
-        summary: postSummary.trim(),
-        detail: postDetail.trim(),
-        linkLabel: cleanLinkLabel,
-        linkUrl: cleanLinkUrl || undefined,
-        images: finalImages,
-        createdAt: nowLabel,
-      };
-      savePostsAndSync([newPost, ...posts]);
-      showToast('Đã đăng thông tin giải đấu', `"${cleanTitle}" đã hiển thị trên trang chủ.`);
+        id: `post_${Date.now().toString(36)}`, tournamentId: currentTournament?.id \vert{}\vert{} '', title: cleanTitle, badge: postBadge.trim() \vert{}\vert{} 'Thông báo BTC', summary: postSummary.trim(), detail: postDetail.trim(), linkLabel: cleanLinkLabel, linkUrl: cleanLinkUrl \vert{}\vert{} undefined, images: finalImages, createdAt: nowLabel, }; savePostsAndSync([newPost, ...posts]); showToast('Đã đăng thông tin giải đấu', `"${cleanTitle}" đã hiển thị trên trang chủ.`);
     }
 
     resetPostForm();
@@ -629,25 +566,7 @@ export default function App() {
     setShowAuthModal(false);
     setAuthReasonMessage(null);
     if (prevName) {
-      showToast('Đã đăng xuất tài khoản', `Tạm biệt ${prevName}. Phiên làm việc đã kết thúc.`);
-    }
-  };
-
-  const handleCreateStaffAccount = (payload: Omit<StaffAccount, 'id'>) => {
-    if (!isAdmin || !currentAccount) {
-      openLoginWithReason(
-        'Chỉ tài khoản Ban Tổ Chức (Admin) mới được phép tạo tài khoản Admin hoặc Trọng tài.',
-      );
-      return;
-    }
-    if (!isStaffRole(payload.role)) {
-      showToast('Vai trò không hợp lệ', 'Chỉ có thể tạo tài khoản Admin hoặc Trọng tài.');
-      return;
-    }
-    const newAccount: StaffAccount = {
-      ...payload,
-      role: payload.role,
-      id: `acc_${Date.now().toString(36)}`,
+      showToast('Đã đăng xuất tài khoản', `Tạm biệt ${prevName}. Phiên làm việc đã kết thúc.`); } };  const handleCreateStaffAccount = (payload: Omit<StaffAccount, 'id'>) => { if (!isAdmin \vert{}\vert{} !currentAccount) { openLoginWithReason( 'Chỉ tài khoản Ban Tổ Chức (Admin) mới được phép tạo tài khoản Admin hoặc Trọng tài.', ); return; } if (!isStaffRole(payload.role)) { showToast('Vai trò không hợp lệ', 'Chỉ có thể tạo tài khoản Admin hoặc Trọng tài.'); return; } const newAccount: StaffAccount = { ...payload, role: payload.role, id: `acc_${Date.now().toString(36)}`,
     };
     updateStateAndSync((prev) => ({
       ...prev,
@@ -690,10 +609,16 @@ export default function App() {
   }, [appState.tournaments, selectedTournamentId]);
 
   useEffect(() => {
-    if (!currentTournament && selectedTournamentId) {
-      setSelectedTournamentId(appState.tournaments[0]?.id || '');
+    if (appState.tournaments.length === 0) {
+      if (selectedTournamentId !== '') {
+        setSelectedTournamentId('');
+      }
+      return;
     }
-  }, [currentTournament, selectedTournamentId, appState.tournaments]);
+    if (!appState.tournaments.some((t) => t.id === selectedTournamentId)) {
+      setSelectedTournamentId(appState.tournaments[0].id);
+    }
+  }, [appState.tournaments, selectedTournamentId]);
 
   const tournamentRegistrations = useMemo(
     () =>
@@ -780,18 +705,7 @@ export default function App() {
   const handleCreateTournament = (
     payload: Omit<Tournament, 'id' | 'createdAt' | 'updatedAt'>,
   ) => {
-    const newId = `t_1986_${Date.now().toString(36)}`;
-    const created: Tournament = {
-      ...payload,
-      id: newId,
-    };
-    updateStateAndSync((prev) => ({
-      ...prev,
-      tournaments: [created, ...prev.tournaments],
-    }));
-    setSelectedTournamentId(newId);
-    showToast(
-      `Đã tạo giải: ${created.name}`,
+    const newId = `t_1986_${Date.now().toString(36)}`; const created: Tournament = { ...payload, id: newId, }; updateStateAndSync((prev) => ({ ...prev, tournaments: [created, ...prev.tournaments], })); setSelectedTournamentId(newId); setShowCreateModal(false); showToast( `Đã tạo giải: ${created.name}`,
       `Quy mô ${created.courtsCount} sân · Đã sẵn sàng nhập VĐV và xếp bảng`,
     );
   };
@@ -808,9 +722,7 @@ export default function App() {
     if (!cleanName) return;
     const normalized =
       compType === 'team' && !cleanName.toLowerCase().includes('đồng đội')
-        ? `Đồng Đội - ${cleanName}`
-        : compType === 'doubles' && !cleanName.toLowerCase().includes('đôi')
-        ? `Đôi - ${cleanName}`
+        ? `Đồng Đội - ${cleanName}` : compType === 'doubles' && !cleanName.toLowerCase().includes('đôi') ? `Đôi - ${cleanName}`
         : cleanName;
 
     updateStateAndSync((prev) => ({
@@ -825,35 +737,7 @@ export default function App() {
       }),
     }));
     showToast(
-      `Đã thêm nội dung: ${normalized}`,
-      `Hình thức: ${compType === 'team' ? 'Đồng đội' : 'Đôi'} · Người tạo: ${currentAccount.displayName}`,
-    );
-  };
-
-  const handleAddRegistration = (payload: {
-    division: string;
-    player1Name: string;
-    player2Name: string;
-    club: string;
-    combinedRating: number;
-    groupName?: string;
-    squadRoster?: string[];
-  }) => {
-    if (!currentTournament) return;
-    if (!isAdmin || !currentAccount) {
-      openLoginWithReason(
-        'Phải đăng nhập tài khoản Admin mới có thể thêm VĐV/đội và sắp xếp bảng.',
-      );
-      return;
-    }
-
-    const teamName = payload.player2Name
-      ? `${payload.player1Name} / ${payload.player2Name}`
-      : payload.player1Name;
-    const assignedGroup = (payload.groupName || 'Bảng A').trim() || 'Bảng A';
-    const paymentCode = generatePaymentCode('1986');
-    const newReg: Registration = {
-      id: `reg_${Date.now().toString(36)}`,
+      `Đã thêm nội dung: ${normalized}`, `Hình thức: ${compType === 'team' ? 'Đồng đội' : 'Đôi'} · Người tạo: ${currentAccount.displayName}`, ); };  const handleAddRegistration = (payload: { division: string; player1Name: string; player2Name: string; club: string; combinedRating: number; groupName?: string; squadRoster?: string[]; }) => { if (!currentTournament) return; if (!isAdmin \vert{}\vert{} !currentAccount) { openLoginWithReason( 'Phải đăng nhập tài khoản Admin mới có thể thêm VĐV/đội và sắp xếp bảng.', ); return; }  const teamName = payload.player2Name ? `${payload.player1Name} / ${payload.player2Name}` : payload.player1Name; const assignedGroup = (payload.groupName \vert{}\vert{} 'Bảng A').trim() \vert{}\vert{} 'Bảng A'; const paymentCode = generatePaymentCode('1986'); const newReg: Registration = { id: `reg_${Date.now().toString(36)}`,
       tournamentId: currentTournament.id,
       ownerUid: currentAccount.id,
       division: payload.division,
@@ -879,8 +763,7 @@ export default function App() {
       registrations: [newReg, ...prev.registrations],
     }));
     showToast(
-      `Đã thêm VĐV/Đội: ${teamName}`,
-      `Xếp vào ${assignedGroup} · Nội dung: ${payload.division}`,
+      `Đã thêm VĐV/Đội: ${teamName}`, `Xếp vào ${assignedGroup} · Nội dung: ${payload.division}`,
     );
   };
 
@@ -898,28 +781,7 @@ export default function App() {
         r.id === registrationId ? { ...r, groupName: cleanGroup } : r,
       ),
     }));
-    showToast('Đã cập nhật bảng thi đấu', `Đã chuyển đội sang ${cleanGroup}.`);
-  };
-
-  const handleAddRosterAthlete = (registrationId: string, athleteLabel: string) => {
-    if (!isAdmin || !currentAccount) {
-      openLoginWithReason(
-        'Chỉ tài khoản Admin mới có quyền thêm VĐV vào danh sách đội hình Đồng đội hoặc Đôi.',
-      );
-      return;
-    }
-    updateStateAndSync((prev) => ({
-      ...prev,
-      registrations: prev.registrations.map((r) => {
-        if (r.id !== registrationId) return r;
-        const current = r.squadRoster || [r.player1Name, r.player2Name].filter(Boolean);
-        return {
-          ...r,
-          squadRoster: Array.from(new Set([...current, athleteLabel])),
-        };
-      }),
-    }));
-    showToast('Đã thêm VĐV vào đội hình', `Bổ sung ${athleteLabel} vào danh sách ra sân.`);
+    showToast('Đã cập nhật bảng thi đấu', `Đã chuyển đội sang ${cleanGroup}.`); };  const handleAddRosterAthlete = (registrationId: string, athleteLabel: string) => { if (!isAdmin \vert{}\vert{} !currentAccount) { openLoginWithReason( 'Chỉ tài khoản Admin mới có quyền thêm VĐV vào danh sách đội hình Đồng đội hoặc Đôi.', ); return; } updateStateAndSync((prev) => ({ ...prev, registrations: prev.registrations.map((r) => { if (r.id !== registrationId) return r; const current = r.squadRoster \vert{}\vert{} [r.player1Name, r.player2Name].filter(Boolean); return { ...r, squadRoster: Array.from(new Set([...current, athleteLabel])), }; }), })); showToast('Đã thêm VĐV vào đội hình', `Bổ sung ${athleteLabel} vào danh sách ra sân.`);
   };
 
   const handleToggleCheckIn = (registrationId: string) => {
@@ -1063,9 +925,7 @@ export default function App() {
           return {
             ...m,
             teamAId: team1?.teamId || m.teamAId,
-            teamAName: team1 ? `Nhất A (${team1.teamName})` : m.teamAName,
-            teamBId: team2?.teamId || m.teamBId,
-            teamBName: team2 ? `Nhì B (${team2.teamName})` : m.teamBName,
+            teamAName: team1 ? `Nhất A (${team1.teamName})` : m.teamAName, teamBId: team2?.teamId \vert{}\vert{} m.teamBId, teamBName: team2 ? `Nhì B (${team2.teamName})` : m.teamBName,
           };
         }
         if (m.stage === 'semifinal' && m.bracketSlot === 'SF2') {
@@ -1074,9 +934,7 @@ export default function App() {
           return {
             ...m,
             teamAId: team1?.teamId || m.teamAId,
-            teamAName: team1 ? `Nhất B (${team1.teamName})` : m.teamAName,
-            teamBId: team2?.teamId || m.teamBId,
-            teamBName: team2 ? `Nhì A (${team2.teamName})` : m.teamBName,
+            teamAName: team1 ? `Nhất B (${team1.teamName})` : m.teamAName, teamBId: team2?.teamId \vert{}\vert{} m.teamBId, teamBName: team2 ? `Nhì A (${team2.teamName})` : m.teamBName,
           };
         }
         return m;
@@ -1084,79 +942,7 @@ export default function App() {
     }));
 
     showToast(
-      `Đã cập nhật nhánh Bán kết ${division}`,
-      'Các đội Nhất/Nhì bảng đã được điền tự động vào lịch thi đấu Bán kết.',
-    );
-  };
-
-  const handleUpdateMatch = (matchId: string, patch: Partial<Match>) => {
-    updateStateAndSync((prev) => ({
-      ...prev,
-      matches: prev.matches.map((m) => (m.id === matchId ? { ...m, ...patch } : m)),
-    }));
-  };
-
-  const handleCompleteMatch = (match: Match, winnerSide: '' | 'A' | 'B') => {
-    const winnerTeamId =
-      winnerSide === 'A' ? match.teamAId : winnerSide === 'B' ? match.teamBId : '';
-    const winnerTeamName =
-      winnerSide === 'A'
-        ? match.teamAName
-        : winnerSide === 'B'
-        ? match.teamBName
-        : 'Hòa 2-2';
-    const loserTeamId =
-      winnerSide === 'A' ? match.teamBId : winnerSide === 'B' ? match.teamAId : '';
-    const loserTeamName =
-      winnerSide === 'A' ? match.teamBName : winnerSide === 'B' ? match.teamAName : '';
-
-    updateStateAndSync((prev) => ({
-      ...prev,
-      matches: prev.matches.map((m) => {
-        if (m.id === match.id) {
-          return {
-            ...m,
-            ...match,
-            status: 'completed',
-            winnerSide,
-            winnerTeamId,
-            durationSeconds: match.durationSeconds || 960,
-          };
-        }
-        if (winnerSide && match.nextMatchId && m.id === match.nextMatchId) {
-          if (match.nextMatchSide === 'A') {
-            return { ...m, teamAId: winnerTeamId, teamAName: winnerTeamName };
-          }
-          if (match.nextMatchSide === 'B') {
-            return { ...m, teamBId: winnerTeamId, teamBName: winnerTeamName };
-          }
-        }
-        if (
-          winnerSide &&
-          match.stage === 'semifinal' &&
-          m.tournamentId === match.tournamentId &&
-          m.division === match.division &&
-          m.stage === 'third_place'
-        ) {
-          if (match.bracketSlot === 'SF1') {
-            return { ...m, teamAId: loserTeamId, teamAName: loserTeamName };
-          }
-          if (match.bracketSlot === 'SF2') {
-            return { ...m, teamBId: loserTeamId, teamBName: loserTeamName };
-          }
-        }
-        return m;
-      }),
-    }));
-
-    pushNotification(
-      'match_result',
-      `Kết quả Trận #${match.matchNumber} (Sân ${match.courtNumber}): ${match.scoreA} - ${match.scoreB}`,
-      winnerSide
-        ? `${winnerTeamName} giành chiến thắng (+3đ) trước ${loserTeamName} tại ${
-            match.groupName || MATCH_STAGE_LABELS[match.stage]
-          }. Bảng xếp hạng đã được cập nhật.`
-        : `Hai đội ${match.teamAName} và ${match.teamBName} hòa 2-2 (+2đ mỗi đội) tại ${match.groupName}.`,
+      `Đã cập nhật nhánh Bán kết ${division}`, 'Các đội Nhất/Nhì bảng đã được điền tự động vào lịch thi đấu Bán kết.', ); };  const handleUpdateMatch = (matchId: string, patch: Partial<Match>) => { updateStateAndSync((prev) => ({ ...prev, matches: prev.matches.map((m) => (m.id === matchId ? { ...m, ...patch } : m)), })); };  const handleCompleteMatch = (match: Match, winnerSide: '' \vert{} 'A' \vert{} 'B') => { const winnerTeamId = winnerSide === 'A' ? match.teamAId : winnerSide === 'B' ? match.teamBId : ''; const winnerTeamName = winnerSide === 'A' ? match.teamAName : winnerSide === 'B' ? match.teamBName : 'Hòa 2-2'; const loserTeamId = winnerSide === 'A' ? match.teamBId : winnerSide === 'B' ? match.teamAId : ''; const loserTeamName = winnerSide === 'A' ? match.teamBName : winnerSide === 'B' ? match.teamAName : '';  updateStateAndSync((prev) => ({ ...prev, matches: prev.matches.map((m) => { if (m.id === match.id) { return { ...m, ...match, status: 'completed', winnerSide, winnerTeamId, durationSeconds: match.durationSeconds \vert{}\vert{} 960, }; } if (winnerSide && match.nextMatchId && m.id === match.nextMatchId) { if (match.nextMatchSide === 'A') { return { ...m, teamAId: winnerTeamId, teamAName: winnerTeamName }; } if (match.nextMatchSide === 'B') { return { ...m, teamBId: winnerTeamId, teamBName: winnerTeamName }; } } if ( winnerSide && match.stage === 'semifinal' && m.tournamentId === match.tournamentId && m.division === match.division && m.stage === 'third_place' ) { if (match.bracketSlot === 'SF1') { return { ...m, teamAId: loserTeamId, teamAName: loserTeamName }; } if (match.bracketSlot === 'SF2') { return { ...m, teamBId: loserTeamId, teamBName: loserTeamName }; } } return m; }), }));  pushNotification( 'match_result', `Kết quả Trận #${match.matchNumber} (Sân ${match.courtNumber}):${match.scoreA} - ${match.scoreB}`, winnerSide ? `${winnerTeamName} giành chiến thắng (+3đ) trước ${loserTeamName} tại ${ match.groupName \vert{}\vert{} MATCH_STAGE_LABELS[match.stage] }. Bảng xếp hạng đã được cập nhật.` : `Hai đội ${match.teamAName} và ${match.teamBName} hòa 2-2 (+2đ mỗi đội) tại ${match.groupName}.`,
       match.id,
     );
   };
@@ -1165,28 +951,9 @@ export default function App() {
     pushNotification(
       'court_call',
       `Mời VĐV vào Sân ${match.courtNumber} — Trận #${match.matchNumber}`,
-      `${match.teamAName} gặp ${match.teamBName} (${match.teamSubCategory || match.division} · ${
+      `${match.teamAName} gặp ${match.teamBName} (${match.teamSubCategory \vert{}\vert{} match.division} ·${
         match.groupName || MATCH_STAGE_LABELS[match.stage]
-      }). Trọng tài: ${currentAccount?.displayName || match.refereeName || 'BTC 1986'}.`,
-      match.id,
-    );
-  };
-
-  const handleAnnounceCourtAvailable = (finishedMatch: Match) => {
-    const waitingMatches = tournamentMatches
-      .filter((m) => m.id !== finishedMatch.id && m.status === 'scheduled')
-      .sort((a, b) => {
-        const aSameCourt = a.courtNumber === finishedMatch.courtNumber ? 0 : 1;
-        const bSameCourt = b.courtNumber === finishedMatch.courtNumber ? 0 : 1;
-        if (aSameCourt !== bSameCourt) return aSameCourt - bSameCourt;
-        return a.matchNumber - b.matchNumber;
-      });
-
-    const nextMatch = waitingMatches[0];
-    if (!nextMatch) {
-      pushNotification(
-        'court_call',
-        `Sân ${finishedMatch.courtNumber} đã trống (Xong Trận #${finishedMatch.matchNumber})`,
+      }). Trọng tài: ${currentAccount?.displayName \vert{}\vert{} match.refereeName \vert{}\vert{} 'BTC 1986'}.`, match.id, ); };  const handleAnnounceCourtAvailable = (finishedMatch: Match) => { const waitingMatches = tournamentMatches .filter((m) => m.id !== finishedMatch.id && m.status === 'scheduled') .sort((a, b) => { const aSameCourt = a.courtNumber === finishedMatch.courtNumber ? 0 : 1; const bSameCourt = b.courtNumber === finishedMatch.courtNumber ? 0 : 1; if (aSameCourt !== bSameCourt) return aSameCourt - bSameCourt; return a.matchNumber - b.matchNumber; });  const nextMatch = waitingMatches[0]; if (!nextMatch) { pushNotification( 'court_call', `Sân ${finishedMatch.courtNumber} đã trống (Xong Trận #${finishedMatch.matchNumber})`,
         `Trận #${finishedMatch.matchNumber} (${finishedMatch.teamAName} vs ${finishedMatch.teamBName}) đã kết thúc và Sân ${finishedMatch.courtNumber} đã sẵn sàng. Hiện không còn trận nào trong danh sách chờ.`,
         finishedMatch.id,
       );
@@ -1204,13 +971,12 @@ export default function App() {
 
     const followUpList = waitingMatches
       .slice(1, 3)
-      .map((m) => `#${m.matchNumber} (${m.teamAName} vs ${m.teamBName})`)
+      .map((m) => `#${m.matchNumber} (${m.teamAName} vs${m.teamBName})`)
       .join(' · ');
 
     pushNotification(
       'court_call',
-      `SÂN ${finishedMatch.courtNumber} ĐÃ TRỐNG — Mời VĐV chờ vào sân!`,
-      `Trận #${finishedMatch.matchNumber} vừa kết thúc. Mời các VĐV chờ Trận #${nextMatch.matchNumber}: ${nextMatch.teamAName} vs ${nextMatch.teamBName}${
+      `SÂN ${finishedMatch.courtNumber} ĐÃ TRỐNG — Mời VĐV chờ vào sân!`, `Trận #${finishedMatch.matchNumber} vừa kết thúc. Mời các VĐV chờ Trận #${nextMatch.matchNumber}:${nextMatch.teamAName} vs ${nextMatch.teamBName}${
         waitingAthletes ? ` (${waitingAthletes})` : ''
       } vào Sân ${finishedMatch.courtNumber} chuẩn bị thi đấu.${
         followUpList ? ` Danh sách chờ tiếp: ${followUpList}.` : ''
@@ -1254,18 +1020,27 @@ export default function App() {
       return;
     }
 
-    localStorage.removeItem(STORAGE_KEY);
     const fresh: PersistedAppState = {
-      tournaments: INITIAL_TOURNAMENTS,
-      registrations: INITIAL_REGISTRATIONS,
-      matches: INITIAL_MATCHES,
-      notifications: INITIAL_NOTIFICATIONS,
+      tournaments: [],
+      registrations: [],
+      matches: [],
+      notifications: [],
       users: INITIAL_USERS,
-      staffAccounts: INITIAL_STAFF_ACCOUNTS,
+      staffAccounts: appState.staffAccounts.length > 0 ? appState.staffAccounts : INITIAL_STAFF_ACCOUNTS,
     };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel(SYNC_CHANNEL);
+        bc.postMessage({ type: 'state_sync', state: fresh });
+        bc.close();
+      }
+    } catch {
+      // ignore storage errors
+    }
     setAppState(fresh);
     setSelectedTournamentId('');
-    setActiveTab('overview');
+    setSelectedRefereeMatchId(null);
     setShowResetPasswordModal(false);
     setResetPasswordInput('');
     setResetPasswordError(null);
@@ -1346,23 +1121,68 @@ export default function App() {
 
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
 
+  const renderEmptyTournamentSection = () => (
+    <section className={`border rounded-2xl p-5 sm:p-8 text-center space-y-4 ${surfaceCard}`}> <div className="space-y-1.5 max-w-md mx-auto"> <h2 className="font-display text-base sm:text-lg font-bold"> Chưa có giải đấu nào được chọn </h2> <p className={`text-xs sm:text-sm ${mutedText}`}>
+          {isAdmin
+            ? 'Hãy tạo giải đấu mới để bắt đầu thêm nội dung thi đấu, nhập VĐV, sắp bảng và điều hành trận đấu.'
+            : 'Vui lòng chờ Ban Tổ Chức mở giải đấu hoặc đăng nhập tài khoản BTC/Trọng tài.'}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-2.5">
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={handleOpenCreateTournament}
+            className="min-h-[40px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-1.5 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Tạo giải mới</span>
+          </button>
+        )}
+
+        {isAdmin ? (
+          <button
+            type="button"
+            onClick={() => {
+              setAuthReasonMessage(null);
+              setAuthModalMode('manage');
+              setShowAuthModal(true);
+            }}
+            className={`min-h-[40px] px-4 py-2 text-xs font-semibold rounded-xl inline-flex items-center gap-1.5 border transition-colors ${
+              isDark
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-orange-500" />
+            <span>Quản lý tài khoản BTC / Trọng tài</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setAuthReasonMessage(null);
+              setAuthModalMode('login');
+              setShowAuthModal(true);
+            }}
+            className={`min-h-[40px] px-4 py-2 text-xs font-semibold rounded-xl inline-flex items-center gap-1.5 border transition-colors ${
+              isDark
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+            }`}
+          >
+            <LogIn className="w-4 h-4 text-orange-500" />
+            <span>Đăng nhập BTC / Trọng tài</span>
+          </button>
+        )}
+      </div>
+    </section>
+  );
+
   const renderTournamentOverviewSection = () => {
     if (!currentTournament) {
-      return (
-        <section className={`border rounded-2xl p-5 sm:p-6 text-center space-y-3 ${surfaceCard}`}>
-          <p className={`text-sm ${mutedText}`}>Chưa có giải đấu nào đang hiển thị.</p>
-          {isAdmin && activeTab === 'admin' && (
-            <button
-              type="button"
-              onClick={handleOpenCreateTournament}
-              className="min-h-[40px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl inline-flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              Tạo giải đấu mới
-            </button>
-          )}
-        </section>
-      );
+      return renderEmptyTournamentSection();
     }
 
     return (
@@ -1372,7 +1192,9 @@ export default function App() {
         >
           <div className="lg:col-span-8 [@media(orientation:landscape)_and_(max-height:540px)]:col-span-8 flex flex-col justify-between space-y-3 sm:space-y-4 min-w-0">
             <div className="space-y-1.5 sm:space-y-2">
-              <div className={`flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs ${mutedText}`}>
+              <div
+                className={`flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs ${mutedText}`}
+              >
                 <span className="font-semibold text-orange-500 uppercase tracking-wider">
                   THÔNG TIN GIẢI ĐẤU · PICKLEBALL 1986
                 </span>
@@ -1390,7 +1212,9 @@ export default function App() {
                 {currentTournament.description}
               </p>
 
-              <div className={`pt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${mutedText}`}>
+              <div
+                className={`pt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${mutedText}`}
+              >
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
                   {currentTournament.location}
@@ -1538,13 +1362,7 @@ export default function App() {
         </section>
 
         {/* Khối thông tin & hình ảnh giải đấu do Admin đăng / quản lý */}
-        <section className={`border rounded-2xl p-3.5 sm:p-6 space-y-3.5 sm:space-y-4 ${surfaceCard}`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0">
-              <h2 className="font-display text-sm sm:text-lg font-bold uppercase tracking-tight">
-                THÔNG BÁO & HÌNH ẢNH GIẢI ĐẤU ({visiblePosts.length})
-              </h2>
-              <p className={`text-xs ${mutedText}`}>
+        <section className={`border rounded-2xl p-3.5 sm:p-6 space-y-3.5 sm:space-y-4 ${surfaceCard}`}> <div className="flex flex-wrap items-center justify-between gap-2"> <div className="min-w-0"> <h2 className="font-display text-sm sm:text-lg font-bold uppercase tracking-tight"> THÔNG BÁO & HÌNH ẢNH GIẢI ĐẤU ({visiblePosts.length}) </h2> <p className={`text-xs ${mutedText}`}>
                 Điều lệ, lịch họp kỹ thuật, sơ đồ sân và hình ảnh cập nhật từ Ban Tổ Chức.
               </p>
             </div>
@@ -1564,21 +1382,10 @@ export default function App() {
           {isAdmin && showPostForm && (
             <form
               onSubmit={handleSavePost}
-              className={`p-3.5 sm:p-5 rounded-2xl border space-y-3.5 sm:space-y-4 ${
-                isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-sm font-bold">
-                  {editingPostId
-                    ? 'Chỉnh sửa thông tin & hình ảnh giải đấu'
-                    : 'Đăng thông tin & hình ảnh giải đấu mới'}
-                </div>
-                <button
-                  type="button"
-                  onClick={resetPostForm}
-                  className={`p-1.5 rounded-lg ${
-                    isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-200'
+              className={`p-3.5 sm:p-5 rounded-2xl border space-y-3.5 sm:space-y-4 ${ isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200' }`} > <div className="flex items-center justify-between gap-2"> <div className="text-sm font-bold"> {editingPostId ? 'Chỉnh sửa thông tin & hình ảnh giải đấu' : 'Đăng thông tin & hình ảnh giải đấu mới'} </div> <button type="button" onClick={resetPostForm} className={`p-1.5 rounded-lg ${
+                    isDark
+                      ? 'text-slate-400 hover:bg-slate-800'
+                      : 'text-slate-500 hover:bg-slate-200'
                   }`}
                 >
                   <X className="w-4 h-4" />
@@ -1731,13 +1538,7 @@ export default function App() {
                     {postDraftImages.map((src, idx) => (
                       <div
                         key={`${idx}_${src.slice(0, 20)}`}
-                        className={`relative w-24 h-16 rounded-lg overflow-hidden border bg-slate-900 ${
-                          isDark ? 'border-slate-700' : 'border-slate-300'
-                        }`}
-                      >
-                        <img
-                          src={src}
-                          alt={`Ảnh giải đấu ${idx + 1}`}
+                        className={`relative w-24 h-16 rounded-lg overflow-hidden border bg-slate-900 ${ isDark ? 'border-slate-700' : 'border-slate-300' }`} > <img src={src} alt={`Ảnh giải đấu ${idx + 1}`}
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover"
                         />
@@ -1797,49 +1598,7 @@ export default function App() {
                 return (
                   <article
                     key={post.id}
-                    className={`rounded-2xl border overflow-hidden flex flex-col justify-between min-w-0 ${
-                      isDark
-                        ? 'bg-slate-950/60 border-slate-800'
-                        : 'bg-slate-50/60 border-slate-200'
-                    }`}
-                  >
-                    <div>
-                      {post.images.length > 0 && (
-                        <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setLightboxState({
-                                title: post.title,
-                                subtitle: post.createdAt || currentTournament.name,
-                                images: post.images,
-                                imageIndex: 0,
-                              })
-                            }
-                            className="block w-full h-full text-left"
-                          >
-                            <img
-                              src={post.images[0]}
-                              alt={post.title}
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300"
-                            />
-                          </button>
-                          {post.images.length > 1 && (
-                            <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-950/80 text-white font-mono-num">
-                              {post.images.length} ảnh
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="p-3.5 sm:p-4 space-y-2">
-                        <div className="flex items-center justify-between gap-2 text-[11px]">
-                          <span className="px-2 py-0.5 rounded-md font-bold bg-orange-500/15 text-orange-500">
-                            {post.badge}
-                          </span>
-                          {post.createdAt && (
-                            <span className={`font-mono-num ${mutedText}`}>{post.createdAt}</span>
+                    className={`rounded-2xl border overflow-hidden flex flex-col justify-between min-w-0 ${ isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50/60 border-slate-200' }`} > <div> {post.images.length > 0 && ( <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden"> <button type="button" onClick={() => setLightboxState({ title: post.title, subtitle: post.createdAt \vert{}\vert{} currentTournament.name, images: post.images, imageIndex: 0, }) } className="block w-full h-full text-left" > <img src={post.images[0]} alt={post.title} referrerPolicy="no-referrer" className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-300" /> </button> {post.images.length > 1 && ( <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-950/80 text-white font-mono-num"> {post.images.length} ảnh </span> )} </div> )}  <div className="p-3.5 sm:p-4 space-y-2"> <div className="flex items-center justify-between gap-2 text-[11px]"> <span className="px-2 py-0.5 rounded-md font-bold bg-orange-500/15 text-orange-500"> {post.badge} </span> {post.createdAt && ( <span className={`font-mono-num ${mutedText}`}>{post.createdAt}</span>
                           )}
                         </div>
 
@@ -1849,7 +1608,7 @@ export default function App() {
 
                         {post.summary && (
                           <p
-                            className={`text-xs leading-relaxed ${mutedText} ${
+                            className={`text-xs leading-relaxed ${mutedText}${
                               isExpanded ? '' : 'line-clamp-3'
                             }`}
                           >
@@ -1892,24 +1651,7 @@ export default function App() {
                     </div>
 
                     <div
-                      className={`px-3.5 sm:px-4 py-2.5 sm:py-3 border-t flex items-center justify-between gap-2 ${
-                        isDark
-                          ? 'border-slate-800 bg-slate-900/70'
-                          : 'border-slate-200 bg-white'
-                      }`}
-                    >
-                      {post.linkUrl ? (
-                        <a
-                          href={post.linkUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-bold text-orange-500 hover:text-orange-400 inline-flex items-center gap-1 truncate"
-                        >
-                          <span className="truncate">{post.linkLabel || 'Xem liên kết'}</span>
-                          <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                        </a>
-                      ) : (
-                        <span className={`text-[11px] ${mutedText}`}>Ban Tổ Chức</span>
+                      className={`px-3.5 sm:px-4 py-2.5 sm:py-3 border-t flex items-center justify-between gap-2 ${ isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-white' }`} > {post.linkUrl ? ( <a href={post.linkUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-orange-500 hover:text-orange-400 inline-flex items-center gap-1 truncate" > <span className="truncate">{post.linkLabel \vert{}\vert{} 'Xem liên kết'}</span> <ExternalLink className="w-3.5 h-3.5 shrink-0" /> </a> ) : ( <span className={`text-[11px] ${mutedText}`}>Ban Tổ Chức</span>
                       )}
 
                       {isAdmin && (
@@ -1981,847 +1723,4 @@ export default function App() {
         </a>
 
         <nav
-          className={`hidden lg:flex items-center gap-1.5 xl:gap-2.5 text-xs xl:text-sm font-medium px-1.5 py-1 rounded-xl overflow-x-auto max-w-full ${
-            isDark ? 'bg-slate-900 text-slate-300' : 'bg-white text-slate-600'
-          }`}
-        >
-          {visibleNavItems.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveTab(item.id)}
-                className={`px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 border-b-2 ${
-                  isActive
-                    ? isDark
-                      ? 'bg-slate-800 border-orange-500 text-white font-semibold'
-                      : 'bg-orange-50 border-orange-600 text-slate-900 font-semibold'
-                    : isDark
-                    ? 'bg-transparent border-transparent text-slate-300 hover:bg-slate-800/70 hover:text-white'
-                    : 'bg-white border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={toggleThemeMode}
-            title={isDark ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối'}
-            className={`min-h-[32px] sm:min-h-[34px] px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg border transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
-              isDark
-                ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
-            }`}
-          >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            <span className="hidden sm:inline">{isDark ? 'Sáng' : 'Tối'}</span>
-          </button>
-
-          {currentAccount ? (
-            <button
-              type="button"
-              onClick={() => {
-                setAuthReasonMessage(null);
-                setAuthModalMode(isAdmin ? 'manage' : 'login');
-                setShowAuthModal(true);
-              }}
-              className={`min-h-[32px] sm:min-h-[36px] px-2.5 sm:px-3.5 py-1 sm:py-2 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
-                isAdmin
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-              }`}
-            >
-              {isAdmin ? (
-                <ShieldCheck className="w-4 h-4 shrink-0" />
-              ) : (
-                <Gavel className="w-4 h-4 shrink-0" />
-              )}
-              <span className="truncate max-w-[115px] sm:max-w-[180px] xl:max-w-none">
-                {isAdmin ? 'BTC' : 'TT'}: {currentAccount.displayName}
-              </span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setAuthReasonMessage(null);
-                setAuthModalMode('login');
-                setShowAuthModal(true);
-              }}
-              className="min-h-[32px] sm:min-h-[36px] px-3 sm:px-4 py-1 sm:py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5"
-            >
-              <LogIn className="w-4 h-4 shrink-0" />
-              <span>Đăng nhập</span>
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* Secondary Workspace Context Toolbar */}
-      <div
-        className={`no-print border-b px-2.5 sm:px-6 py-1.5 sm:py-2 shrink-0 ${
-          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            {appState.tournaments.length > 0 && currentTournament ? (
-              <select
-                value={currentTournament.id}
-                onChange={(e) => setSelectedTournamentId(e.target.value)}
-                className={`min-h-[34px] sm:min-h-[36px] w-full sm:w-auto flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 text-xs font-semibold border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 max-w-full sm:max-w-md truncate ${
-                  isDark
-                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
-                    : 'bg-slate-100 hover:bg-slate-200/70 text-slate-900 border-slate-200'
-                }`}
-              >
-                {appState.tournaments.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({TOURNAMENT_STATUS_LABELS[t.status]})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className={`text-xs font-medium truncate ${mutedText}`}>
-                Chưa có giải đấu nào đang diễn ra
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center justify-end gap-1.5 shrink-0">
-            {isAdmin && activeTab === 'admin' && (
-              <button
-                type="button"
-                onClick={handleOpenCreateTournament}
-                className="min-h-[34px] px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-orange-600 text-white text-xs font-bold inline-flex items-center gap-1 whitespace-nowrap transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Tạo giải mới</span>
-              </button>
-            )}
-
-            {currentTournament && (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowNotifDrawer((s) => !s);
-                  setReadNotifIds(tournamentNotifications.map((n) => n.id));
-                }}
-                className={`min-h-[32px] sm:min-h-[34px] px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap ${
-                  isDark
-                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
-              >
-                <Bell className="w-3.5 h-3.5 text-orange-500" />
-                <span>
-                  {unreadCount > 0 ? `${unreadCount} mới` : tournamentNotifications.length}
-                </span>
-              </button>
-            )}
-
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={handleRequestResetDemoData}
-                title="Làm mới dữ liệu giải đấu (yêu cầu mật khẩu)"
-                className={`min-h-[32px] sm:min-h-[34px] p-1.5 rounded-lg transition-colors ${
-                  isDark
-                    ? 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Real-Time Toast Banner */}
-      {toastMessage && (
-        <div
-          className={`no-print fixed bottom-14 lg:bottom-5 right-3 left-3 sm:left-auto sm:right-5 z-50 sm:max-w-md border rounded-xl p-3.5 shadow-xl flex items-start gap-2.5 ${
-            isDark
-              ? 'bg-slate-900 text-white border-slate-700'
-              : 'bg-slate-900 text-white border-slate-800'
-          }`}
-        >
-          <CheckCircle2 className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-          <div className="text-xs space-y-0.5 min-w-0">
-            <div className="font-semibold text-white">{toastMessage.title}</div>
-            <div className="text-slate-300">{toastMessage.subtitle}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Notification Slide-Down Panel */}
-      {showNotifDrawer && currentTournament && (
-        <div
-          className={`no-print border-b px-3.5 sm:px-6 py-4 ${
-            isDark
-              ? 'bg-slate-950 text-white border-slate-800'
-              : 'bg-slate-900 text-white border-slate-800'
-          }`}
-        >
-          <div className="max-w-7xl mx-auto space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-sm sm:text-base font-bold uppercase tracking-wide text-orange-400">
-                THÔNG BÁO KẾT QUẢ & GỌI SÂN TRỰC TIẾP ({tournamentNotifications.length})
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowNotifDrawer(false)}
-                className="text-xs text-slate-400 hover:text-white"
-              >
-                Đóng ✕
-              </button>
-            </div>
-            {tournamentNotifications.length === 0 ? (
-              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300">
-                Hiện chưa có thông báo nào.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto">
-                {tournamentNotifications.slice(0, 6).map((n) => (
-                  <div
-                    key={n.id}
-                    className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-1"
-                  >
-                    <div className="font-semibold text-white">{n.title}</div>
-                    <p className="text-slate-300 leading-relaxed">{n.message}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* MAIN WORKSPACE CONTENT */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-2.5 sm:px-5 lg:px-6 py-3 sm:py-5 lg:py-6 [@media(orientation:landscape)_and_(max-height:540px)]:py-2 space-y-4 sm:space-y-5 min-w-0">
-        {!currentTournament ? (
-          activeTab === 'overview' || activeTab === 'admin' ? (
-            renderTournamentOverviewSection()
-          ) : (
-            <section
-              className={`border rounded-2xl p-6 text-center text-xs ${surfaceCard} ${mutedText}`}
-            >
-              Chưa có giải đấu nào được chọn.
-            </section>
-          )
-        ) : (
-          <>
-            {/* TAB 1: TRANG CHỦ */}
-            {activeTab === 'overview' && renderTournamentOverviewSection()}
-
-            {/* TAB 2: LIVE */}
-            {activeTab === 'live' && (
-              <div className="space-y-4 sm:space-y-5">
-                <section
-                  className={`border rounded-2xl p-3.5 sm:p-5 flex flex-wrap items-center justify-between gap-3 ${surfaceCard}`}
-                >
-                  <div className="min-w-0">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-500">
-                      <Radio className="w-4 h-4 shrink-0" />
-                      <span>TRỰC TIẾP SÂN THI ĐẤU</span>
-                    </div>
-                    <h1 className="font-display text-lg sm:text-2xl font-extrabold mt-0.5 truncate">
-                      Live Scoreboard — {currentTournament.name}
-                    </h1>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs font-mono-num shrink-0">
-                    <span className="px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-500 font-bold border border-emerald-500/30">
-                      Đang đấu: {liveMatches.length} / {currentTournament.courtsCount} sân
-                    </span>
-                  </div>
-                </section>
-
-                <section className="grid grid-cols-1 lg:grid-cols-12 [@media(orientation:landscape)_and_(max-height:540px)]:grid-cols-12 gap-4 sm:gap-5 items-start">
-                  <div
-                    className={`lg:col-span-7 [@media(orientation:landscape)_and_(max-height:540px)]:col-span-7 border rounded-xl overflow-hidden min-w-0 ${surfaceCard}`}
-                  >
-                    <div
-                      className={`px-3.5 sm:px-5 py-3 sm:py-3.5 border-b flex items-center justify-between gap-2 ${
-                        isDark ? 'border-slate-800' : 'border-slate-200'
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <h2 className="font-display text-sm sm:text-lg font-bold tracking-tight uppercase truncate">
-                          CÁC TRẬN ĐANG THI ĐẤU TRỰC TIẾP
-                        </h2>
-                        <p className={`text-xs truncate ${mutedText}`}>
-                          Cặp VĐV đứng sân, điểm số và lượt giao bóng cập nhật tức thời
-                        </p>
-                      </div>
-                      {isStaff && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('referee')}
-                          className="text-xs font-semibold text-orange-500 hover:text-orange-400 shrink-0"
-                        >
-                          App Trọng tài →
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="p-3.5 sm:p-5 space-y-3 sm:space-y-3.5">
-                      {liveMatches.length === 0 ? (
-                        <div
-                          className={`p-6 text-center rounded-xl border space-y-2 ${
-                            isDark
-                              ? 'bg-slate-950/60 border-slate-800'
-                              : 'bg-slate-50 border-slate-200'
-                          }`}
-                        >
-                          <p className={`text-sm ${mutedText}`}>
-                            Hiện chưa có trận nào đang thi đấu trực tiếp trên sân.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab('schedule')}
-                            className="min-h-[36px] px-3.5 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-orange-600 transition-colors"
-                          >
-                            Xem lịch thi đấu
-                          </button>
-                        </div>
-                      ) : (
-                        liveMatches.map((m) => (
-                          <div
-                            key={m.id}
-                            className={`border rounded-xl p-3 sm:p-4 space-y-2.5 ${
-                              isDark
-                                ? 'border-slate-800 bg-slate-950/60'
-                                : 'border-slate-200 bg-slate-50/70'
-                            }`}
-                          >
-                            <div
-                              className={`flex flex-wrap items-center justify-between gap-2 text-xs ${mutedText}`}
-                            >
-                              <div>
-                                <span className="font-mono-num font-bold text-orange-500">
-                                  SÂN {m.courtNumber} · TRẬN #{m.matchNumber}
-                                </span>
-                                <span> · </span>
-                                <span className="font-semibold">
-                                  {m.teamSubCategory || m.division}
-                                </span>
-                              </div>
-                              <span className="font-mono-num font-semibold text-emerald-500">
-                                Hô điểm: {formatScoreCallout(m)}
-                              </span>
-                            </div>
-
-                            <div className="grid grid-cols-12 items-center gap-2 py-1">
-                              <div className="col-span-5 min-w-0">
-                                <div className="text-xs sm:text-sm font-bold truncate">
-                                  {m.teamAName}
-                                </div>
-                                {(m.teamAPlayer1 || m.teamAPlayer2) && (
-                                  <div className={`text-[11px] truncate ${mutedText}`}>
-                                    {m.teamAPlayer1} · {m.teamAPlayer2}
-                                  </div>
-                                )}
-                                <div className="text-[10px] text-orange-500 font-semibold">
-                                  {m.servingTeam === 'A'
-                                    ? `● Đang giao bóng (Người ${m.serverNumber})`
-                                    : 'Đỡ giao bóng'}
-                                </div>
-                              </div>
-
-                              <div className="col-span-2 text-center font-mono-num text-lg sm:text-2xl font-extrabold">
-                                {m.scoreA} : {m.scoreB}
-                              </div>
-
-                              <div className="col-span-5 text-right min-w-0">
-                                <div className="text-xs sm:text-sm font-bold truncate">
-                                  {m.teamBName}
-                                </div>
-                                {(m.teamBPlayer1 || m.teamBPlayer2) && (
-                                  <div className={`text-[11px] truncate ${mutedText}`}>
-                                    {m.teamBPlayer1} · {m.teamBPlayer2}
-                                  </div>
-                                )}
-                                <div className="text-[10px] text-orange-500 font-semibold">
-                                  {m.servingTeam === 'B'
-                                    ? `● Đang giao bóng (Người ${m.serverNumber})`
-                                    : 'Đỡ giao bóng'}
-                                </div>
-                              </div>
-                            </div>
-
-                            {isStaff && (
-                              <div
-                                className={`pt-2 border-t flex items-center justify-between gap-2 text-xs ${
-                                  isDark
-                                    ? 'border-slate-800 text-slate-400'
-                                    : 'border-slate-200/80 text-slate-500'
-                                }`}
-                              >
-                                <span className="truncate">TT: {m.refereeName || 'BTC 1986'}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedRefereeMatchId(m.id);
-                                    setActiveTab('referee');
-                                  }}
-                                  className="min-h-[34px] px-3 py-1 font-semibold text-white bg-slate-900 hover:bg-orange-600 rounded-lg transition-colors shrink-0"
-                                >
-                                  Mở sân trọng tài
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  <div
-                    className={`lg:col-span-5 [@media(orientation:landscape)_and_(max-height:540px)]:col-span-5 border rounded-xl overflow-hidden min-w-0 ${surfaceCard}`}
-                  >
-                    <div
-                      className={`px-3.5 sm:px-5 py-3 sm:py-3.5 border-b flex items-center justify-between gap-2 ${
-                        isDark ? 'border-slate-800' : 'border-slate-200'
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <h2 className="font-display text-sm sm:text-lg font-bold tracking-tight uppercase truncate">
-                          BẢNG XẾP HẠNG THỜI GIAN THỰC
-                        </h2>
-                        <p className={`text-xs truncate ${mutedText}`}>
-                          {currentTournament.divisions[0]
-                            ? `Nội dung ${currentTournament.divisions[0]}`
-                            : 'Chưa có nội dung thi đấu'}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('standings')}
-                        className="text-xs font-semibold text-orange-500 hover:text-orange-400 shrink-0"
-                      >
-                        Chi tiết →
-                      </button>
-                    </div>
-
-                    <div
-                      className={
-                        isDark ? 'divide-y divide-slate-800' : 'divide-y divide-slate-200'
-                      }
-                    >
-                      {Object.keys(standingsPreview).length === 0 ? (
-                        <div className="p-6 text-center space-y-2.5">
-                          <p className={`text-xs ${mutedText}`}>
-                            Chưa có dữ liệu bảng xếp hạng cho giải đấu này.
-                          </p>
-                        </div>
-                      ) : (
-                        Object.entries(standingsPreview).map(([gName, rows]) => (
-                          <div key={gName} className="p-3 sm:p-4 overflow-x-auto">
-                            <div
-                              className={`text-xs font-bold uppercase tracking-wider mb-2 ${mutedText}`}
-                            >
-                              {gName}
-                            </div>
-                            <table className="w-full text-left border-collapse text-xs min-w-[270px]">
-                              <thead>
-                                <tr
-                                  className={`border-b ${
-                                    isDark
-                                      ? 'border-slate-800 text-slate-400'
-                                      : 'border-slate-200 text-slate-500'
-                                  }`}
-                                >
-                                  <th className="py-1.5 pr-2">#</th>
-                                  <th className="py-1.5 px-2">Đội</th>
-                                  <th className="py-1.5 px-2 text-right">T-B</th>
-                                  <th className="py-1.5 px-2 text-right">Hiệu số</th>
-                                  <th className="py-1.5 pl-2 text-right">Điểm</th>
-                                </tr>
-                              </thead>
-                              <tbody
-                                className={
-                                  isDark
-                                    ? 'divide-y divide-slate-800/70'
-                                    : 'divide-y divide-slate-100'
-                                }
-                              >
-                                {rows.map((r, i) => (
-                                  <tr key={r.teamId}>
-                                    <td className="py-2 pr-2 font-mono-num font-bold">{i + 1}</td>
-                                    <td className="py-2 px-2 font-semibold truncate max-w-[140px]">
-                                      {r.teamName}
-                                    </td>
-                                    <td className="py-2 px-2 text-right font-mono-num">
-                                      {r.wins}-{r.losses}
-                                    </td>
-                                    <td
-                                      className={`py-2 px-2 text-right font-mono-num font-semibold ${
-                                        r.pointDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'
-                                      }`}
-                                    >
-                                      {r.pointDiff > 0 ? `+${r.pointDiff}` : r.pointDiff}
-                                    </td>
-                                    <td className="py-2 pl-2 text-right font-mono-num font-bold text-orange-500">
-                                      {r.rankPoints}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </section>
-              </div>
-            )}
-
-            {activeTab === 'schedule' && (
-              <ScheduleAndStandingsView
-                tournament={currentTournament}
-                registrations={tournamentRegistrations}
-                matches={tournamentMatches}
-                mode="schedule"
-                isAdmin={isAdmin}
-                themeMode={themeMode}
-                onGenerateSchedule={handleGenerateSchedule}
-                onOpenRefereeForMatch={(matchId) => {
-                  setSelectedRefereeMatchId(matchId);
-                  setActiveTab('referee');
-                }}
-                onUpdateMatchSchedule={(matchId, courtNumber, scheduledTime) =>
-                  handleUpdateMatch(matchId, { courtNumber, scheduledTime })
-                }
-                onSyncKnockoutFromGroups={handleSyncKnockoutFromGroups}
-              />
-            )}
-
-            {activeTab === 'standings' && (
-              <ScheduleAndStandingsView
-                tournament={currentTournament}
-                registrations={tournamentRegistrations}
-                matches={tournamentMatches}
-                mode="standings"
-                isAdmin={isAdmin}
-                themeMode={themeMode}
-                onGenerateSchedule={handleGenerateSchedule}
-                onOpenRefereeForMatch={(matchId) => {
-                  setSelectedRefereeMatchId(matchId);
-                  setActiveTab('referee');
-                }}
-                onUpdateMatchSchedule={(matchId, courtNumber, scheduledTime) =>
-                  handleUpdateMatch(matchId, { courtNumber, scheduledTime })
-                }
-                onSyncKnockoutFromGroups={handleSyncKnockoutFromGroups}
-              />
-            )}
-
-            {activeTab === 'referee' && isStaff && (
-              <RefereeConsoleView
-                tournament={currentTournament}
-                matches={tournamentMatches}
-                registrations={tournamentRegistrations}
-                selectedMatchId={selectedRefereeMatchId}
-                currentAccount={currentAccount}
-                themeMode={themeMode}
-                activeTab={activeTab}
-                onRequestLogin={(reason) => openLoginWithReason(reason)}
-                onSelectMatch={(matchId) => setSelectedRefereeMatchId(matchId)}
-                onUpdateMatch={handleUpdateMatch}
-                onCompleteMatch={handleCompleteMatch}
-                onAnnounceCourtCall={handleAnnounceCourtCall}
-                onAnnounceCourtAvailable={handleAnnounceCourtAvailable}
-                onAddRosterAthlete={handleAddRosterAthlete}
-              />
-            )}
-
-            {activeTab === 'members' && isStaff && (
-              <MembersAndPaymentsView
-                tournament={currentTournament}
-                registrations={tournamentRegistrations}
-                currentAccount={currentAccount}
-                themeMode={themeMode}
-                onRequestLogin={(reason) => openLoginWithReason(reason)}
-                onAddDivision={handleAddDivision}
-                onAddRegistration={handleAddRegistration}
-                onAssignRegistrationGroup={handleAssignRegistrationGroup}
-                onToggleCheckIn={handleToggleCheckIn}
-              />
-            )}
-
-            {activeTab === 'reports' && isStaff && (
-              <AnalyticsReportView
-                tournament={currentTournament}
-                registrations={tournamentRegistrations}
-                matches={tournamentMatches}
-                themeMode={themeMode}
-              />
-            )}
-
-            {activeTab === 'admin' && isAdmin && renderTournamentOverviewSection()}
-          </>
-        )}
-      </main>
-
-      {/* Lightbox Modal for Tournament Photos */}
-      {lightboxState && (
-        <div
-          onClick={() => setLightboxState(null)}
-          className="no-print fixed inset-0 z-50 bg-slate-950/85 p-3 sm:p-6 flex items-center justify-center"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className={`rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl border ${
-              isDark
-                ? 'bg-slate-900 text-white border-slate-800'
-                : 'bg-white text-slate-900 border-slate-200'
-            }`}
-          >
-            <div
-              className={`px-4 py-3 flex items-center justify-between gap-2 border-b ${
-                isDark
-                  ? 'bg-slate-950 border-slate-800 text-white'
-                  : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
-            >
-              <div className="min-w-0">
-                <div className="text-sm font-bold truncate">
-                  {lightboxState.title} ({lightboxState.imageIndex + 1}/
-                  {lightboxState.images.length})
-                </div>
-                <div className={`text-xs truncate ${mutedText}`}>{lightboxState.subtitle}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setLightboxState(null)}
-                className={`p-1.5 rounded-lg shrink-0 ${
-                  isDark
-                    ? 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                }`}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div
-              className={`flex flex-col items-center justify-center max-h-[75vh] overflow-auto p-3 gap-3 ${
-                isDark ? 'bg-slate-950' : 'bg-slate-100'
-              }`}
-            >
-              <img
-                src={lightboxState.images[lightboxState.imageIndex]}
-                alt={lightboxState.title}
-                referrerPolicy="no-referrer"
-                className="max-h-[60vh] w-auto object-contain rounded-lg"
-              />
-              {lightboxState.images.length > 1 && (
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  {lightboxState.images.map((thumb, idx) => (
-                    <button
-                      key={`${lightboxState.title}_thumb_${idx}`}
-                      type="button"
-                      onClick={() =>
-                        setLightboxState({ ...lightboxState, imageIndex: idx })
-                      }
-                      className={`w-14 h-10 rounded-md overflow-hidden border-2 ${
-                        lightboxState.imageIndex === idx
-                          ? 'border-orange-500'
-                          : 'border-transparent opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <img
-                        src={thumb}
-                        alt={`Ảnh ${idx + 1}`}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Password Confirmation Modal for Resetting Data */}
-      {showResetPasswordModal && (
-        <div
-          onClick={() => setShowResetPasswordModal(false)}
-          className="no-print fixed inset-0 z-50 bg-slate-950/75 p-4 flex items-center justify-center"
-        >
-          <form
-            key={resetShakeKey}
-            onSubmit={handleConfirmResetDemoData}
-            onClick={(e) => e.stopPropagation()}
-            className={`rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border ${
-              resetShakeKey > 0 ? 'popup-shake' : ''
-            } ${surfaceCard}`}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="text-xs font-extrabold uppercase tracking-wider text-rose-500">
-                  Xác nhận thao tác nhạy cảm
-                </div>
-                <h3 className="font-display text-lg font-bold mt-0.5">
-                  Làm mới toàn bộ dữ liệu giải đấu?
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowResetPasswordModal(false)}
-                className={`p-1 rounded-lg ${
-                  isDark
-                    ? 'text-slate-400 hover:bg-slate-800'
-                    : 'text-slate-400 hover:bg-slate-100'
-                }`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className={`text-xs leading-relaxed ${mutedText}`}>
-              Thao tác này sẽ xóa dữ liệu giải đấu, danh sách VĐV/đội và lịch đấu hiện tại trên
-              trình duyệt. Vui lòng nhập mật khẩu Admin để xác nhận.
-            </p>
-
-            <div>
-              <label className="block text-xs font-semibold mb-1">Mật khẩu xác nhận *</label>
-              <input
-                type="password"
-                autoFocus
-                value={resetPasswordInput}
-                onChange={(e) => {
-                  setResetPasswordInput(e.target.value);
-                  if (resetPasswordError) setResetPasswordError(null);
-                }}
-                placeholder="Nhập mật khẩu Admin..."
-                className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-2 ${
-                  resetPasswordError
-                    ? 'border-rose-500 focus:ring-rose-500'
-                    : 'focus:ring-rose-500'
-                } ${
-                  isDark
-                    ? 'bg-slate-950 border-slate-700 text-white placeholder:text-slate-500'
-                    : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
-                }`}
-              />
-              {resetPasswordError && (
-                <p className="text-xs font-semibold text-rose-500 mt-1.5">{resetPasswordError}</p>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setShowResetPasswordModal(false)}
-                className={`min-h-[38px] px-4 py-2 rounded-xl text-xs font-semibold ${
-                  isDark
-                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                className="min-h-[38px] px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold"
-              >
-                Xác nhận làm mới
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Quiet Footer */}
-      <footer
-        className={`no-print border-t px-3.5 sm:px-6 py-3 sm:py-4 text-xs ${
-          isDark
-            ? 'bg-slate-900 border-slate-800 text-slate-400'
-            : 'bg-white border-slate-200 text-slate-500'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div>
-            © 2026 <strong>1986 — Bính Dần Pickleball</strong> · Thông tin & điều hành giải đấu.
-          </div>
-          <div>
-            {isStaff
-              ? 'Nhập VĐV & Sắp bảng chủ động · Điều hành bàn trọng tài · Xuất PDF/CSV'
-              : 'Thông tin giải đấu · Lịch thi đấu · Tỷ số trực tiếp'}
-          </div>
-        </div>
-      </footer>
-
-      {/* FIXED BOTTOM THUMB-ZONE TAB BAR FOR MOBILE PHONES */}
-      <nav
-        className={`no-print lg:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md border-t flex items-center justify-around h-11 sm:h-12 px-1 compact-on-mobile-landscape ${
-          isDark
-            ? 'bg-slate-900/95 border-slate-800 text-slate-300'
-            : 'bg-white/95 border-slate-200 text-slate-600'
-        }`}
-      >
-        {visibleNavItems.map((item) => {
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setActiveTab(item.id)}
-              className={`min-h-[38px] sm:min-h-[44px] flex-1 min-w-0 flex flex-col items-center justify-center rounded-lg transition-colors ${
-                isActive
-                  ? isDark
-                    ? 'bg-slate-800 text-orange-400 font-bold'
-                    : 'bg-orange-50 text-orange-600 font-bold'
-                  : isDark
-                  ? 'bg-slate-900 text-slate-400 hover:text-white'
-                  : 'bg-white text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              {item.icon}
-              <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-full px-0.5">
-                {item.shortLabel}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Modals */}
-      {showAuthModal && (
-        <StaffAuthModal
-          accounts={appState.staffAccounts}
-          currentAccount={currentAccount}
-          themeMode={themeMode}
-          initialMode={authModalMode}
-          reasonMessage={authReasonMessage}
-          onClose={() => {
-            setShowAuthModal(false);
-            setAuthReasonMessage(null);
-          }}
-          onLoginSuccess={handleLoginSuccess}
-          onLogout={handleLogout}
-          onCreateAccount={handleCreateStaffAccount}
-          onDeleteAccount={handleDeleteStaffAccount}
-        />
-      )}
-
-      {showCreateModal && (
-        <CreateTournamentModal
-          themeMode={themeMode}
-          onClose={() => setShowCreateModal(false)}
-          onCreate={handleCreateTournament}
-        />
-      )}
-    </div>
-  );
-}
+          className={`hidden lg:flex items-center gap-1.5 xl:gap-2.5 text-xs xl:text-sm font-medium px
