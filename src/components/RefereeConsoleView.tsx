@@ -76,8 +76,6 @@ function getServeAndReceiveCoords(params: {
       : 'left';
 
   const isEven = serverScore % 2 === 0;
-  // Khi đứng ở Sân Trái nhìn sang phải: ô phải là ô dưới (1).
-  // Khi đứng ở Sân Phải nhìn sang trái: ô phải là ô trên (0).
   const rightHandRow: 0 | 1 = serveSide === 'left' ? 1 : 0;
   const serveRow: 0 | 1 = isEven ? rightHandRow : rightHandRow === 0 ? 1 : 0;
 
@@ -165,7 +163,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
-    if (window.innerWidth < 640) {
+    if (window.innerWidth < 900) {
       document.body.style.overflow = 'hidden';
     }
     return () => {
@@ -291,16 +289,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     rawServeY,
     rawReceiveX,
     rawReceiveY,
-    36,
-    42,
+    34,
+    38,
   );
 
-  /**
-   * Đúng luật Pickleball khi bên đang giao ghi điểm (rally win by serving side):
-   * - Tăng điểm của đội giao thêm 1.
-   * - Đồng đội của đội giao hoán đổi vị trí trên/dưới cho nhau để người giao chuyển sang ô chẵn/lẻ đúng luật;
-   *   đội đỡ đứng nguyên vị trí.
-   */
   const handleScorePoint = (side: 'A' | 'B') => {
     const nextScoreA = side === 'A' ? activeMatch.scoreA + 1 : activeMatch.scoreA;
     const nextScoreB = side === 'B' ? activeMatch.scoreB + 1 : activeMatch.scoreB;
@@ -335,12 +327,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     });
   };
 
-  /**
-   * Đổi giao (khi bên giao hỏng / side-out):
-   * - Đánh đôi: Người 1 hỏng -> chuyển Người 2 cùng đội; Người 2 hỏng -> đổi giao sang đội kia (Người 1).
-   *   (Nếu đầu trận 0-0 và serverNumber === 2: hỏng thì đổi sang đội kia, Người 1).
-   * - Đánh đơn: hỏng -> đổi thẳng sang đội kia (Người 1).
-   */
   const handleFaultRotateServe = () => {
     const otherTeam: 'A' | 'B' = servingTeam === 'A' ? 'B' : 'A';
     const isOpeningDoublesStart =
@@ -534,390 +520,394 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   };
 
   return (
-    <div className="h-[calc(100dvh-148px)] sm:h-auto overflow-hidden flex flex-col justify-between gap-1 sm:gap-2.5">
-      {/* 1. Thanh chọn trận của sân & điều phối */}
-      <section className={`border rounded-xl sm:rounded-2xl p-1.5 sm:p-3 space-y-1 shrink-0 ${cardSurface}`}>
-        <div className="flex items-center justify-between gap-1.5">
-          <div className="flex items-center gap-1 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-orange-500 min-w-0">
-            <Gavel className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-            <span className="truncate">
-              SÂN {activeMatch.courtNumber} · {tournament.name}
-            </span>
-          </div>
-          <span
-            className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold border truncate max-w-[155px] ${
-              isDark
-                ? 'bg-slate-950 border-slate-800 text-slate-300'
-                : 'bg-slate-100 border-slate-200 text-slate-700'
-            }`}
-          >
-            {currentAccount?.displayName || `Trọng tài Sân ${activeMatch.courtNumber}`}
-          </span>
-        </div>
-
-        <select
-          value={activeMatch.id}
-          onChange={(e) => onSelectMatch(e.target.value)}
-          className={`w-full min-h-[28px] sm:min-h-[34px] px-2 py-0.5 text-[10px] sm:text-xs font-bold border rounded-lg sm:rounded-xl ${inputSurface}`}
-        >
-          {courtFilteredMatches.map((m) => (
-            <option key={m.id} value={m.id}>
-              Trận #{m.matchNumber} (Sân {m.courtNumber}) — {m.teamAName} vs {m.teamBName} [
-              {MATCH_STATUS_LABELS[m.status]}]
-            </option>
-          ))}
-        </select>
-
-        <div className="grid grid-cols-4 gap-1 sm:gap-1.5">
-          <button
-            type="button"
-            onClick={handleOpenCoinToss}
-            className="min-h-[26px] sm:min-h-[34px] px-1 py-0.5 rounded-lg sm:rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
-          >
-            <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-            <span>Bốc thăm</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOpenSubstitute('A', 1)}
-            className={`min-h-[26px] sm:min-h-[34px] px-1 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
-              isDark
-                ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-100'
-                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
-            }`}
-          >
-            <UserCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-500 shrink-0" />
-            <span>Thay VĐV</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onAnnounceCourtCall(activeMatch)}
-            className="min-h-[26px] sm:min-h-[34px] px-1 py-0.5 rounded-lg sm:rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
-          >
-            <Megaphone className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-            <span>Gọi sân</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onAnnounceCourtAvailable(activeMatch)}
-            className={`min-h-[26px] sm:min-h-[34px] px-1 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
-              isDark
-                ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-emerald-400'
-                : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
-            }`}
-          >
-            <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-            <span>Sân trống</span>
-          </button>
-        </div>
-      </section>
-
-      {/* 2. Sân Pickleball 22:10 có mũi tên phát -> đỡ rõ nét, không bị cắt */}
-      <section className={`border rounded-xl sm:rounded-2xl p-1.5 sm:p-3 space-y-1 shrink-0 ${cardSurface}`}>
-        <div className="flex items-center justify-between gap-1">
-          <div className="flex items-center gap-1 min-w-0">
-            <h2 className="font-display text-[10px] sm:text-sm font-extrabold uppercase tracking-tight truncate">
-              SÂN {activeMatch.courtNumber} · {serverScore % 2 === 0 ? 'CHẴN' : 'LẺ'} · N
-              {currentServerNum}
-            </h2>
-            <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-300 text-slate-950 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
-              <span>Phát</span>
-            </span>
-            <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-cyan-300 text-slate-950 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
-              <span>Đỡ</span>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-mono-num shrink-0">
-            <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 font-bold truncate max-w-[82px] sm:max-w-[160px]">
-              T: {compactCourtNameLabel(leftTeamLabel)}
-            </span>
-            <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-500 font-bold truncate max-w-[82px] sm:max-w-[160px]">
-              P: {compactCourtNameLabel(rightTeamLabel)}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`rounded-lg sm:rounded-xl border p-1 sm:p-2 ${
-            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
-          }`}
-        >
-          <div className="w-full max-w-3xl mx-auto">
-            <div className="relative w-full max-h-[16.5svh] sm:max-h-[27svh] aspect-[22/10] mx-auto rounded-lg sm:rounded-xl border-2 border-white shadow-sm bg-emerald-700 overflow-hidden select-none">
-              <div className="w-full h-full flex relative z-10">
-                <div className="w-[34.09%] h-full border-r-2 border-white flex flex-col relative">
-                  <div className="flex-1 border-b border-white/85 flex items-center justify-center p-0.5">
-                    {renderSpotButton('left', 0, leftTeamKey, 1, leftPlayers[0])}
-                  </div>
-                  <div className="flex-1 border-t border-white/85 flex items-center justify-center p-0.5">
-                    {renderSpotButton('left', 1, leftTeamKey, 2, leftPlayers[1])}
-                  </div>
-                </div>
-
-                <div className="w-[15.91%] h-full bg-emerald-800/75 border-r border-white/70 flex items-center justify-center">
-                  <span className="text-[7px] sm:text-[9px] font-bold uppercase tracking-widest text-white/60 -rotate-90 whitespace-nowrap">
-                    NVZ 7FT
-                  </span>
-                </div>
-
-                <div className="w-[15.91%] h-full bg-emerald-800/75 border-l border-white/70 flex items-center justify-center">
-                  <span className="text-[7px] sm:text-[9px] font-bold uppercase tracking-widest text-white/60 rotate-90 whitespace-nowrap">
-                    NVZ 7FT
-                  </span>
-                </div>
-
-                <div className="w-[34.09%] h-full border-l-2 border-white flex flex-col relative">
-                  <div className="flex-1 border-b border-white/85 flex items-center justify-center p-0.5">
-                    {renderSpotButton('right', 0, rightTeamKey, 1, rightPlayers[0])}
-                  </div>
-                  <div className="flex-1 border-t border-white/85 flex items-center justify-center p-0.5">
-                    {renderSpotButton('right', 1, rightTeamKey, 2, rightPlayers[1])}
-                  </div>
-                </div>
-
-                <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 bg-white pointer-events-none flex items-start justify-center">
-                  <span className="mt-0.5 px-1 py-0.5 rounded bg-slate-950/80 text-[7px] sm:text-[9px] font-extrabold text-white uppercase leading-none">
-                    Lưới
-                  </span>
-                </div>
-              </div>
-
-              {/* Mũi tên phát -> đỡ ngắn gọn, hiển thị liền mạch phía trên vạch sân */}
-              <svg
-                viewBox="0 0 440 200"
-                className="absolute inset-0 w-full h-full pointer-events-none z-20"
-                preserveAspectRatio="none"
-              >
-                <defs>
-                  <marker
-                    id="serveArrowHead"
-                    markerWidth="7"
-                    markerHeight="7"
-                    refX="5.5"
-                    refY="3.5"
-                    orient="auto"
-                  >
-                    <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#fde047" />
-                  </marker>
-                </defs>
-                <line
-                  x1={sx}
-                  y1={sy}
-                  x2={ex}
-                  y2={ey}
-                  stroke="#fde047"
-                  strokeWidth="3"
-                  strokeDasharray="6 4"
-                  markerEnd="url(#serveArrowHead)"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Bảng điểm & các nút điều khiển nằm gọn trong 1 khung */}
-      <section className={`border rounded-xl sm:rounded-2xl p-1.5 sm:p-3 space-y-1 shrink-0 ${cardSurface}`}>
-        <div className="flex items-center justify-between gap-1 text-[10px] sm:text-xs font-mono-num">
-          <div className="flex items-center gap-1 min-w-0">
-            <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 font-extrabold shrink-0">
-              #{activeMatch.matchNumber} · S{activeMatch.courtNumber}
-            </span>
-            <span className={`truncate ${mutedText}`}>
-              {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-              {formatScoreCallout(activeMatch)}
-            </span>
-            <span className={mutedText}>/{targetPoints}đ</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5 sm:gap-2.5">
-          {/* Đội A */}
-          <div className={`border rounded-lg sm:rounded-xl p-1.5 sm:p-2.5 space-y-1 min-w-0 ${subSurface}`}>
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-orange-500 truncate">
-                ĐỘI A · {courtSideA === 'left' ? 'TRÁI' : 'PHẢI'}
+    <div className="h-[calc(100dvh-146px)] landscape:h-[calc(100dvh-84px)] lg:h-auto overflow-hidden flex flex-col landscape:grid landscape:grid-cols-12 lg:flex lg:flex-col justify-start gap-1 sm:gap-2">
+      {/* CỘT TRÁI (trên điện thoại ngang) / KHỐI TRÊN (trên điện thoại dọc): Chọn trận + Sân */}
+      <div className="landscape:col-span-6 flex flex-col justify-start gap-1 sm:gap-2 min-w-0 shrink-0">
+        {/* 1. Thanh chọn trận của sân & điều phối */}
+        <section className={`border rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 space-y-1 shrink-0 ${cardSurface}`}>
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-orange-500 min-w-0">
+              <Gavel className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <span className="truncate">
+                SÂN {activeMatch.courtNumber} · {tournament.name}
               </span>
-              <div className="flex items-center gap-1 shrink-0">
-                {servingTeam === 'A' && (
-                  <span className="px-1 py-0.5 rounded bg-orange-600 text-white text-[9px] font-bold leading-none">
-                    ● N{currentServerNum}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleStartTimeout('A')}
-                  className={`min-h-[20px] sm:min-h-[22px] px-1.5 py-0.5 rounded border text-[9px] sm:text-[10px] font-bold inline-flex items-center gap-0.5 ${
-                    isDark
-                      ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
-                      : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
-                  }`}
-                >
-                  <Timer className="w-2.5 h-2.5 shrink-0" />
-                  <span>TO ({activeMatch.timeoutsA || 0})</span>
-                </button>
-              </div>
             </div>
-
-            <div
-              className="font-display text-[10px] sm:text-xs font-extrabold leading-tight truncate"
-              title={activeMatch.teamAName}
+            <span
+              className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold border truncate max-w-[155px] ${
+                isDark
+                  ? 'bg-slate-950 border-slate-800 text-slate-300'
+                  : 'bg-slate-100 border-slate-200 text-slate-700'
+              }`}
             >
-              {activeMatch.teamAName}
-            </div>
-
-            <div className="flex items-center justify-between gap-1.5">
-              <div className="font-mono-num text-xl sm:text-3xl font-extrabold leading-none">
-                {activeMatch.scoreA}
-              </div>
-              <button
-                type="button"
-                onClick={() => handleScorePoint('A')}
-                className="min-h-[28px] sm:min-h-[36px] px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white text-[10px] sm:text-xs font-extrabold inline-flex items-center gap-1 whitespace-nowrap"
-              >
-                <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-                <span>+1 ĐIỂM A</span>
-              </button>
-            </div>
+              {currentAccount?.displayName || `Trọng tài Sân ${activeMatch.courtNumber}`}
+            </span>
           </div>
 
-          {/* Đội B */}
-          <div className={`border rounded-lg sm:rounded-xl p-1.5 sm:p-2.5 space-y-1 min-w-0 ${subSurface}`}>
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-sky-500 truncate">
-                ĐỘI B · {courtSideA === 'left' ? 'PHẢI' : 'TRÁI'}
-              </span>
-              <div className="flex items-center gap-1 shrink-0">
-                {servingTeam === 'B' && (
-                  <span className="px-1 py-0.5 rounded bg-sky-600 text-white text-[9px] font-bold leading-none">
-                    ● N{currentServerNum}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleStartTimeout('B')}
-                  className={`min-h-[20px] sm:min-h-[22px] px-1.5 py-0.5 rounded border text-[9px] sm:text-[10px] font-bold inline-flex items-center gap-0.5 ${
-                    isDark
-                      ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
-                      : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
-                  }`}
-                >
-                  <Timer className="w-2.5 h-2.5 shrink-0" />
-                  <span>TO ({activeMatch.timeoutsB || 0})</span>
-                </button>
-              </div>
-            </div>
-
-            <div
-              className="font-display text-[10px] sm:text-xs font-extrabold leading-tight truncate"
-              title={activeMatch.teamBName}
-            >
-              {activeMatch.teamBName}
-            </div>
-
-            <div className="flex items-center justify-between gap-1.5">
-              <div className="font-mono-num text-xl sm:text-3xl font-extrabold leading-none">
-                {activeMatch.scoreB}
-              </div>
-              <button
-                type="button"
-                onClick={() => handleScorePoint('B')}
-                className="min-h-[28px] sm:min-h-[36px] px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] text-white text-[10px] sm:text-xs font-extrabold inline-flex items-center gap-1 whitespace-nowrap"
-              >
-                <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-                <span>+1 ĐIỂM B</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Hàng 1: Đổi giao / Hoàn tác / Đổi sân */}
-        <div className="grid grid-cols-3 gap-1 sm:gap-1.5">
-          <button
-            type="button"
-            onClick={handleFaultRotateServe}
-            className={`min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
-              isDark
-                ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
-                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
-            }`}
+          <select
+            value={activeMatch.id}
+            onChange={(e) => onSelectMatch(e.target.value)}
+            className={`w-full min-h-[26px] sm:min-h-[32px] px-2 py-0.5 text-[10px] sm:text-xs font-bold border rounded-lg sm:rounded-xl ${inputSurface}`}
           >
-            <Clock className="w-3 h-3 text-orange-500 shrink-0" />
-            <span>Đổi giao</span>
-          </button>
+            {courtFilteredMatches.map((m) => (
+              <option key={m.id} value={m.id}>
+                Trận #{m.matchNumber} (Sân {m.courtNumber}) — {m.teamAName} vs {m.teamBName} [
+                {MATCH_STATUS_LABELS[m.status]}]
+              </option>
+            ))}
+          </select>
 
-          <button
-            type="button"
-            onClick={handleUndoPoint}
-            className={`min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
-              isDark
-                ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
-                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
-            }`}
-          >
-            <RotateCcw className="w-3 h-3 text-amber-500 shrink-0" />
-            <span>Hoàn tác</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSwitchCourtSides}
-            className={`min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center whitespace-nowrap ${
-              isDark
-                ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
-                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
-            }`}
-          >
-            Đổi sân
-          </button>
-        </div>
-
-        {/* Hàng 2: Đội A thắng / Đội B thắng / Hòa 2-2 */}
-        <div className={`grid ${isTeam ? 'grid-cols-3' : 'grid-cols-2'} gap-1 sm:gap-1.5`}>
-          <button
-            type="button"
-            onClick={() => onCompleteMatch(activeMatch, 'A')}
-            className="min-h-[26px] sm:min-h-[34px] px-1.5 py-0.5 rounded-lg sm:rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
-          >
-            <Flag className="w-3 h-3 shrink-0" />
-            <span>Đội A thắng</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onCompleteMatch(activeMatch, 'B')}
-            className="min-h-[26px] sm:min-h-[34px] px-1.5 py-0.5 rounded-lg sm:rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
-          >
-            <Flag className="w-3 h-3 shrink-0" />
-            <span>Đội B thắng</span>
-          </button>
-
-          {isTeam && (
+          <div className="grid grid-cols-4 gap-1 sm:gap-1.5">
             <button
               type="button"
-              onClick={() => onCompleteMatch(activeMatch, '')}
-              className={`min-h-[26px] sm:min-h-[34px] px-1.5 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center whitespace-nowrap ${
+              onClick={handleOpenCoinToss}
+              className="min-h-[26px] sm:min-h-[32px] px-1 py-0.5 rounded-lg sm:rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+            >
+              <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <span>Bốc thăm</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOpenSubstitute('A', 1)}
+              className={`min-h-[26px] sm:min-h-[32px] px-1 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
+                isDark
+                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-100'
+                  : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+              }`}
+            >
+              <UserCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-500 shrink-0" />
+              <span>Thay VĐV</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onAnnounceCourtCall(activeMatch)}
+              className="min-h-[26px] sm:min-h-[32px] px-1 py-0.5 rounded-lg sm:rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+            >
+              <Megaphone className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <span>Gọi sân</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onAnnounceCourtAvailable(activeMatch)}
+              className={`min-h-[26px] sm:min-h-[32px] px-1 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
+                isDark
+                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-emerald-400'
+                  : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
+              }`}
+            >
+              <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <span>Sân trống</span>
+            </button>
+          </div>
+        </section>
+
+        {/* 2. Sân Pickleball gọn, không dãn khoảng trắng */}
+        <section className={`border rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 space-y-1 shrink-0 ${cardSurface}`}>
+          <div className="flex items-center justify-between gap-1">
+            <div className="flex items-center gap-1 min-w-0">
+              <h2 className="font-display text-[10px] sm:text-sm font-extrabold uppercase tracking-tight truncate">
+                SÂN {activeMatch.courtNumber} · {serverScore % 2 === 0 ? 'CHẴN' : 'LẺ'} · N
+                {currentServerNum}
+              </h2>
+              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-300 text-slate-950 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
+                <span>Phát</span>
+              </span>
+              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-cyan-300 text-slate-950 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
+                <span>Đỡ</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-mono-num shrink-0">
+              <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 font-bold truncate max-w-[82px] sm:max-w-[150px]">
+                T: {compactCourtNameLabel(leftTeamLabel)}
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-500 font-bold truncate max-w-[82px] sm:max-w-[150px]">
+                P: {compactCourtNameLabel(rightTeamLabel)}
+              </span>
+            </div>
+          </div>
+
+          <div
+            className={`rounded-lg sm:rounded-xl border p-1 sm:p-1.5 ${
+              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+            }`}
+          >
+            <div className="w-full max-w-2xl mx-auto">
+              <div className="relative w-full max-h-[15.5svh] landscape:max-h-[34svh] sm:max-h-[26svh] aspect-[22/10] mx-auto rounded-lg sm:rounded-xl border-2 border-white shadow-sm bg-emerald-700 overflow-hidden select-none">
+                <div className="w-full h-full flex relative z-10">
+                  <div className="w-[34.09%] h-full border-r-2 border-white flex flex-col relative">
+                    <div className="flex-1 border-b border-white/85 flex items-center justify-center p-0.5">
+                      {renderSpotButton('left', 0, leftTeamKey, 1, leftPlayers[0])}
+                    </div>
+                    <div className="flex-1 border-t border-white/85 flex items-center justify-center p-0.5">
+                      {renderSpotButton('left', 1, leftTeamKey, 2, leftPlayers[1])}
+                    </div>
+                  </div>
+
+                  <div className="w-[15.91%] h-full bg-emerald-800/75 border-r border-white/70 flex items-center justify-center">
+                    <span className="text-[7px] sm:text-[9px] font-bold uppercase tracking-widest text-white/60 -rotate-90 whitespace-nowrap">
+                      NVZ 7FT
+                    </span>
+                  </div>
+
+                  <div className="w-[15.91%] h-full bg-emerald-800/75 border-l border-white/70 flex items-center justify-center">
+                    <span className="text-[7px] sm:text-[9px] font-bold uppercase tracking-widest text-white/60 rotate-90 whitespace-nowrap">
+                      NVZ 7FT
+                    </span>
+                  </div>
+
+                  <div className="w-[34.09%] h-full border-l-2 border-white flex flex-col relative">
+                    <div className="flex-1 border-b border-white/85 flex items-center justify-center p-0.5">
+                      {renderSpotButton('right', 0, rightTeamKey, 1, rightPlayers[0])}
+                    </div>
+                    <div className="flex-1 border-t border-white/85 flex items-center justify-center p-0.5">
+                      {renderSpotButton('right', 1, rightTeamKey, 2, rightPlayers[1])}
+                    </div>
+                  </div>
+
+                  <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 bg-white pointer-events-none flex items-start justify-center">
+                    <span className="mt-0.5 px-1 py-0.5 rounded bg-slate-950/80 text-[7px] sm:text-[9px] font-extrabold text-white uppercase leading-none">
+                      Lưới
+                    </span>
+                  </div>
+                </div>
+
+                <svg
+                  viewBox="0 0 440 200"
+                  className="absolute inset-0 w-full h-full pointer-events-none z-20"
+                  preserveAspectRatio="none"
+                >
+                  <defs>
+                    <marker
+                      id="serveArrowHead"
+                      markerWidth="7"
+                      markerHeight="7"
+                      refX="5.5"
+                      refY="3.5"
+                      orient="auto"
+                    >
+                      <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#fde047" />
+                    </marker>
+                  </defs>
+                  <line
+                    x1={sx}
+                    y1={sy}
+                    x2={ex}
+                    y2={ey}
+                    stroke="#fde047"
+                    strokeWidth="3"
+                    strokeDasharray="6 4"
+                    markerEnd="url(#serveArrowHead)"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* CỘT PHẢI (trên điện thoại ngang) / KHỐI DƯỚI (trên điện thoại dọc): Bảng điểm & các nút */}
+      <div className="landscape:col-span-6 flex flex-col justify-start min-w-0 shrink-0">
+        <section className={`border rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 space-y-1 shrink-0 ${cardSurface}`}>
+          <div className="flex items-center justify-between gap-1 text-[10px] sm:text-xs font-mono-num">
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 font-extrabold shrink-0">
+                #{activeMatch.matchNumber} · S{activeMatch.courtNumber}
+              </span>
+              <span className={`truncate ${mutedText}`}>
+                {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                {formatScoreCallout(activeMatch)}
+              </span>
+              <span className={mutedText}>/{targetPoints}đ</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+            {/* Đội A */}
+            <div className={`border rounded-lg sm:rounded-xl p-1.5 sm:p-2 space-y-1 min-w-0 ${subSurface}`}>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-orange-500 truncate">
+                  ĐỘI A · {courtSideA === 'left' ? 'TRÁI' : 'PHẢI'}
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  {servingTeam === 'A' && (
+                    <span className="px-1 py-0.5 rounded bg-orange-600 text-white text-[9px] font-bold leading-none">
+                      ● N{currentServerNum}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleStartTimeout('A')}
+                    className={`min-h-[20px] sm:min-h-[22px] px-1.5 py-0.5 rounded border text-[9px] sm:text-[10px] font-bold inline-flex items-center gap-0.5 ${
+                      isDark
+                        ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
+                        : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
+                    }`}
+                  >
+                    <Timer className="w-2.5 h-2.5 shrink-0" />
+                    <span>TO ({activeMatch.timeoutsA || 0})</span>
+                  </button>
+                </div>
+              </div>
+
+              <div
+                className="font-display text-[10px] sm:text-xs font-extrabold leading-tight truncate"
+                title={activeMatch.teamAName}
+              >
+                {activeMatch.teamAName}
+              </div>
+
+              <div className="flex items-center justify-between gap-1.5">
+                <div className="font-mono-num text-xl sm:text-2xl font-extrabold leading-none">
+                  {activeMatch.scoreA}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleScorePoint('A')}
+                  className="min-h-[28px] sm:min-h-[34px] px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white text-[10px] sm:text-xs font-extrabold inline-flex items-center gap-1 whitespace-nowrap"
+                >
+                  <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                  <span>+1 ĐIỂM A</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Đội B */}
+            <div className={`border rounded-lg sm:rounded-xl p-1.5 sm:p-2 space-y-1 min-w-0 ${subSurface}`}>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-sky-500 truncate">
+                  ĐỘI B · {courtSideA === 'left' ? 'PHẢI' : 'TRÁI'}
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  {servingTeam === 'B' && (
+                    <span className="px-1 py-0.5 rounded bg-sky-600 text-white text-[9px] font-bold leading-none">
+                      ● N{currentServerNum}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleStartTimeout('B')}
+                    className={`min-h-[20px] sm:min-h-[22px] px-1.5 py-0.5 rounded border text-[9px] sm:text-[10px] font-bold inline-flex items-center gap-0.5 ${
+                      isDark
+                        ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-amber-300'
+                        : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
+                    }`}
+                  >
+                    <Timer className="w-2.5 h-2.5 shrink-0" />
+                    <span>TO ({activeMatch.timeoutsB || 0})</span>
+                  </button>
+                </div>
+              </div>
+
+              <div
+                className="font-display text-[10px] sm:text-xs font-extrabold leading-tight truncate"
+                title={activeMatch.teamBName}
+              >
+                {activeMatch.teamBName}
+              </div>
+
+              <div className="flex items-center justify-between gap-1.5">
+                <div className="font-mono-num text-xl sm:text-2xl font-extrabold leading-none">
+                  {activeMatch.scoreB}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleScorePoint('B')}
+                  className="min-h-[28px] sm:min-h-[34px] px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] text-white text-[10px] sm:text-xs font-extrabold inline-flex items-center gap-1 whitespace-nowrap"
+                >
+                  <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                  <span>+1 ĐIỂM B</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Hàng 1: Đổi giao / Hoàn tác / Đổi sân */}
+          <div className="grid grid-cols-3 gap-1 sm:gap-1.5">
+            <button
+              type="button"
+              onClick={handleFaultRotateServe}
+              className={`min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
                 isDark
                   ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
               }`}
             >
-              Hòa 2-2
+              <Clock className="w-3 h-3 text-orange-500 shrink-0" />
+              <span>Đổi giao</span>
             </button>
-          )}
-        </div>
-      </section>
+
+            <button
+              type="button"
+              onClick={handleUndoPoint}
+              className={`min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap ${
+                isDark
+                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
+                  : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+              }`}
+            >
+              <RotateCcw className="w-3 h-3 text-amber-500 shrink-0" />
+              <span>Hoàn tác</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSwitchCourtSides}
+              className={`min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center whitespace-nowrap ${
+                isDark
+                  ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
+                  : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+              }`}
+            >
+              Đổi sân
+            </button>
+          </div>
+
+          {/* Hàng 2: Đội A thắng / Đội B thắng / Hòa 2-2 */}
+          <div className={`grid ${isTeam ? 'grid-cols-3' : 'grid-cols-2'} gap-1 sm:gap-1.5`}>
+            <button
+              type="button"
+              onClick={() => onCompleteMatch(activeMatch, 'A')}
+              className="min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+            >
+              <Flag className="w-3 h-3 shrink-0" />
+              <span>Đội A thắng</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onCompleteMatch(activeMatch, 'B')}
+              className="min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] sm:text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap"
+            >
+              <Flag className="w-3 h-3 shrink-0" />
+              <span>Đội B thắng</span>
+            </button>
+
+            {isTeam && (
+              <button
+                type="button"
+                onClick={() => onCompleteMatch(activeMatch, '')}
+                className={`min-h-[26px] sm:min-h-[32px] px-1.5 py-0.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-bold inline-flex items-center justify-center whitespace-nowrap ${
+                  isDark
+                    ? 'bg-slate-950 hover:bg-slate-800 border-slate-700 text-slate-200'
+                    : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+                }`}
+              >
+                Hòa 2-2
+              </button>
+            )}
+          </div>
+        </section>
+      </div>
 
       {/* POPUP TIME OUT */}
       {timeoutModal && (
