@@ -124,8 +124,8 @@ const VALID_TABS: ActiveTab[] = [
   'admin',
 ];
 
-const STAFF_ONLY_TABS: ActiveTab[] = ['referee', 'members', 'reports', 'admin'];
-const ADMIN_ONLY_TABS: ActiveTab[] = ['admin'];
+const REFEREE_TABS: ActiveTab[] = ['referee'];
+const ADMIN_ONLY_TABS: ActiveTab[] = ['members', 'reports', 'admin'];
 
 function isStaffRole(role: unknown): role is 'admin' | 'referee' {
   return role === 'admin' || role === 'referee';
@@ -294,6 +294,7 @@ export default function App() {
   const isDark = themeMode === 'dark';
   const isStaff = Boolean(currentAccount && isStaffRole(currentAccount.role));
   const isAdmin = currentAccount?.role === 'admin';
+  const isReferee = currentAccount?.role === 'referee';
 
   useEffect(() => {
     try {
@@ -313,7 +314,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!isStaff && STAFF_ONLY_TABS.includes(activeTab)) {
+    if (!isStaff && REFEREE_TABS.includes(activeTab)) {
       setActiveTab('overview');
     } else if (!isAdmin && ADMIN_ONLY_TABS.includes(activeTab)) {
       setActiveTab('overview');
@@ -567,6 +568,9 @@ export default function App() {
     } catch {}
     setShowAuthModal(false);
     setAuthReasonMessage(null);
+    if (account.role === 'referee') {
+      setActiveTab('referee');
+    }
     showToast(
       `Đăng nhập thành công: ${account.displayName}`,
       `Quyền hạn: ${ROLE_LABELS[account.role]} (${account.assignedCourts || 'Toàn hệ thống'})`,
@@ -579,7 +583,9 @@ export default function App() {
     try {
       localStorage.removeItem(AUTH_SESSION_KEY);
     } catch {}
-    if (STAFF_ONLY_TABS.includes(activeTab)) setActiveTab('overview');
+    if ([...REFEREE_TABS, ...ADMIN_ONLY_TABS].includes(activeTab)) {
+      setActiveTab('overview');
+    }
     setShowAuthModal(false);
     setAuthReasonMessage(null);
     if (prevName) {
@@ -893,10 +899,8 @@ export default function App() {
   };
 
   const handleToggleCheckIn = (registrationId: string) => {
-    if (!currentAccount || !isStaffRole(currentAccount.role)) {
-      openLoginWithReason(
-        'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để điểm danh Check-in VĐV.',
-      );
+    if (!isAdmin) {
+      openLoginWithReason('Chỉ tài khoản Ban Tổ Chức (Admin) mới có quyền điểm danh Check-in VĐV.');
       return;
     }
     updateStateAndSync((prev) => ({
@@ -1224,7 +1228,7 @@ export default function App() {
     label: string;
     shortLabel: string;
     icon: React.ReactNode;
-    staffOnly?: boolean;
+    refereeOnly?: boolean;
     adminOnly?: boolean;
   }> = [
     { id: 'overview', label: 'Trang chủ', shortLabel: 'Trang chủ', icon: <Home className="w-4 h-4" /> },
@@ -1246,21 +1250,21 @@ export default function App() {
       label: 'Trọng tài (Sân)',
       shortLabel: 'Trọng tài',
       icon: <Gavel className="w-4 h-4" />,
-      staffOnly: true,
+      refereeOnly: true,
     },
     {
       id: 'members',
       label: 'VĐV & Sắp bảng',
       shortLabel: 'VĐV/Bảng',
       icon: <Users className="w-4 h-4" />,
-      staffOnly: true,
+      adminOnly: true,
     },
     {
       id: 'reports',
       label: 'Báo cáo & Xuất file',
       shortLabel: 'Báo cáo',
       icon: <BarChart3 className="w-4 h-4" />,
-      staffOnly: true,
+      adminOnly: true,
     },
     {
       id: 'admin',
@@ -1273,9 +1277,11 @@ export default function App() {
 
   const visibleNavItems = useMemo(
     () =>
-      navItems.filter(
-        (item) => (!item.staffOnly || isStaff) && (!item.adminOnly || isAdmin),
-      ),
+      navItems.filter((item) => {
+        if (item.adminOnly) return isAdmin;
+        if (item.refereeOnly) return isStaff;
+        return true;
+      }),
     [isStaff, isAdmin],
   );
 
@@ -1590,35 +1596,33 @@ export default function App() {
               </button>
 
               {isStaff && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('referee')}
-                    className={`min-h-[38px] sm:min-h-[40px] px-3.5 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 ${
-                      isDark
-                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
-                    }`}
-                  >
-                    <Gavel className="w-4 h-4 text-orange-500 shrink-0" />
-                    <span>Mở App Trọng Tài</span>
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('referee')}
+                  className={`min-h-[38px] sm:min-h-[40px] px-3.5 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 ${
+                    isDark
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                  }`}
+                >
+                  <Gavel className="w-4 h-4 text-orange-500 shrink-0" />
+                  <span>Mở App Trọng Tài</span>
+                </button>
+              )}
 
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('members')}
-                      className={`min-h-[38px] sm:min-h-[40px] px-3.5 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 ${
-                        isDark
-                          ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
-                      }`}
-                    >
-                      <UserPlus className="w-4 h-4 text-orange-500 shrink-0" />
-                      <span>Nhập VĐV & Sắp Xếp Bảng</span>
-                    </button>
-                  )}
-                </>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('members')}
+                  className={`min-h-[38px] sm:min-h-[40px] px-3.5 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 ${
+                    isDark
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                  }`}
+                >
+                  <UserPlus className="w-4 h-4 text-orange-500 shrink-0" />
+                  <span>Nhập VĐV & Sắp Xếp Bảng</span>
+                </button>
               )}
             </div>
           </div>
@@ -2503,7 +2507,7 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'members' && isStaff && (
+            {activeTab === 'members' && isAdmin && (
               <MembersAndPaymentsView
                 tournament={currentTournament}
                 registrations={tournamentRegistrations}
@@ -2517,7 +2521,7 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'reports' && isStaff && (
+            {activeTab === 'reports' && isAdmin && (
               <AnalyticsReportView
                 tournament={currentTournament}
                 registrations={tournamentRegistrations}
@@ -2708,7 +2712,9 @@ export default function App() {
             © 2026 <strong>1986 — Bính Dần Pickleball</strong> · Thông tin & điều hành giải đấu.
           </div>
           <div>
-            {isStaff
+            {isReferee
+              ? 'Điều hành bàn trọng tài · Tỷ số trực tiếp · Lịch thi đấu'
+              : isAdmin
               ? 'Nhập VĐV & Sắp bảng chủ động · Điều hành bàn trọng tài · Xuất PDF/CSV'
               : 'Thông tin giải đấu · Lịch thi đấu · Tỷ số trực tiếp'}
           </div>
