@@ -1359,7 +1359,6 @@ export default function App() {
 
     return (
       <div className="space-y-5">
-        {/* Khối thông tin chính của giải đấu */}
         <section
           className={`border rounded-2xl p-4 sm:p-6 lg:p-7 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch ${surfaceCard}`}
         >
@@ -1486,7 +1485,13 @@ export default function App() {
             </div>
           </div>
 
-          <div className="lg:col-span-4 bg-slate-900 text-white rounded-xl p-4 sm:p-5 flex flex-col items-center justify-between text-center border border-slate-800">
+          <div
+            className={`lg:col-span-4 rounded-xl p-4 sm:p-5 flex flex-col items-center justify-between text-center border ${
+              isDark
+                ? 'bg-slate-950/70 text-white border-slate-800'
+                : 'bg-slate-900 text-white border-slate-800'
+            }`}
+          >
             <img
               src={BRAND_LOGO_URL}
               alt="1986 Bính Dần Pickleball"
@@ -1582,8 +1587,8 @@ export default function App() {
                     placeholder="VD: Điều lệ thi đấu, Sơ đồ sân, Hình ảnh khai mạc..."
                     className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg ${
                       isDark
-                        ? 'bg-slate-900 border-slate-700 text-white'
-                        : 'bg-white border-slate-300 text-slate-900'
+                        ? 'bg-slate-900 border-slate-700 text-white placeholder:text-slate-500'
+                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                     }`}
                   />
                 </div>
@@ -1596,8 +1601,8 @@ export default function App() {
                     placeholder="VD: Điều lệ, Lịch họp, Ảnh sân..."
                     className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg ${
                       isDark
-                        ? 'bg-slate-900 border-slate-700 text-white'
-                        : 'bg-white border-slate-300 text-slate-900'
+                        ? 'bg-slate-900 border-slate-700 text-white placeholder:text-slate-500'
+                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                     }`}
                   />
                 </div>
@@ -1613,8 +1618,8 @@ export default function App() {
                     placeholder="Nội dung tóm tắt hiển thị trên thẻ..."
                     className={`w-full px-3 py-2 text-xs border rounded-lg ${
                       isDark
-                        ? 'bg-slate-900 border-slate-700 text-white'
-                        : 'bg-white border-slate-300 text-slate-900'
+                        ? 'bg-slate-900 border-slate-700 text-white placeholder:text-slate-500'
+                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                     }`}
                   />
                 </div>
@@ -1629,8 +1634,8 @@ export default function App() {
                     placeholder="Quy định, giờ tập trung, lưu ý cho VĐV và trọng tài..."
                     className={`w-full px-3 py-2 text-xs border rounded-lg ${
                       isDark
-                        ? 'bg-slate-900 border-slate-700 text-white'
-                        : 'bg-white border-slate-300 text-slate-900'
+                        ? 'bg-slate-900 border-slate-700 text-white placeholder:text-slate-500'
+                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                     }`}
                   />
                 </div>
@@ -1646,8 +1651,8 @@ export default function App() {
                     placeholder="VD: Xem điều lệ / Bản đồ sân"
                     className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg ${
                       isDark
-                        ? 'bg-slate-900 border-slate-700 text-white'
-                        : 'bg-white border-slate-300 text-slate-900'
+                        ? 'bg-slate-900 border-slate-700 text-white placeholder:text-slate-500'
+                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                     }`}
                   />
                 </div>
@@ -1660,8 +1665,8 @@ export default function App() {
                     placeholder="https://..."
                     className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg ${
                       isDark
-                        ? 'bg-slate-900 border-slate-700 text-white'
-                        : 'bg-white border-slate-300 text-slate-900'
+                        ? 'bg-slate-900 border-slate-700 text-white placeholder:text-slate-500'
+                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                     }`}
                   />
                 </div>
@@ -1685,8 +1690,8 @@ export default function App() {
                     placeholder="Dán link URL ảnh rồi bấm + Ảnh"
                     className={`flex-1 min-w-0 min-h-[38px] px-3 py-1.5 text-xs border rounded-lg ${
                       isDark
-                        ? 'bg-slate-900 border-slate-700 text-white'
-                        : 'bg-white border-slate-300 text-slate-900'
+                        ? 'bg-slate-900 border-slate-700 text-white placeholder:text-slate-500'
+                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                     }`}
                   />
                   <button
@@ -1718,7 +1723,9 @@ export default function App() {
                     {postDraftImages.map((src, idx) => (
                       <div
                         key={`${idx}_${src.slice(0, 20)}`}
-                        className="relative w-24 h-16 rounded-lg overflow-hidden border border-slate-300 bg-slate-900"
+                        className={`relative w-24 h-16 rounded-lg overflow-hidden border bg-slate-900 ${
+                          isDark ? 'border-slate-700' : 'border-slate-300'
+                        }`}
                       >
                         <img
                           src={src}
@@ -1765,7 +1772,9 @@ export default function App() {
           {visiblePosts.length === 0 ? (
             <div
               className={`p-6 rounded-xl border text-center text-xs ${
-                isDark ? 'bg-slate-950/50 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                isDark
+                  ? 'bg-slate-950/50 border-slate-800 text-slate-400'
+                  : 'bg-slate-50 border-slate-200 text-slate-500'
               }`}
             >
               Chưa có bài đăng thông tin hoặc hình ảnh nào cho giải đấu.
@@ -1781,7 +1790,9 @@ export default function App() {
                   <article
                     key={post.id}
                     className={`rounded-2xl border overflow-hidden flex flex-col justify-between ${
-                      isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50/60 border-slate-200'
+                      isDark
+                        ? 'bg-slate-950/60 border-slate-800'
+                        : 'bg-slate-50/60 border-slate-200'
                     }`}
                   >
                     <div>
@@ -1874,7 +1885,9 @@ export default function App() {
 
                     <div
                       className={`px-4 py-3 border-t flex items-center justify-between gap-2 ${
-                        isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-white'
+                        isDark
+                          ? 'border-slate-800 bg-slate-900/70'
+                          : 'border-slate-200 bg-white'
                       }`}
                     >
                       {post.linkUrl ? (
@@ -2128,7 +2141,13 @@ export default function App() {
 
       {/* Real-Time Toast Banner */}
       {toastMessage && (
-        <div className="no-print fixed bottom-16 lg:bottom-5 right-3 left-3 sm:left-auto sm:right-5 z-50 sm:max-w-md bg-slate-900 text-white border border-slate-700 rounded-xl p-3.5 shadow-xl flex items-start gap-2.5">
+        <div
+          className={`no-print fixed bottom-16 lg:bottom-5 right-3 left-3 sm:left-auto sm:right-5 z-50 sm:max-w-md border rounded-xl p-3.5 shadow-xl flex items-start gap-2.5 ${
+            isDark
+              ? 'bg-slate-900 text-white border-slate-700'
+              : 'bg-slate-900 text-white border-slate-800'
+          }`}
+        >
           <CheckCircle2 className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
           <div className="text-xs space-y-0.5 min-w-0">
             <div className="font-semibold text-white">{toastMessage.title}</div>
@@ -2139,7 +2158,13 @@ export default function App() {
 
       {/* Notification Slide-Down Panel */}
       {showNotifDrawer && currentTournament && (
-        <div className="no-print bg-slate-900 text-white border-b border-slate-800 px-4 sm:px-6 py-4">
+        <div
+          className={`no-print border-b px-4 sm:px-6 py-4 ${
+            isDark
+              ? 'bg-slate-950 text-white border-slate-800'
+              : 'bg-slate-900 text-white border-slate-800'
+          }`}
+        >
           <div className="max-w-7xl mx-auto space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-sm sm:text-base font-bold uppercase tracking-wide text-orange-400">
@@ -2154,7 +2179,7 @@ export default function App() {
               </button>
             </div>
             {tournamentNotifications.length === 0 ? (
-              <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
+              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300">
                 Hiện chưa có thông báo nào.
               </div>
             ) : (
@@ -2162,7 +2187,7 @@ export default function App() {
                 {tournamentNotifications.slice(0, 6).map((n) => (
                   <div
                     key={n.id}
-                    className="p-3 rounded-xl bg-slate-800/90 border border-slate-700 text-xs space-y-1"
+                    className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-1"
                   >
                     <div className="font-semibold text-white">{n.title}</div>
                     <p className="text-slate-300 leading-relaxed">{n.message}</p>
@@ -2515,25 +2540,43 @@ export default function App() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 text-white rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl border border-slate-800"
+            className={`rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl border ${
+              isDark
+                ? 'bg-slate-900 text-white border-slate-800'
+                : 'bg-white text-slate-900 border-slate-200'
+            }`}
           >
-            <div className="px-4 py-3 bg-slate-950 flex items-center justify-between gap-2">
+            <div
+              className={`px-4 py-3 flex items-center justify-between gap-2 border-b ${
+                isDark
+                  ? 'bg-slate-950 border-slate-800 text-white'
+                  : 'bg-slate-50 border-slate-200 text-slate-900'
+              }`}
+            >
               <div className="min-w-0">
                 <div className="text-sm font-bold truncate">
                   {lightboxState.title} ({lightboxState.imageIndex + 1}/
                   {lightboxState.images.length})
                 </div>
-                <div className="text-xs text-slate-400 truncate">{lightboxState.subtitle}</div>
+                <div className={`text-xs truncate ${mutedText}`}>{lightboxState.subtitle}</div>
               </div>
               <button
                 type="button"
                 onClick={() => setLightboxState(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 shrink-0"
+                className={`p-1.5 rounded-lg shrink-0 ${
+                  isDark
+                    ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+                }`}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="bg-slate-950 flex flex-col items-center justify-center max-h-[75vh] overflow-auto p-3 gap-3">
+            <div
+              className={`flex flex-col items-center justify-center max-h-[75vh] overflow-auto p-3 gap-3 ${
+                isDark ? 'bg-slate-950' : 'bg-slate-100'
+              }`}
+            >
               <img
                 src={lightboxState.images[lightboxState.imageIndex]}
                 alt={lightboxState.title}
@@ -2551,7 +2594,7 @@ export default function App() {
                       }
                       className={`w-14 h-10 rounded-md overflow-hidden border-2 ${
                         lightboxState.imageIndex === idx
-                          ? 'border-orange-400'
+                          ? 'border-orange-500'
                           : 'border-transparent opacity-60 hover:opacity-100'
                       }`}
                     >
@@ -2619,8 +2662,8 @@ export default function App() {
                 placeholder="Nhập mật khẩu Admin..."
                 className={`w-full min-h-[38px] px-3 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 ${
                   isDark
-                    ? 'bg-slate-950 border-slate-700 text-white'
-                    : 'bg-white border-slate-300 text-slate-900'
+                    ? 'bg-slate-950 border-slate-700 text-white placeholder:text-slate-500'
+                    : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                 }`}
               />
               {resetPasswordError && (
@@ -2654,7 +2697,9 @@ export default function App() {
       {/* Quiet Footer */}
       <footer
         className={`no-print border-t px-4 sm:px-6 py-4 text-xs ${
-          isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+          isDark
+            ? 'bg-slate-900 border-slate-800 text-slate-400'
+            : 'bg-white border-slate-200 text-slate-500'
         } ${activeTab === 'referee' && isStaff ? 'hidden' : ''}`}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
@@ -2704,6 +2749,7 @@ export default function App() {
         <StaffAuthModal
           accounts={appState.staffAccounts}
           currentAccount={currentAccount}
+          themeMode={themeMode}
           initialMode={authModalMode}
           reasonMessage={authReasonMessage}
           onClose={() => {
@@ -2719,6 +2765,7 @@ export default function App() {
 
       {showCreateModal && (
         <CreateTournamentModal
+          themeMode={themeMode}
           onClose={() => setShowCreateModal(false)}
           onCreate={handleCreateTournament}
         />
