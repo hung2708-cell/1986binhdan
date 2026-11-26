@@ -73,7 +73,8 @@ type ActiveTab =
   | 'referee'
   | 'standings'
   | 'members'
-  | 'reports';
+  | 'reports'
+  | 'admin';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -121,9 +122,10 @@ const VALID_TABS: ActiveTab[] = [
   'standings',
   'members',
   'reports',
+  'admin',
 ];
 
-const STAFF_ONLY_TABS: ActiveTab[] = ['referee', 'members', 'reports'];
+const STAFF_ONLY_TABS: ActiveTab[] = ['referee', 'members', 'reports', 'admin'];
 
 function isStaffRole(role: unknown): role is 'admin' | 'referee' {
   return role === 'admin' || role === 'referee';
@@ -1347,9 +1349,9 @@ export default function App() {
   const renderTournamentOverviewSection = () => {
     if (!currentTournament) {
       return (
-        <section className={`border rounded-2xl p-6 text-center space-y-3 ${surfaceCard}`}>
+        <section className={`border rounded-2xl p-5 sm:p-6 text-center space-y-3 ${surfaceCard}`}>
           <p className={`text-sm ${mutedText}`}>Chưa có giải đấu nào đang hiển thị.</p>
-          {isAdmin && (
+          {isAdmin && activeTab === 'admin' && (
             <button
               type="button"
               onClick={handleOpenCreateTournament}
@@ -1364,13 +1366,13 @@ export default function App() {
     }
 
     return (
-      <div className="space-y-5">
+      <div className="space-y-4 sm:space-y-5 [@media(orientation:landscape)_and_(max-height:540px)]:space-y-3">
         <section
-          className={`border rounded-2xl p-4 sm:p-6 lg:p-7 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch ${surfaceCard}`}
+          className={`border rounded-2xl p-3.5 sm:p-6 lg:p-7 [@media(orientation:landscape)_and_(max-height:540px)]:p-3 grid grid-cols-1 lg:grid-cols-12 [@media(orientation:landscape)_and_(max-height:540px)]:grid-cols-12 gap-4 sm:gap-5 [@media(orientation:landscape)_and_(max-height:540px)]:gap-3 items-stretch ${surfaceCard}`}
         >
-          <div className="lg:col-span-8 flex flex-col justify-between space-y-4">
-            <div className="space-y-2">
-              <div className={`flex flex-wrap items-center gap-1.5 text-xs ${mutedText}`}>
+          <div className="lg:col-span-8 [@media(orientation:landscape)_and_(max-height:540px)]:col-span-8 flex flex-col justify-between space-y-3 sm:space-y-4 min-w-0">
+            <div className="space-y-1.5 sm:space-y-2">
+              <div className={`flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs ${mutedText}`}>
                 <span className="font-semibold text-orange-500 uppercase tracking-wider">
                   THÔNG TIN GIẢI ĐẤU · PICKLEBALL 1986
                 </span>
@@ -1380,7 +1382,7 @@ export default function App() {
                 <span>{TOURNAMENT_STATUS_LABELS[currentTournament.status]}</span>
               </div>
 
-              <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight">
+              <h1 className="font-display text-lg sm:text-2xl lg:text-3xl font-extrabold tracking-tight leading-snug">
                 {currentTournament.name}
               </h1>
 
@@ -1388,7 +1390,7 @@ export default function App() {
                 {currentTournament.description}
               </p>
 
-              <div className={`pt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${mutedText}`}>
+              <div className={`pt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${mutedText}`}>
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
                   {currentTournament.location}
@@ -1404,11 +1406,11 @@ export default function App() {
               </div>
 
               {currentTournament.divisions.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-2">
+                <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
                   {currentTournament.divisions.map((div) => (
                     <span
                       key={div}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${
+                      className={`px-2.5 py-0.5 sm:py-1 rounded-lg text-[11px] font-semibold border ${
                         isDark
                           ? 'bg-slate-800 text-orange-300 border-slate-700'
                           : 'bg-orange-50 text-orange-800 border-orange-200'
@@ -1421,40 +1423,40 @@ export default function App() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:flex flex-wrap items-center gap-2.5 pt-1">
+            <div className="grid grid-cols-1 sm:flex flex-wrap items-center gap-2 sm:gap-2.5 pt-1">
               <button
                 type="button"
                 onClick={() => setActiveTab('live')}
-                className="min-h-[42px] px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="min-h-[38px] sm:min-h-[42px] px-3.5 sm:px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition-colors flex items-center justify-center gap-2"
               >
-                <Radio className="w-4 h-4" />
-                Xem tỷ số trực tiếp (Live)
+                <Radio className="w-4 h-4 shrink-0" />
+                <span>Xem tỷ số trực tiếp (Live)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('schedule')}
-                className={`min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                className={`min-h-[38px] sm:min-h-[42px] px-3.5 sm:px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
                 }`}
               >
-                <Calendar className="w-4 h-4 text-orange-500" />
-                Lịch & Nhánh đấu
+                <Calendar className="w-4 h-4 text-orange-500 shrink-0" />
+                <span>Lịch & Nhánh đấu</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('standings')}
-                className={`min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                className={`min-h-[38px] sm:min-h-[42px] px-3.5 sm:px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
                 }`}
               >
-                <Trophy className="w-4 h-4 text-orange-500" />
-                Bảng xếp hạng
+                <Trophy className="w-4 h-4 text-orange-500 shrink-0" />
+                <span>Bảng xếp hạng</span>
               </button>
 
               {isStaff && (
@@ -1462,28 +1464,28 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setActiveTab('referee')}
-                    className={`min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                    className={`min-h-[38px] sm:min-h-[42px] px-3.5 sm:px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
                       isDark
                         ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
                     }`}
                   >
-                    <Gavel className="w-4 h-4 text-orange-500" />
-                    Mở App Trọng Tài
+                    <Gavel className="w-4 h-4 text-orange-500 shrink-0" />
+                    <span>Mở App Trọng Tài</span>
                   </button>
 
                   {isAdmin && (
                     <button
                       type="button"
                       onClick={() => setActiveTab('members')}
-                      className={`min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                      className={`min-h-[38px] sm:min-h-[42px] px-3.5 sm:px-4 py-2 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
                         isDark
                           ? 'bg-slate-800 hover:bg-slate-700 text-slate-100'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
                       }`}
                     >
-                      <UserPlus className="w-4 h-4 text-orange-500" />
-                      Nhập VĐV & Sắp Xếp Bảng
+                      <UserPlus className="w-4 h-4 text-orange-500 shrink-0" />
+                      <span>Nhập VĐV & Sắp Xếp Bảng</span>
                     </button>
                   )}
                 </>
@@ -1492,7 +1494,7 @@ export default function App() {
           </div>
 
           <div
-            className={`lg:col-span-4 rounded-xl p-4 sm:p-5 flex flex-col items-center justify-between text-center border ${
+            className={`lg:col-span-4 [@media(orientation:landscape)_and_(max-height:540px)]:col-span-4 rounded-xl p-3.5 sm:p-5 [@media(orientation:landscape)_and_(max-height:540px)]:p-3 flex flex-col items-center justify-between text-center border min-w-0 ${
               isDark
                 ? 'bg-slate-950/70 text-white border-slate-800'
                 : 'bg-slate-900 text-white border-slate-800'
@@ -1502,31 +1504,31 @@ export default function App() {
               src={BRAND_LOGO_URL}
               alt="1986 Bính Dần Pickleball"
               referrerPolicy="no-referrer"
-              className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-orange-500 shadow-md"
+              className="w-14 h-14 sm:w-20 sm:h-20 [@media(orientation:landscape)_and_(max-height:540px)]:w-12 [@media(orientation:landscape)_and_(max-height:540px)]:h-12 rounded-2xl object-cover border-2 border-orange-500 shadow-md"
             />
             <div className="my-2">
-              <div className="font-display text-lg sm:text-xl font-extrabold tracking-wide text-orange-400">
+              <div className="font-display text-base sm:text-xl font-extrabold tracking-wide text-orange-400">
                 BÍNH DẦN 1986 PICKLEBALL
               </div>
-              <p className="text-xs text-slate-300 mt-1">
+              <p className="text-[11px] sm:text-xs text-slate-300 mt-1">
                 Cổng thông tin điều hành · Lịch thi đấu · Tỷ số trực tiếp
               </p>
             </div>
             <div className="w-full pt-2 border-t border-slate-800 grid grid-cols-3 gap-2 font-mono-num text-xs">
               <div>
-                <div className="text-slate-400">Đang đấu</div>
+                <div className="text-slate-400 text-[11px]">Đang đấu</div>
                 <div className="text-sm font-bold text-emerald-400">
                   {liveMatches.length}/{currentTournament.courtsCount}
                 </div>
               </div>
               <div>
-                <div className="text-slate-400">Tổng đội</div>
+                <div className="text-slate-400 text-[11px]">Tổng đội</div>
                 <div className="text-sm font-bold text-white">
                   {tournamentRegistrations.length}
                 </div>
               </div>
               <div>
-                <div className="text-slate-400">Tổng trận</div>
+                <div className="text-slate-400 text-[11px]">Tổng trận</div>
                 <div className="text-sm font-bold text-orange-400">
                   {tournamentMatches.length}
                 </div>
@@ -1536,10 +1538,10 @@ export default function App() {
         </section>
 
         {/* Khối thông tin & hình ảnh giải đấu do Admin đăng / quản lý */}
-        <section className={`border rounded-2xl p-4 sm:p-6 space-y-4 ${surfaceCard}`}>
+        <section className={`border rounded-2xl p-3.5 sm:p-6 space-y-3.5 sm:space-y-4 ${surfaceCard}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="font-display text-base sm:text-lg font-bold uppercase tracking-tight">
+            <div className="min-w-0">
+              <h2 className="font-display text-sm sm:text-lg font-bold uppercase tracking-tight">
                 THÔNG BÁO & HÌNH ẢNH GIẢI ĐẤU ({visiblePosts.length})
               </h2>
               <p className={`text-xs ${mutedText}`}>
@@ -1551,10 +1553,10 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleStartAddPost}
-                className="min-h-[38px] px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors"
+                className="min-h-[36px] sm:min-h-[38px] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors shrink-0"
               >
-                <Plus className="w-4 h-4" />
-                Đăng thông tin / Hình ảnh
+                <Plus className="w-4 h-4 shrink-0" />
+                <span>Đăng thông tin / Hình ảnh</span>
               </button>
             )}
           </div>
@@ -1562,7 +1564,7 @@ export default function App() {
           {isAdmin && showPostForm && (
             <form
               onSubmit={handleSavePost}
-              className={`p-4 sm:p-5 rounded-2xl border space-y-4 ${
+              className={`p-3.5 sm:p-5 rounded-2xl border space-y-3.5 sm:space-y-4 ${
                 isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
               }`}
             >
@@ -1713,7 +1715,7 @@ export default function App() {
                   </button>
                   <label className="min-h-[38px] px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-600 text-white text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5 shrink-0 transition-colors">
                     <ImagePlus className="w-3.5 h-3.5" />
-                    Tải ảnh lên
+                    <span>Tải ảnh lên</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1787,7 +1789,7 @@ export default function App() {
               {isAdmin ? ' Bấm "Đăng thông tin / Hình ảnh" để thêm mới.' : ''}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 [@media(orientation:landscape)_and_(max-height:540px)]:grid-cols-2 gap-3.5 sm:gap-4 items-start">
               {visiblePosts.map((post) => {
                 const isExpanded = Boolean(expandedPostIds[post.id]);
                 const hasMore = Boolean(post.detail) || post.summary.length > 120;
@@ -1795,7 +1797,7 @@ export default function App() {
                 return (
                   <article
                     key={post.id}
-                    className={`rounded-2xl border overflow-hidden flex flex-col justify-between ${
+                    className={`rounded-2xl border overflow-hidden flex flex-col justify-between min-w-0 ${
                       isDark
                         ? 'bg-slate-950/60 border-slate-800'
                         : 'bg-slate-50/60 border-slate-200'
@@ -1831,7 +1833,7 @@ export default function App() {
                         </div>
                       )}
 
-                      <div className="p-4 space-y-2">
+                      <div className="p-3.5 sm:p-4 space-y-2">
                         <div className="flex items-center justify-between gap-2 text-[11px]">
                           <span className="px-2 py-0.5 rounded-md font-bold bg-orange-500/15 text-orange-500">
                             {post.badge}
@@ -1841,7 +1843,7 @@ export default function App() {
                           )}
                         </div>
 
-                        <h3 className="font-display text-base font-bold leading-snug">
+                        <h3 className="font-display text-sm sm:text-base font-bold leading-snug">
                           {post.title}
                         </h3>
 
@@ -1890,7 +1892,7 @@ export default function App() {
                     </div>
 
                     <div
-                      className={`px-4 py-3 border-t flex items-center justify-between gap-2 ${
+                      className={`px-3.5 sm:px-4 py-2.5 sm:py-3 border-t flex items-center justify-between gap-2 ${
                         isDark
                           ? 'border-slate-800 bg-slate-900/70'
                           : 'border-slate-200 bg-white'
@@ -1922,7 +1924,7 @@ export default function App() {
                             }`}
                           >
                             <Pencil className="w-3.5 h-3.5" />
-                            Sửa
+                            <span>Sửa</span>
                           </button>
                           <button
                             type="button"
@@ -1930,7 +1932,7 @@ export default function App() {
                             className="text-xs font-semibold text-rose-500 hover:text-rose-400 inline-flex items-center gap-1"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                            Xóa
+                            <span>Xóa</span>
                           </button>
                         </div>
                       )}
@@ -1947,13 +1949,13 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-dvh flex flex-col pb-16 lg:pb-0 ${
+      className={`min-h-dvh flex flex-col pb-14 lg:pb-0 [@media(orientation:landscape)_and_(max-height:540px)]:pb-11 ${
         isDark ? 'bg-slate-950 text-slate-100' : 'bg-[#F8FAFC] text-[#0F172A]'
       }`}
     >
       {/* TOP BAR CONTRACT */}
       <header
-        className={`no-print sticky top-0 z-30 backdrop-blur-xs border-b px-3 sm:px-6 shrink-0 flex items-center justify-between gap-2 sm:gap-6 min-h-12 sm:min-h-14 py-1.5 ${
+        className={`no-print sticky top-0 z-30 backdrop-blur-xs border-b px-2.5 sm:px-6 [@media(orientation:landscape)_and_(max-height:540px)]:px-3 shrink-0 flex items-center justify-between gap-2 sm:gap-6 min-h-11 sm:min-h-14 py-1 sm:py-1.5 ${
           isDark
             ? 'bg-slate-900/95 border-slate-800 text-slate-100'
             : 'bg-white/95 border-slate-200 text-slate-900'
@@ -1965,15 +1967,15 @@ export default function App() {
             e.preventDefault();
             setActiveTab('overview');
           }}
-          className="flex items-center gap-2 sm:gap-2.5 shrink-0 group"
+          className="flex items-center gap-2 sm:gap-2.5 shrink-0 group min-w-0"
         >
           <img
             src={BRAND_LOGO_URL}
             alt="Logo 1986 Bính Dần Pickleball"
             referrerPolicy="no-referrer"
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-cover border border-orange-400 shadow-2xs shrink-0"
+            className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg object-cover border border-orange-400 shadow-2xs shrink-0"
           />
-          <span className="font-display text-lg sm:text-xl xl:text-2xl font-extrabold tracking-tight group-hover:text-orange-500 transition-colors whitespace-nowrap">
+          <span className="font-display text-base sm:text-xl xl:text-2xl font-extrabold tracking-tight group-hover:text-orange-500 transition-colors whitespace-nowrap">
             1986 PICKLEBALL
           </span>
         </a>
@@ -2006,12 +2008,12 @@ export default function App() {
           })}
         </nav>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             type="button"
             onClick={toggleThemeMode}
             title={isDark ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối'}
-            className={`min-h-[34px] px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+            className={`min-h-[32px] sm:min-h-[34px] px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg border transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
               isDark
                 ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
@@ -2029,7 +2031,7 @@ export default function App() {
                 setAuthModalMode(isAdmin ? 'manage' : 'login');
                 setShowAuthModal(true);
               }}
-              className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+              className={`min-h-[32px] sm:min-h-[36px] px-2.5 sm:px-3.5 py-1 sm:py-2 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                 isAdmin
                   ? 'bg-orange-600 hover:bg-orange-700 text-white'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white'
@@ -2040,7 +2042,7 @@ export default function App() {
               ) : (
                 <Gavel className="w-4 h-4 shrink-0" />
               )}
-              <span className="truncate max-w-[130px] sm:max-w-[180px] xl:max-w-none">
+              <span className="truncate max-w-[115px] sm:max-w-[180px] xl:max-w-none">
                 {isAdmin ? 'BTC' : 'TT'}: {currentAccount.displayName}
               </span>
             </button>
@@ -2052,7 +2054,7 @@ export default function App() {
                 setAuthModalMode('login');
                 setShowAuthModal(true);
               }}
-              className="px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5"
+              className="min-h-[32px] sm:min-h-[36px] px-3 sm:px-4 py-1 sm:py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5"
             >
               <LogIn className="w-4 h-4 shrink-0" />
               <span>Đăng nhập</span>
@@ -2063,7 +2065,7 @@ export default function App() {
 
       {/* Secondary Workspace Context Toolbar */}
       <div
-        className={`no-print border-b px-2.5 sm:px-6 py-2 shrink-0 ${
+        className={`no-print border-b px-2.5 sm:px-6 py-1.5 sm:py-2 shrink-0 ${
           isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
         }`}
       >
@@ -2073,7 +2075,7 @@ export default function App() {
               <select
                 value={currentTournament.id}
                 onChange={(e) => setSelectedTournamentId(e.target.value)}
-                className={`min-h-[36px] w-full sm:w-auto flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 text-xs font-semibold border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 max-w-full sm:max-w-md truncate ${
+                className={`min-h-[34px] sm:min-h-[36px] w-full sm:w-auto flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 text-xs font-semibold border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 max-w-full sm:max-w-md truncate ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
                     : 'bg-slate-100 hover:bg-slate-200/70 text-slate-900 border-slate-200'
@@ -2093,17 +2095,16 @@ export default function App() {
           </div>
 
           <div className="flex items-center justify-end gap-1.5 shrink-0">
-            {isAdmin && (
-              {activeTab === 'admin' && (
-  <button
-    type="button"
-    onClick={handleOpenCreateTournament}
-    className="..."
-  >
-    + Tạo giải mới
-  </button>
-)}
-
+            {isAdmin && activeTab === 'admin' && (
+              <button
+                type="button"
+                onClick={handleOpenCreateTournament}
+                className="min-h-[34px] px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-orange-600 text-white text-xs font-bold inline-flex items-center gap-1 whitespace-nowrap transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Tạo giải mới</span>
+              </button>
+            )}
 
             {currentTournament && (
               <button
@@ -2112,14 +2113,16 @@ export default function App() {
                   setShowNotifDrawer((s) => !s);
                   setReadNotifIds(tournamentNotifications.map((n) => n.id));
                 }}
-                className={`min-h-[34px] px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap ${
+                className={`min-h-[32px] sm:min-h-[34px] px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap ${
                   isDark
                     ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                 }`}
               >
                 <Bell className="w-3.5 h-3.5 text-orange-500" />
-                <span>{unreadCount > 0 ? `${unreadCount} mới` : tournamentNotifications.length}</span>
+                <span>
+                  {unreadCount > 0 ? `${unreadCount} mới` : tournamentNotifications.length}
+                </span>
               </button>
             )}
 
@@ -2128,7 +2131,7 @@ export default function App() {
                 type="button"
                 onClick={handleRequestResetDemoData}
                 title="Làm mới dữ liệu giải đấu (yêu cầu mật khẩu)"
-                className={`min-h-[34px] p-1.5 rounded-lg transition-colors ${
+                className={`min-h-[32px] sm:min-h-[34px] p-1.5 rounded-lg transition-colors ${
                   isDark
                     ? 'text-slate-400 hover:text-white hover:bg-slate-800'
                     : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
@@ -2144,7 +2147,7 @@ export default function App() {
       {/* Real-Time Toast Banner */}
       {toastMessage && (
         <div
-          className={`no-print fixed bottom-16 lg:bottom-5 right-3 left-3 sm:left-auto sm:right-5 z-50 sm:max-w-md border rounded-xl p-3.5 shadow-xl flex items-start gap-2.5 ${
+          className={`no-print fixed bottom-14 lg:bottom-5 right-3 left-3 sm:left-auto sm:right-5 z-50 sm:max-w-md border rounded-xl p-3.5 shadow-xl flex items-start gap-2.5 ${
             isDark
               ? 'bg-slate-900 text-white border-slate-700'
               : 'bg-slate-900 text-white border-slate-800'
@@ -2161,7 +2164,7 @@ export default function App() {
       {/* Notification Slide-Down Panel */}
       {showNotifDrawer && currentTournament && (
         <div
-          className={`no-print border-b px-4 sm:px-6 py-4 ${
+          className={`no-print border-b px-3.5 sm:px-6 py-4 ${
             isDark
               ? 'bg-slate-950 text-white border-slate-800'
               : 'bg-slate-900 text-white border-slate-800'
@@ -2202,12 +2205,14 @@ export default function App() {
       )}
 
       {/* MAIN WORKSPACE CONTENT */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-2.5 sm:px-5 lg:px-6 py-3.5 sm:py-5 lg:py-6 space-y-5">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-2.5 sm:px-5 lg:px-6 py-3 sm:py-5 lg:py-6 [@media(orientation:landscape)_and_(max-height:540px)]:py-2 space-y-4 sm:space-y-5 min-w-0">
         {!currentTournament ? (
-          activeTab === 'overview' ? (
+          activeTab === 'overview' || activeTab === 'admin' ? (
             renderTournamentOverviewSection()
           ) : (
-            <section className={`border rounded-2xl p-6 text-center text-xs ${surfaceCard} ${mutedText}`}>
+            <section
+              className={`border rounded-2xl p-6 text-center text-xs ${surfaceCard} ${mutedText}`}
+            >
               Chưa có giải đấu nào được chọn.
             </section>
           )
@@ -2218,38 +2223,40 @@ export default function App() {
 
             {/* TAB 2: LIVE */}
             {activeTab === 'live' && (
-              <div className="space-y-5">
+              <div className="space-y-4 sm:space-y-5">
                 <section
-                  className={`border rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 ${surfaceCard}`}
+                  className={`border rounded-2xl p-3.5 sm:p-5 flex flex-wrap items-center justify-between gap-3 ${surfaceCard}`}
                 >
-                  <div>
+                  <div className="min-w-0">
                     <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-500">
-                      <Radio className="w-4 h-4" />
+                      <Radio className="w-4 h-4 shrink-0" />
                       <span>TRỰC TIẾP SÂN THI ĐẤU</span>
                     </div>
-                    <h1 className="font-display text-xl sm:text-2xl font-extrabold mt-0.5">
+                    <h1 className="font-display text-lg sm:text-2xl font-extrabold mt-0.5 truncate">
                       Live Scoreboard — {currentTournament.name}
                     </h1>
                   </div>
-                  <div className="flex items-center gap-2 text-xs font-mono-num">
+                  <div className="flex items-center gap-2 text-xs font-mono-num shrink-0">
                     <span className="px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-500 font-bold border border-emerald-500/30">
                       Đang đấu: {liveMatches.length} / {currentTournament.courtsCount} sân
                     </span>
                   </div>
                 </section>
 
-                <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                  <div className={`lg:col-span-7 border rounded-xl overflow-hidden ${surfaceCard}`}>
+                <section className="grid grid-cols-1 lg:grid-cols-12 [@media(orientation:landscape)_and_(max-height:540px)]:grid-cols-12 gap-4 sm:gap-5 items-start">
+                  <div
+                    className={`lg:col-span-7 [@media(orientation:landscape)_and_(max-height:540px)]:col-span-7 border rounded-xl overflow-hidden min-w-0 ${surfaceCard}`}
+                  >
                     <div
-                      className={`px-4 sm:px-5 py-3.5 border-b flex items-center justify-between ${
+                      className={`px-3.5 sm:px-5 py-3 sm:py-3.5 border-b flex items-center justify-between gap-2 ${
                         isDark ? 'border-slate-800' : 'border-slate-200'
                       }`}
                     >
-                      <div>
-                        <h2 className="font-display text-base sm:text-lg font-bold tracking-tight uppercase">
+                      <div className="min-w-0">
+                        <h2 className="font-display text-sm sm:text-lg font-bold tracking-tight uppercase truncate">
                           CÁC TRẬN ĐANG THI ĐẤU TRỰC TIẾP
                         </h2>
-                        <p className={`text-xs ${mutedText}`}>
+                        <p className={`text-xs truncate ${mutedText}`}>
                           Cặp VĐV đứng sân, điểm số và lượt giao bóng cập nhật tức thời
                         </p>
                       </div>
@@ -2264,7 +2271,7 @@ export default function App() {
                       )}
                     </div>
 
-                    <div className="p-4 sm:p-5 space-y-3.5">
+                    <div className="p-3.5 sm:p-5 space-y-3 sm:space-y-3.5">
                       {liveMatches.length === 0 ? (
                         <div
                           className={`p-6 text-center rounded-xl border space-y-2 ${
@@ -2288,13 +2295,15 @@ export default function App() {
                         liveMatches.map((m) => (
                           <div
                             key={m.id}
-                            className={`border rounded-xl p-3.5 sm:p-4 space-y-2.5 ${
+                            className={`border rounded-xl p-3 sm:p-4 space-y-2.5 ${
                               isDark
                                 ? 'border-slate-800 bg-slate-950/60'
                                 : 'border-slate-200 bg-slate-50/70'
                             }`}
                           >
-                            <div className={`flex flex-wrap items-center justify-between gap-2 text-xs ${mutedText}`}>
+                            <div
+                              className={`flex flex-wrap items-center justify-between gap-2 text-xs ${mutedText}`}
+                            >
                               <div>
                                 <span className="font-mono-num font-bold text-orange-500">
                                   SÂN {m.courtNumber} · TRẬN #{m.matchNumber}
@@ -2311,7 +2320,9 @@ export default function App() {
 
                             <div className="grid grid-cols-12 items-center gap-2 py-1">
                               <div className="col-span-5 min-w-0">
-                                <div className="text-sm font-bold truncate">{m.teamAName}</div>
+                                <div className="text-xs sm:text-sm font-bold truncate">
+                                  {m.teamAName}
+                                </div>
                                 {(m.teamAPlayer1 || m.teamAPlayer2) && (
                                   <div className={`text-[11px] truncate ${mutedText}`}>
                                     {m.teamAPlayer1} · {m.teamAPlayer2}
@@ -2324,12 +2335,14 @@ export default function App() {
                                 </div>
                               </div>
 
-                              <div className="col-span-2 text-center font-mono-num text-xl sm:text-2xl font-extrabold">
+                              <div className="col-span-2 text-center font-mono-num text-lg sm:text-2xl font-extrabold">
                                 {m.scoreA} : {m.scoreB}
                               </div>
 
                               <div className="col-span-5 text-right min-w-0">
-                                <div className="text-sm font-bold truncate">{m.teamBName}</div>
+                                <div className="text-xs sm:text-sm font-bold truncate">
+                                  {m.teamBName}
+                                </div>
                                 {(m.teamBPlayer1 || m.teamBPlayer2) && (
                                   <div className={`text-[11px] truncate ${mutedText}`}>
                                     {m.teamBPlayer1} · {m.teamBPlayer2}
@@ -2345,8 +2358,10 @@ export default function App() {
 
                             {isStaff && (
                               <div
-                                className={`pt-2 border-t flex items-center justify-between text-xs ${
-                                  isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200/80 text-slate-500'
+                                className={`pt-2 border-t flex items-center justify-between gap-2 text-xs ${
+                                  isDark
+                                    ? 'border-slate-800 text-slate-400'
+                                    : 'border-slate-200/80 text-slate-500'
                                 }`}
                               >
                                 <span className="truncate">TT: {m.refereeName || 'BTC 1986'}</span>
@@ -2356,7 +2371,7 @@ export default function App() {
                                     setSelectedRefereeMatchId(m.id);
                                     setActiveTab('referee');
                                   }}
-                                  className="min-h-[36px] px-3 py-1 font-semibold text-white bg-slate-900 hover:bg-orange-600 rounded-lg transition-colors shrink-0"
+                                  className="min-h-[34px] px-3 py-1 font-semibold text-white bg-slate-900 hover:bg-orange-600 rounded-lg transition-colors shrink-0"
                                 >
                                   Mở sân trọng tài
                                 </button>
@@ -2368,17 +2383,19 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className={`lg:col-span-5 border rounded-xl overflow-hidden ${surfaceCard}`}>
+                  <div
+                    className={`lg:col-span-5 [@media(orientation:landscape)_and_(max-height:540px)]:col-span-5 border rounded-xl overflow-hidden min-w-0 ${surfaceCard}`}
+                  >
                     <div
-                      className={`px-4 sm:px-5 py-3.5 border-b flex items-center justify-between ${
+                      className={`px-3.5 sm:px-5 py-3 sm:py-3.5 border-b flex items-center justify-between gap-2 ${
                         isDark ? 'border-slate-800' : 'border-slate-200'
                       }`}
                     >
-                      <div>
-                        <h2 className="font-display text-base sm:text-lg font-bold tracking-tight uppercase">
+                      <div className="min-w-0">
+                        <h2 className="font-display text-sm sm:text-lg font-bold tracking-tight uppercase truncate">
                           BẢNG XẾP HẠNG THỜI GIAN THỰC
                         </h2>
-                        <p className={`text-xs ${mutedText}`}>
+                        <p className={`text-xs truncate ${mutedText}`}>
                           {currentTournament.divisions[0]
                             ? `Nội dung ${currentTournament.divisions[0]}`
                             : 'Chưa có nội dung thi đấu'}
@@ -2387,13 +2404,17 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setActiveTab('standings')}
-                        className="text-xs font-semibold text-orange-500 hover:text-orange-400"
+                        className="text-xs font-semibold text-orange-500 hover:text-orange-400 shrink-0"
                       >
                         Chi tiết →
                       </button>
                     </div>
 
-                    <div className={isDark ? 'divide-y divide-slate-800' : 'divide-y divide-slate-200'}>
+                    <div
+                      className={
+                        isDark ? 'divide-y divide-slate-800' : 'divide-y divide-slate-200'
+                      }
+                    >
                       {Object.keys(standingsPreview).length === 0 ? (
                         <div className="p-6 text-center space-y-2.5">
                           <p className={`text-xs ${mutedText}`}>
@@ -2402,13 +2423,21 @@ export default function App() {
                         </div>
                       ) : (
                         Object.entries(standingsPreview).map(([gName, rows]) => (
-                          <div key={gName} className="p-3.5 sm:p-4">
-                            <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${mutedText}`}>
+                          <div key={gName} className="p-3 sm:p-4 overflow-x-auto">
+                            <div
+                              className={`text-xs font-bold uppercase tracking-wider mb-2 ${mutedText}`}
+                            >
                               {gName}
                             </div>
-                            <table className="w-full text-left border-collapse text-xs">
+                            <table className="w-full text-left border-collapse text-xs min-w-[270px]">
                               <thead>
-                                <tr className={`border-b ${isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
+                                <tr
+                                  className={`border-b ${
+                                    isDark
+                                      ? 'border-slate-800 text-slate-400'
+                                      : 'border-slate-200 text-slate-500'
+                                  }`}
+                                >
                                   <th className="py-1.5 pr-2">#</th>
                                   <th className="py-1.5 px-2">Đội</th>
                                   <th className="py-1.5 px-2 text-right">T-B</th>
@@ -2416,7 +2445,13 @@ export default function App() {
                                   <th className="py-1.5 pl-2 text-right">Điểm</th>
                                 </tr>
                               </thead>
-                              <tbody className={isDark ? 'divide-y divide-slate-800/70' : 'divide-y divide-slate-100'}>
+                              <tbody
+                                className={
+                                  isDark
+                                    ? 'divide-y divide-slate-800/70'
+                                    : 'divide-y divide-slate-100'
+                                }
+                              >
                                 {rows.map((r, i) => (
                                   <tr key={r.teamId}>
                                     <td className="py-2 pr-2 font-mono-num font-bold">{i + 1}</td>
@@ -2497,6 +2532,7 @@ export default function App() {
                 selectedMatchId={selectedRefereeMatchId}
                 currentAccount={currentAccount}
                 themeMode={themeMode}
+                activeTab={activeTab}
                 onRequestLogin={(reason) => openLoginWithReason(reason)}
                 onSelectMatch={(matchId) => setSelectedRefereeMatchId(matchId)}
                 onUpdateMatch={handleUpdateMatch}
@@ -2529,6 +2565,8 @@ export default function App() {
                 themeMode={themeMode}
               />
             )}
+
+            {activeTab === 'admin' && isAdmin && renderTournamentOverviewSection()}
           </>
         )}
       </main>
@@ -2641,7 +2679,9 @@ export default function App() {
                 type="button"
                 onClick={() => setShowResetPasswordModal(false)}
                 className={`p-1 rounded-lg ${
-                  isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-400 hover:bg-slate-100'
+                  isDark
+                    ? 'text-slate-400 hover:bg-slate-800'
+                    : 'text-slate-400 hover:bg-slate-100'
                 }`}
               >
                 <X className="w-4 h-4" />
@@ -2704,7 +2744,7 @@ export default function App() {
 
       {/* Quiet Footer */}
       <footer
-        className={`no-print border-t px-4 sm:px-6 py-4 text-xs ${
+        className={`no-print border-t px-3.5 sm:px-6 py-3 sm:py-4 text-xs ${
           isDark
             ? 'bg-slate-900 border-slate-800 text-slate-400'
             : 'bg-white border-slate-200 text-slate-500'
@@ -2737,7 +2777,7 @@ export default function App() {
               key={item.id}
               type="button"
               onClick={() => setActiveTab(item.id)}
-              className={`min-h-[40px] sm:min-h-[44px] flex-1 min-w-0 flex flex-col items-center justify-center rounded-lg transition-colors ${
+              className={`min-h-[38px] sm:min-h-[44px] flex-1 min-w-0 flex flex-col items-center justify-center rounded-lg transition-colors ${
                 isActive
                   ? isDark
                     ? 'bg-slate-800 text-orange-400 font-bold'
