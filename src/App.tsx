@@ -6,7 +6,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
-  Bell,
   Calendar,
   CheckCircle2,
   ChevronDown,
@@ -269,8 +268,6 @@ export default function App() {
   );
   const [selectedRefereeMatchId, setSelectedRefereeMatchId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showNotifDrawer, setShowNotifDrawer] = useState(false);
-  const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<{ title: string; subtitle: string } | null>(
     null,
   );
@@ -664,19 +661,6 @@ export default function App() {
             .sort((a, b) => a.matchNumber - b.matchNumber)
         : [],
     [appState.matches, currentTournament],
-  );
-
-  const tournamentNotifications = useMemo(
-    () =>
-      currentTournament
-        ? appState.notifications.filter((n) => n.tournamentId === currentTournament.id)
-        : [],
-    [appState.notifications, currentTournament],
-  );
-
-  const unreadCount = useMemo(
-    () => tournamentNotifications.filter((n) => !readNotifIds.includes(n.id)).length,
-    [tournamentNotifications, readNotifIds],
   );
 
   const liveMatches = useMemo(
@@ -1325,14 +1309,30 @@ export default function App() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleOpenCreateTournament}
-            className="min-h-[38px] px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 shrink-0 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tạo giải mới</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleRequestResetDemoData}
+              title="Làm mới dữ liệu giải đấu (yêu cầu mật khẩu)"
+              className={`min-h-[38px] px-3 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                isDark
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Làm mới</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenCreateTournament}
+              className="min-h-[38px] px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tạo giải mới</span>
+            </button>
+          </div>
         </div>
 
         {appState.tournaments.length === 0 ? (
@@ -2182,75 +2182,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Secondary Workspace Context Toolbar */}
-      <div
-        className={`no-print border-b px-2.5 sm:px-6 py-2 shrink-0 ${
-          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            {appState.tournaments.length > 0 && currentTournament ? (
-              <select
-                value={currentTournament.id}
-                onChange={(e) => setSelectedTournamentId(e.target.value)}
-                className={`min-h-[34px] sm:min-h-[36px] w-full sm:w-auto flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 text-xs font-semibold border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 max-w-full sm:max-w-md truncate ${
-                  isDark
-                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
-                    : 'bg-slate-100 hover:bg-slate-200/70 text-slate-900 border-slate-200'
-                }`}
-              >
-                {appState.tournaments.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({TOURNAMENT_STATUS_LABELS[t.status]})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className={`text-xs font-medium truncate ${mutedText}`}>
-                Chưa có giải đấu nào đang diễn ra
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
-            {currentTournament && (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowNotifDrawer((s) => !s);
-                  setReadNotifIds(tournamentNotifications.map((n) => n.id));
-                }}
-                className={`min-h-[34px] px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap ${
-                  isDark
-                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
-              >
-                <Bell className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                <span>{unreadCount > 0 ? `${unreadCount} mới` : tournamentNotifications.length}</span>
-              </button>
-            )}
-
-            {isAdmin && activeTab === 'admin' && (
-              <button
-                type="button"
-                onClick={handleRequestResetDemoData}
-                title="Làm mới dữ liệu giải đấu (yêu cầu mật khẩu)"
-                className={`min-h-[34px] px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-1 whitespace-nowrap ${
-                  isDark
-                    ? 'text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700'
-                    : 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200'
-                }`}
-              >
-                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden sm:inline">Làm mới</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Real-Time Toast Banner */}
       {toastMessage && (
         <div
@@ -2264,49 +2195,6 @@ export default function App() {
           <div className="text-xs space-y-0.5 min-w-0">
             <div className="font-semibold text-white">{toastMessage.title}</div>
             <div className="text-slate-300">{toastMessage.subtitle}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Notification Slide-Down Panel */}
-      {showNotifDrawer && currentTournament && (
-        <div
-          className={`no-print border-b px-3 sm:px-6 py-3.5 ${
-            isDark
-              ? 'bg-slate-950 text-white border-slate-800'
-              : 'bg-slate-900 text-white border-slate-800'
-          }`}
-        >
-          <div className="max-w-7xl mx-auto space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="font-display text-xs sm:text-base font-bold uppercase tracking-wide text-orange-400">
-                THÔNG BÁO KẾT QUẢ & GỌI SÂN TRỰC TIẾP ({tournamentNotifications.length})
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowNotifDrawer(false)}
-                className="text-xs text-slate-400 hover:text-white shrink-0"
-              >
-                Đóng ✕
-              </button>
-            </div>
-            {tournamentNotifications.length === 0 ? (
-              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300">
-                Hiện chưa có thông báo nào.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto">
-                {tournamentNotifications.slice(0, 6).map((n) => (
-                  <div
-                    key={n.id}
-                    className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-1"
-                  >
-                    <div className="font-semibold text-white">{n.title}</div>
-                    <p className="text-slate-300 leading-relaxed">{n.message}</p>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}
