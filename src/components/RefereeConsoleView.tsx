@@ -270,13 +270,13 @@ const Player3DToken: React.FC<Player3DTokenProps> = ({
   return (
     <div
       title={name || 'Chưa chọn VĐV'}
-      className={`inline-flex items-center gap-1 max-w-full ${
+      className={`inline-flex items-center gap-1 max-w-full min-w-0 ${
         align === 'right' ? 'flex-row-reverse text-right' : 'flex-row text-left'
       }`}
     >
       <svg
         viewBox="0 0 28 32"
-        className="w-4 h-4 sm:w-5 sm:h-6 shrink-0 drop-shadow-[0_3px_2px_rgba(0,0,0,0.75)]"
+        className="w-4 h-4 sm:w-5 sm:h-6 landscape:w-3.5 landscape:h-4 shrink-0 drop-shadow-[0_3px_2px_rgba(0,0,0,0.75)]"
         aria-hidden="true"
       >
         <ellipse cx="14" cy="29.5" rx="9.5" ry="2.2" fill="rgba(2,6,23,0.5)" />
@@ -298,7 +298,7 @@ const Player3DToken: React.FC<Player3DTokenProps> = ({
       </svg>
 
       <span
-        className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-bold truncate max-w-[76px] sm:max-w-[128px] landscape:max-w-[78px] ${pillStyle}`}
+        className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] landscape:text-[8px] font-bold truncate max-w-[78px] sm:max-w-[128px] landscape:max-w-[72px] ${pillStyle}`}
       >
         <span className="truncate">{shortName}</span>
         {isServing && (
@@ -774,18 +774,20 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đổi lượt giao bóng.',
       () => {
         if (activeMatch.scoringMode === 'rally') {
+          const nextTeam: 'A' | 'B' = activeMatch.servingTeam === 'A' ? 'B' : 'A';
           onUpdateMatch(activeMatch.id, {
             status: 'live',
-            servingTeam: activeMatch.servingTeam === 'A' ? 'B' : 'A',
+            servingTeam: nextTeam,
             serverNumber: 1,
           });
+          setNotice(`Đổi giao sang đội ${nextTeam}.`);
           return;
         }
 
         const currentServer = activeMatch.serverNumber || 2;
         if (currentServer === 1) {
           onUpdateMatch(activeMatch.id, { status: 'live', serverNumber: 2 });
-          setNotice(`Mất điểm ở Tay 1 · Chuyển sang Tay 2 của đội ${activeMatch.servingTeam}.`);
+          setNotice(`Chuyển sang Tay 2 của đội ${activeMatch.servingTeam}.`);
         } else {
           const nextTeam: 'A' | 'B' = activeMatch.servingTeam === 'A' ? 'B' : 'A';
           const isOpeningZeroZero = activeMatch.scoreA === 0 && activeMatch.scoreB === 0;
@@ -795,8 +797,23 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             servingTeam: nextTeam,
             serverNumber: nextServer,
           });
-          setNotice(`Mất điểm ở Tay 2 · Đổi tay giao sang đội ${nextTeam} (Tay ${nextServer}).`);
+          setNotice(`Đổi giao sang đội ${nextTeam} (Tay ${nextServer}).`);
         }
+      },
+    );
+  };
+
+  const handleSwapHandNumber = () => {
+    if (!activeMatch) return;
+    requireStaffAction(
+      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đổi Tay 1 / Tay 2.',
+      () => {
+        const nextServer: 1 | 2 = activeMatch.serverNumber === 1 ? 2 : 1;
+        onUpdateMatch(activeMatch.id, {
+          status: 'live',
+          serverNumber: nextServer,
+        });
+        setNotice(`Đã đổi sang Tay ${nextServer} (Đội ${activeMatch.servingTeam}).`);
       },
     );
   };
@@ -812,6 +829,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           courtSideA: nextSideA,
           sideSwitched: !activeMatch.sideSwitched,
         });
+        setNotice(`Đã đổi sân (Đội A sang bên ${nextSideA === 'left' ? 'Trái' : 'Phải'}).`);
       },
     );
   };
@@ -1124,16 +1142,16 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const coinLoserName = coinLoserSide === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden overscroll-none pt-2 sm:pt-3 landscape:pt-1.5 pb-4 sm:pb-6 landscape:pb-2 px-0.5 sm:px-0">
-      <section className="grid grid-cols-1 lg:grid-cols-12 landscape:grid-cols-12 gap-3 sm:gap-4 landscape:gap-2 items-start">
+    <div className="w-full max-w-full overflow-x-hidden overscroll-none pt-1.5 sm:pt-3 landscape:pt-1 pb-4 sm:pb-6 landscape:pb-2 px-0.5 sm:px-0">
+      <section className="w-full max-w-full grid grid-cols-1 lg:grid-cols-12 landscape:grid-cols-12 gap-2.5 sm:gap-4 landscape:gap-2 items-start">
         {/* CỘT TRÁI: CHỌN SÂN + NỘI DUNG + 4 NÚT + SÂN 3D */}
-        <div className="lg:col-span-6 landscape:col-span-6 min-w-0 space-y-3 sm:space-y-3.5 landscape:space-y-1.5">
+        <div className="lg:col-span-6 landscape:col-span-6 w-full min-w-0 max-w-full overflow-hidden space-y-2.5 sm:space-y-3.5 landscape:space-y-1.5">
           <div
-            className={`border rounded-2xl p-3 sm:p-4 landscape:p-2 space-y-2.5 sm:space-y-3 landscape:space-y-1.5 ${surfaceCard}`}
+            className={`w-full max-w-full overflow-hidden border rounded-2xl p-2.5 sm:p-4 landscape:p-2 space-y-2 sm:space-y-3 landscape:space-y-1 ${surfaceCard}`}
           >
             {/* Chọn sân */}
             <div className="flex items-center justify-between gap-2 min-w-0">
-              <div className="flex items-center gap-1.5 overflow-x-auto max-w-full">
+              <div className="flex items-center gap-1.5 overflow-x-auto min-w-0 flex-1 py-0.5">
                 {courtNumbers.map((cNum) => {
                   const isSelected = cNum === activeMatch.courtNumber;
                   const courtLive = matches.some(
@@ -1172,7 +1190,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5 text-[11px] sm:text-xs shrink-0">
-                <span className={`font-mono-num ${mutedText}`}>
+                <span className={`font-mono-num truncate max-w-[84px] sm:max-w-none ${mutedText}`}>
                   {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]}
                 </span>
                 {!isStaff && (
@@ -1183,7 +1201,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                         'Đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để điều khiển tỷ số và gọi sân.',
                       )
                     }
-                    className="min-h-[26px] px-2.5 py-1 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold text-[11px]"
+                    className="min-h-[26px] px-2 py-1 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] sm:text-[11px] shrink-0"
                   >
                     Đăng nhập
                   </button>
@@ -1192,23 +1210,23 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
 
             {/* Chọn nội dung + Chọn VĐV */}
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <button
                 type="button"
                 onClick={() => setShowSubmatchModal(true)}
-                className={`flex-1 min-w-0 min-h-[36px] sm:min-h-[40px] landscape:min-h-[28px] px-3 py-1.5 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors ${
+                className={`flex-1 min-w-0 min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-2.5 sm:px-3 py-1 rounded-xl border text-left flex items-center justify-between gap-1.5 transition-colors ${
                   isDark
                     ? 'bg-slate-950/80 hover:bg-slate-800 border-slate-700 text-slate-100'
                     : 'bg-slate-50 hover:bg-orange-50/60 border-slate-200 text-slate-900'
                 }`}
               >
-                <span className="inline-flex items-center gap-2 min-w-0 text-xs font-bold">
-                  <Users className="w-4 h-4 text-orange-500 shrink-0" />
+                <span className="inline-flex items-center gap-1.5 min-w-0 text-[11px] sm:text-xs font-bold">
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 shrink-0" />
                   <span className="truncate">
                     {currentSubEventConfig.label} ({activeMatch.scoreA}-{activeMatch.scoreB})
                   </span>
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-500 shrink-0">
+                <span className="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-bold text-orange-500 shrink-0">
                   <span>Đổi ND</span>
                   <ChevronDown className="w-3.5 h-3.5" />
                 </span>
@@ -1225,19 +1243,19 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     },
                   )
                 }
-                className="min-h-[36px] sm:min-h-[40px] landscape:min-h-[28px] px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shrink-0 transition-colors"
+                className="min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-2.5 sm:px-3 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-[11px] sm:text-xs font-extrabold flex items-center gap-1 shrink-0 transition-colors"
               >
-                <UserCheck className="w-4 h-4 shrink-0" />
+                <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 <span>Chọn VĐV</span>
               </button>
             </div>
 
             {/* 4 nút điều khiển sân */}
-            <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+            <div className="grid grid-cols-4 gap-1 sm:gap-2">
               <button
                 type="button"
                 onClick={handleOpenCoinToss}
-                className="min-h-[36px] sm:min-h-[40px] landscape:min-h-[28px] px-1.5 sm:px-2 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-colors min-w-0"
+                className="min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-1 sm:px-2 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-colors min-w-0"
               >
                 <Shuffle className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Bốc thăm</span>
@@ -1254,7 +1272,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     },
                   )
                 }
-                className={`min-h-[36px] sm:min-h-[40px] landscape:min-h-[28px] px-1.5 sm:px-2 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
+                className={`min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-1 sm:px-2 py-1 rounded-xl text-[10px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
                   showLineupModal
                     ? 'bg-orange-600 text-white border-orange-600'
                     : isDark
@@ -1269,7 +1287,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <button
                 type="button"
                 onClick={handleTriggerCourtCall}
-                className="min-h-[36px] sm:min-h-[40px] landscape:min-h-[28px] px-1.5 sm:px-2 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-colors min-w-0"
+                className="min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-1 sm:px-2 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-colors min-w-0"
               >
                 <Megaphone className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Gọi sân</span>
@@ -1278,7 +1296,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <button
                 type="button"
                 onClick={handleTriggerCourtAvailable}
-                className={`min-h-[36px] sm:min-h-[40px] landscape:min-h-[28px] px-1.5 sm:px-2 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
+                className={`min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-1 sm:px-2 py-1 rounded-xl text-[10px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
                   isDark
                     ? 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border-emerald-700/70'
                     : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -1291,7 +1309,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
             {notice && (
               <div
-                className={`px-3 py-2 rounded-xl text-[11px] sm:text-xs font-medium border flex items-center justify-between gap-2 ${
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-medium border flex items-center justify-between gap-2 min-w-0 ${
                   isDark
                     ? 'bg-orange-950/40 border-orange-800/60 text-orange-200'
                     : 'bg-orange-50 border-orange-200 text-orange-900'
@@ -1309,41 +1327,41 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             )}
           </div>
 
-          {/* SÂN THI ĐẤU 3D */}
+          {/* SÂN THI ĐẤU 3D — KHÓA KÍCH THƯỚC ĐỂ KHÔNG GIÃN KHI ĐỔI SÂN */}
           <div
-            className={`border rounded-2xl p-3 sm:p-4 landscape:p-2 space-y-2.5 landscape:space-y-1 ${surfaceCard}`}
+            className={`w-full max-w-full overflow-hidden border rounded-2xl p-2.5 sm:p-4 landscape:p-1.5 space-y-2 landscape:space-y-1 ${surfaceCard}`}
           >
-            <div className="flex items-center justify-between gap-2 text-[10px] sm:text-xs min-w-0">
-              <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex items-center justify-between gap-1.5 text-[10px] sm:text-xs landscape:text-[9px] min-w-0">
+              <div className="flex items-center gap-1 min-w-0">
                 <span className="font-mono-num font-extrabold uppercase truncate">
                   S#{activeMatch.courtNumber} · {isServingScoreOdd ? 'LẺ (TRÁI)' : 'CHẴN (PHẢI)'}{' '}
                   ({servingScore}đ) · TAY {serverNum}
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[8px] sm:text-[9px] font-extrabold shrink-0">
+                <span className="px-1 py-0.5 rounded bg-amber-400 text-slate-950 text-[8px] sm:text-[9px] font-extrabold shrink-0">
                   Phát
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-cyan-300 text-slate-950 text-[8px] sm:text-[9px] font-extrabold shrink-0">
+                <span className="px-1 py-0.5 rounded bg-cyan-300 text-slate-950 text-[8px] sm:text-[9px] font-extrabold shrink-0">
                   Đỡ
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 font-semibold shrink-0">
-                <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 truncate max-w-[74px] sm:max-w-[120px] landscape:max-w-[72px]">
+              <div className="flex items-center gap-1 font-semibold shrink-0">
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 truncate max-w-[68px] sm:max-w-[120px] landscape:max-w-[66px]">
                   P: {serverDisplayName}
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-500 truncate max-w-[74px] sm:max-w-[120px] landscape:max-w-[72px]">
+                <span className="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-500 truncate max-w-[68px] sm:max-w-[120px] landscape:max-w-[66px]">
                   Đ: {receiverDisplayName}
                 </span>
               </div>
             </div>
 
             <div
-              className="rounded-xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-2 sm:p-3 landscape:p-1 border border-slate-800 overflow-hidden"
+              className="w-full max-w-full rounded-xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-2 sm:p-3 landscape:p-1 border border-slate-800 overflow-hidden"
               style={{ perspective: '760px' }}
             >
               <div
                 style={{ transform: 'rotateX(15deg) scale(0.99)', transformOrigin: 'center center' }}
-                className="relative w-full h-[185px] sm:h-[235px] landscape:h-[135px] mx-auto rounded-xl bg-gradient-to-b from-[#22c55e] via-[#16a34a] to-[#15803d] border-[2px] sm:border-[3px] border-white shadow-[0_8px_0_#052e16,0_14px_24px_rgba(0,0,0,0.75)] overflow-hidden select-none"
+                className="relative w-full h-[176px] sm:h-[235px] landscape:h-[126px] shrink-0 mx-auto rounded-xl bg-gradient-to-b from-[#22c55e] via-[#16a34a] to-[#15803d] border-[2px] sm:border-[3px] border-white shadow-[0_8px_0_#052e16,0_14px_24px_rgba(0,0,0,0.75)] overflow-hidden select-none"
               >
                 <div
                   className="pointer-events-none absolute inset-0"
@@ -1471,10 +1489,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   />
                 </svg>
 
-                <div className="relative z-20 w-full h-full grid grid-cols-12">
-                  <div className="col-span-4 grid grid-rows-2 py-1.5 px-1.5 sm:py-2 sm:px-2">
+                <div className="relative z-20 w-full h-full grid grid-cols-12 overflow-hidden">
+                  <div className="col-span-4 grid grid-rows-2 py-1.5 px-1 sm:py-2 sm:px-2 min-w-0">
                     <div
-                      className={`flex items-center justify-start rounded-lg px-0.5 ${
+                      className={`flex items-center justify-start rounded-lg px-0.5 min-w-0 overflow-hidden ${
                         leftTopServing ? 'bg-amber-400/20' : leftTopReceiver ? 'bg-cyan-300/15' : ''
                       }`}
                     >
@@ -1487,7 +1505,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     </div>
                     {!isSinglesEvent && (
                       <div
-                        className={`flex items-center justify-start rounded-lg px-0.5 ${
+                        className={`flex items-center justify-start rounded-lg px-0.5 min-w-0 overflow-hidden ${
                           leftBottomServing
                             ? 'bg-amber-400/20'
                             : leftBottomReceiver
@@ -1505,15 +1523,15 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     )}
                   </div>
 
-                  <div className="col-span-4 flex items-center justify-center">
+                  <div className="col-span-4 flex items-center justify-center min-w-0">
                     <span className="px-1.5 py-0.5 rounded bg-slate-950/85 text-white text-[8px] sm:text-[10px] font-extrabold tracking-wider border border-white/30 shadow-sm">
                       LƯỚI
                     </span>
                   </div>
 
-                  <div className="col-span-4 grid grid-rows-2 py-1.5 px-1.5 sm:py-2 sm:px-2">
+                  <div className="col-span-4 grid grid-rows-2 py-1.5 px-1 sm:py-2 sm:px-2 min-w-0">
                     <div
-                      className={`flex items-center justify-end rounded-lg px-0.5 ${
+                      className={`flex items-center justify-end rounded-lg px-0.5 min-w-0 overflow-hidden ${
                         rightTopServing
                           ? 'bg-amber-400/20'
                           : rightTopReceiver
@@ -1530,7 +1548,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     </div>
                     {!isSinglesEvent && (
                       <div
-                        className={`flex items-center justify-end rounded-lg px-0.5 ${
+                        className={`flex items-center justify-end rounded-lg px-0.5 min-w-0 overflow-hidden ${
                           rightBottomServing
                             ? 'bg-amber-400/20'
                             : rightBottomReceiver
@@ -1550,21 +1568,23 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 </div>
               </div>
 
-              <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] sm:text-[11px] text-slate-300 px-1 min-w-0">
-                <span className="truncate font-bold text-amber-300">{leftTeamName}</span>
+              <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] sm:text-[11px] landscape:text-[9px] text-slate-300 px-1 min-w-0">
+                <span className="truncate font-bold text-amber-300 min-w-0">{leftTeamName}</span>
                 <span className="text-slate-400 shrink-0">Giao chéo</span>
-                <span className="truncate font-bold text-cyan-300 text-right">{rightTeamName}</span>
+                <span className="truncate font-bold text-cyan-300 text-right min-w-0">
+                  {rightTeamName}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* CỘT PHẢI: BẢNG ĐIỂM LIVE + ĐỔI GIAO / ĐỔI SÂN */}
+        {/* CỘT PHẢI: BẢNG ĐIỂM LIVE + ĐỔI GIAO / ĐỔI TAY / ĐỔI SÂN */}
         <div
-          className={`lg:col-span-6 landscape:col-span-6 min-w-0 border rounded-2xl p-3 sm:p-4 landscape:p-2 space-y-3 sm:space-y-3.5 landscape:space-y-1.5 ${surfaceCard}`}
+          className={`lg:col-span-6 landscape:col-span-6 w-full min-w-0 max-w-full overflow-hidden border rounded-2xl p-2.5 sm:p-4 landscape:p-2 space-y-2.5 sm:space-y-3.5 landscape:space-y-1.5 ${surfaceCard}`}
         >
-          <div className="flex items-center justify-between gap-2 text-xs min-w-0">
-            <div className="flex items-center gap-2 font-mono-num font-bold min-w-0">
+          <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs min-w-0">
+            <div className="flex items-center gap-1.5 font-mono-num font-bold min-w-0">
               <span className="px-2 py-0.5 rounded-md bg-orange-500/15 text-orange-500 shrink-0">
                 #{activeMatch.matchNumber} · S{activeMatch.courtNumber} · LIVE
               </span>
@@ -1578,10 +1598,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 landscape:gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 landscape:gap-1.5 min-w-0">
             {/* BÊN TRÁI */}
             <div
-              className={`rounded-xl border p-3 sm:p-4 landscape:p-2 space-y-2.5 sm:space-y-3 landscape:space-y-1 min-w-0 transition-colors ${
+              className={`min-w-0 overflow-hidden rounded-xl border p-2.5 sm:p-4 landscape:p-2 space-y-2 sm:space-y-3 landscape:space-y-1 transition-colors ${
                 leftIsServing
                   ? isDark
                     ? 'border-sky-500 bg-sky-950/20'
@@ -1623,17 +1643,17 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 {leftTeamName}
               </div>
 
-              <div className="flex items-center justify-between gap-1.5 pt-1">
-                <span className="font-mono-num text-2xl sm:text-4xl landscape:text-2xl font-extrabold leading-none">
+              <div className="flex items-center justify-between gap-1 pt-0.5 min-w-0">
+                <span className="font-mono-num text-2xl sm:text-4xl landscape:text-2xl font-extrabold leading-none shrink-0">
                   {leftSideIsA ? activeMatch.scoreA : activeMatch.scoreB}
                 </span>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
                     onClick={() => adjustScore(leftSideIsA ? 'A' : 'B', -1)}
                     aria-label="Giảm điểm đội trái"
-                    className={`w-8 h-8 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7 rounded-xl flex items-center justify-center font-bold transition-colors ${
+                    className={`w-7 h-7 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7 rounded-xl flex items-center justify-center font-bold transition-colors ${
                       isDark
                         ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
@@ -1646,7 +1666,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     type="button"
                     disabled={!leftCanPlus}
                     onClick={() => adjustScore(leftSideIsA ? 'A' : 'B', 1)}
-                    className={`min-w-[48px] sm:min-w-[68px] h-8 sm:h-10 landscape:h-7 px-2 sm:px-2.5 rounded-xl font-mono-num text-xs sm:text-sm font-extrabold flex items-center justify-center gap-0.5 transition-all ${
+                    className={`min-w-[44px] sm:min-w-[68px] h-7 sm:h-10 landscape:h-7 px-1.5 sm:px-2.5 rounded-xl font-mono-num text-[11px] sm:text-sm font-extrabold flex items-center justify-center gap-0.5 transition-all ${
                       leftCanPlus
                         ? 'bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white shadow-xs'
                         : 'bg-slate-300/70 dark:bg-slate-800/70 text-slate-400 dark:text-slate-600 cursor-not-allowed'
@@ -1661,7 +1681,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
             {/* BÊN PHẢI */}
             <div
-              className={`rounded-xl border p-3 sm:p-4 landscape:p-2 space-y-2.5 sm:space-y-3 landscape:space-y-1 min-w-0 transition-colors ${
+              className={`min-w-0 overflow-hidden rounded-xl border p-2.5 sm:p-4 landscape:p-2 space-y-2 sm:space-y-3 landscape:space-y-1 transition-colors ${
                 rightIsServing
                   ? isDark
                     ? 'border-sky-500 bg-sky-950/20'
@@ -1703,17 +1723,17 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 {rightTeamName}
               </div>
 
-              <div className="flex items-center justify-between gap-1.5 pt-1">
-                <span className="font-mono-num text-2xl sm:text-4xl landscape:text-2xl font-extrabold leading-none">
+              <div className="flex items-center justify-between gap-1 pt-0.5 min-w-0">
+                <span className="font-mono-num text-2xl sm:text-4xl landscape:text-2xl font-extrabold leading-none shrink-0">
                   {leftSideIsA ? activeMatch.scoreB : activeMatch.scoreA}
                 </span>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
                     onClick={() => adjustScore(leftSideIsA ? 'B' : 'A', -1)}
                     aria-label="Giảm điểm đội phải"
-                    className={`w-8 h-8 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7 rounded-xl flex items-center justify-center font-bold transition-colors ${
+                    className={`w-7 h-7 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7 rounded-xl flex items-center justify-center font-bold transition-colors ${
                       isDark
                         ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
@@ -1726,7 +1746,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     type="button"
                     disabled={!rightCanPlus}
                     onClick={() => adjustScore(leftSideIsA ? 'B' : 'A', 1)}
-                    className={`min-w-[48px] sm:min-w-[68px] h-8 sm:h-10 landscape:h-7 px-2 sm:px-2.5 rounded-xl font-mono-num text-xs sm:text-sm font-extrabold flex items-center justify-center gap-0.5 transition-all ${
+                    className={`min-w-[44px] sm:min-w-[68px] h-7 sm:h-10 landscape:h-7 px-1.5 sm:px-2.5 rounded-xl font-mono-num text-[11px] sm:text-sm font-extrabold flex items-center justify-center gap-0.5 transition-all ${
                       rightCanPlus
                         ? 'bg-sky-600 hover:bg-sky-700 active:scale-[0.98] text-white shadow-xs'
                         : 'bg-slate-300/70 dark:bg-slate-800/70 text-slate-400 dark:text-slate-600 cursor-not-allowed'
@@ -1740,31 +1760,43 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 min-w-0">
             <button
               type="button"
               onClick={handleToggleServe}
-              className={`min-h-[38px] sm:min-h-[42px] landscape:min-h-[28px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
+              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[28px] px-2 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
                 isDark
                   ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
               }`}
             >
               <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 shrink-0" />
-              <span>Đổi giao</span>
+              <span className="truncate">Đổi giao</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSwapHandNumber}
+              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[28px] px-2 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
+                isDark
+                  ? 'bg-sky-950/50 hover:bg-sky-900/60 text-sky-300 border-sky-800/70'
+                  : 'bg-sky-50 hover:bg-sky-100 text-sky-700 border-sky-200'
+              }`}
+            >
+              <span className="truncate">Đổi tay ({serverNum === 1 ? 'T1→T2' : 'T2→T1'})</span>
             </button>
 
             <button
               type="button"
               onClick={handleSwitchCourtEnds}
-              className={`min-h-[38px] sm:min-h-[42px] landscape:min-h-[28px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${
+              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[28px] px-2 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
                 isDark
                   ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
               }`}
             >
-              <ArrowLeftRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-500 shrink-0" />
-              <span>Đổi sân</span>
+              <ArrowLeftRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
+              <span className="truncate">Đổi sân</span>
             </button>
           </div>
         </div>
