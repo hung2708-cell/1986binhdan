@@ -9,17 +9,15 @@ import {
   Award,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   Clock,
   Coins,
   Flag,
   Megaphone,
   Minus,
   Plus,
-  RefreshCw,
-  RotateCcw,
   Shuffle,
   UserCheck,
-  UserPlus,
   Users,
   X,
 } from 'lucide-react';
@@ -197,6 +195,62 @@ function buildInitialSlots(match: Match, includeSingles: boolean): TeamLineupSlo
   });
 }
 
+interface SpinningCoin3DProps {
+  face: 'SẤP' | 'NGỬA';
+  isSpinning: boolean;
+  spinKey: number;
+}
+
+const SpinningCoin3D: React.FC<SpinningCoin3DProps> = ({ face, isSpinning, spinKey }) => {
+  const targetAngle = face === 'NGỬA' ? 0 : 180;
+
+  return (
+    <div className="flex flex-col items-center justify-center py-1">
+      <style>{`
+        @keyframes coinSpin3D {
+          0% { transform: rotateY(0deg) scale(0.95); }
+          50% { transform: rotateY(540deg) scale(1.08); }
+          100% { transform: rotateY(${1080 + targetAngle}deg) scale(1); }
+        }
+        .coin-spin-anim {
+          animation: coinSpin3D 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+      `}</style>
+      <div style={{ perspective: '600px' }} className="w-20 h-20">
+        <div
+          key={`${spinKey}_${face}_${isSpinning ? 'spin' : 'idle'}`}
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: isSpinning ? undefined : `rotateY(${targetAngle}deg)`,
+          }}
+          className={`relative w-full h-full rounded-full ${isSpinning ? 'coin-spin-anim' : ''}`}
+        >
+          {/* Mặt NGỬA */}
+          <div
+            style={{ backfaceVisibility: 'hidden' }}
+            className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 border-4 border-amber-100 shadow-lg flex flex-col items-center justify-center text-slate-950"
+          >
+            <Coins className="w-5 h-5 mb-0.5" />
+            <span className="text-[11px] font-black tracking-wider">NGỬA</span>
+          </div>
+
+          {/* Mặt SẤP */}
+          <div
+            style={{
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+            }}
+            className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-400 via-amber-500 to-orange-700 border-4 border-amber-200 shadow-lg flex flex-col items-center justify-center text-white"
+          >
+            <span className="text-[11px] font-black tracking-wider">SẤP</span>
+            <span className="text-[9px] font-bold opacity-90">1986</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface Player3DTokenProps {
   name: string;
   isServing: boolean;
@@ -295,23 +349,25 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const [selectedCourt, setSelectedCourt] = useState<number>(1);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // Modals: Tung đồng xu, Chọn VĐV nội dung, Danh sách trận nhỏ
+  // Coin toss states
   const [showCoinTossModal, setShowCoinTossModal] = useState(false);
   const [coinWinner, setCoinWinner] = useState<'A' | 'B'>('A');
   const [coinChoice, setCoinChoice] = useState<'ball' | 'side'>('ball');
-  const [coinResultLabel, setCoinResultLabel] = useState<'SẤP' | 'NGỬA'>('NGỬA');
+  const [coinFace, setCoinFace] = useState<'SẤP' | 'NGỬA'>('NGỬA');
+  const [isSpinningCoin, setIsSpinningCoin] = useState(false);
+  const [coinSpinKey, setCoinSpinKey] = useState(0);
 
+  // Lineup step-by-step states: Đội A trước -> xác nhận xong mới qua Đội B
   const [showLineupModal, setShowLineupModal] = useState(false);
+  const [lineupStep, setLineupStep] = useState<'A' | 'B'>('A');
   const [showSubmatchModal, setShowSubmatchModal] = useState(false);
 
   const [draftA1, setDraftA1] = useState('');
   const [draftA2, setDraftA2] = useState('');
   const [draftB1, setDraftB1] = useState('');
   const [draftB2, setDraftB2] = useState('');
-  const [newRosterNameA, setNewRosterNameA] = useState('');
-  const [newRosterGenderA, setNewRosterGenderA] = useState<'male' | 'female'>('male');
-  const [newRosterNameB, setNewRosterNameB] = useState('');
-  const [newRosterGenderB, setNewRosterGenderB] = useState<'male' | 'female'>('male');
+  const [newRosterName, setNewRosterName] = useState('');
+  const [newRosterGender, setNewRosterGender] = useState<'male' | 'female'>('male');
 
   const courtMatches = useMemo(
     () =>
@@ -347,11 +403,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     }
   }, [activeMatch?.id, activeMatch?.courtNumber, selectedCourt]);
 
-  const isTeamMatch = activeMatch
-    ? isTeamDivision(activeMatch.division, activeMatch.competitionType) ||
-      activeMatch.stage === 'group'
-    : false;
-
   const hasGroupStageTie = useMemo(() => {
     if (!activeMatch) return false;
     const slots = buildInitialSlots(activeMatch, false);
@@ -382,7 +433,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     );
   }, [hasGroupStageTie, activeSlotOrder, activeMatch?.teamSubCategory, currentSlot?.label]);
 
-  // Đồng bộ form chọn VĐV khi mở modal hoặc đổi slot
   useEffect(() => {
     if (!activeMatch) return;
     const slot = lineupSlots.find((s) => s.order === activeSlotOrder);
@@ -398,6 +448,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         ? ''
         : slot?.teamBPlayer2 || activeMatch.teamBPlayer2 || '',
     );
+    setLineupStep('A');
   }, [
     activeMatch?.id,
     activeSlotOrder,
@@ -406,7 +457,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     currentSubEventConfig.sideBRole2,
   ]);
 
-  // Danh sách VĐV của Đội A và Đội B (kèm giới tính)
   const regTeamA = useMemo(
     () =>
       activeMatch
@@ -490,7 +540,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     [regTeamB, activeMatch],
   );
 
-  // Đếm số trận/nội dung mỗi VĐV đã tham gia (tối đa 02 trận / VĐV)
   const matchCountByPlayer = useMemo(() => {
     const counts = new Map<string, number>();
     const addCount = (name?: string) => {
@@ -517,7 +566,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     return counts;
   }, [lineupSlots]);
 
-  // Tính số trận đã dùng trước khi tính slot đang chỉnh sửa (để sửa lại chính slot hiện tại vẫn chọn được)
   const priorMatchCountByPlayer = useMemo(() => {
     const counts = new Map<string, number>();
     const addCount = (name?: string) => {
@@ -545,10 +593,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     return counts;
   }, [lineupSlots, activeSlotOrder]);
 
-  // Lọc danh sách VĐV khả dụng cho từng slot:
-  // 1. Lọc theo giới tính của nội dung (Nam / Nữ)
-  // 2. Ẩn VĐV đã được chọn ở vị trí kia trong cùng nội dung
-  // 3. Ẩn VĐV đã đủ tối đa 02 trận
   const getFilteredOptions = (
     pool: RosterCandidate[],
     role: 'male' | 'female' | 'any' | 'none',
@@ -564,20 +608,14 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     );
 
     return pool.filter((cand) => {
-      // Nếu đã được chọn ở vị trí khác trong nội dung này -> ẩn đi
       if (otherKeys.has(cand.id)) return false;
-
-      // Kiểm tra giới hạn tối đa 02 trận
       const priorUsed = priorMatchCountByPlayer.get(cand.id) || 0;
       const isCurrentChoice = cand.id === currentKey;
       if (!isCurrentChoice && priorUsed >= MAX_MATCHES_PER_PLAYER) {
         return false;
       }
-
-      // Lọc theo giới tính (nếu VĐV có giới tính rõ ràng thì lọc khớp; nếu 'unknown' vẫn cho phép để trọng tài linh hoạt)
       if (role === 'male' && cand.gender === 'female') return false;
       if (role === 'female' && cand.gender === 'male') return false;
-
       return true;
     });
   };
@@ -652,10 +690,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         const currentServer = activeMatch.serverNumber || 2;
         const isScoringTeamServing = activeMatch.servingTeam === side;
         const shouldSwapServingTeamPlayers =
-          delta > 0 &&
-          activeMatch.status === 'live' &&
-          isScoringTeamServing &&
-          currentServer === 1;
+          delta > 0 && isScoringTeamServing && currentServer === 1;
 
         let nextA1 = activeMatch.teamAPlayer1 || '';
         let nextA2 = activeMatch.teamAPlayer2 || '';
@@ -676,7 +711,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
         const shouldAutoSwitchServe =
           delta > 0 &&
-          activeMatch.status === 'live' &&
           activeMatch.servingTeam !== side &&
           activeMatch.scoringMode === 'rally';
 
@@ -719,7 +753,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         const hitTarget = hasReachedTargetScore(nextA, nextB, activeMatch.pointsToWin);
 
         onUpdateMatch(activeMatch.id, {
-          status: activeMatch.status === 'scheduled' ? 'live' : activeMatch.status,
+          status: 'live',
           startedAtMs: activeMatch.startedAtMs || Date.now(),
           teamAPlayer1: nextA1,
           teamAPlayer2: nextA2,
@@ -734,7 +768,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         });
 
         if (delta > 0 && hitTarget) {
-          setNotice(`Đã chạm mốc ${activeMatch.pointsToWin} điểm. Hãy xác nhận đội thắng hoặc đặt lại.`);
+          setNotice(`Đã chạm mốc ${activeMatch.pointsToWin} điểm. Hãy xác nhận đội thắng.`);
         } else if (shouldSwapServingTeamPlayers) {
           setNotice(`Tay 1 ghi điểm (${nextA}-${nextB}) · Đổi chỗ 2 VĐV đội ${side}.`);
         }
@@ -742,7 +776,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     );
   };
 
-  // Mất điểm -> đổi tay (Tay 1 sang Tay 2; Tay 2 sang đội đối phương)
+  // Mất điểm -> đổi tay
   const handleToggleServe = () => {
     if (!activeMatch) return;
     requireStaffAction(
@@ -750,6 +784,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       () => {
         if (activeMatch.scoringMode === 'rally') {
           onUpdateMatch(activeMatch.id, {
+            status: 'live',
             servingTeam: activeMatch.servingTeam === 'A' ? 'B' : 'A',
             serverNumber: 1,
           });
@@ -758,13 +793,14 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
         const currentServer = activeMatch.serverNumber || 2;
         if (currentServer === 1) {
-          onUpdateMatch(activeMatch.id, { serverNumber: 2 });
+          onUpdateMatch(activeMatch.id, { status: 'live', serverNumber: 2 });
           setNotice(`Mất điểm ở Tay 1 · Chuyển sang Tay 2 của đội ${activeMatch.servingTeam}.`);
         } else {
           const nextTeam: 'A' | 'B' = activeMatch.servingTeam === 'A' ? 'B' : 'A';
           const isOpeningZeroZero = activeMatch.scoreA === 0 && activeMatch.scoreB === 0;
           const nextServer: 1 | 2 = isOpeningZeroZero ? 2 : 1;
           onUpdateMatch(activeMatch.id, {
+            status: 'live',
             servingTeam: nextTeam,
             serverNumber: nextServer,
           });
@@ -781,6 +817,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       () => {
         const nextSideA = activeMatch.courtSideA === 'left' ? 'right' : 'left';
         onUpdateMatch(activeMatch.id, {
+          status: 'live',
           courtSideA: nextSideA,
           sideSwitched: !activeMatch.sideSwitched,
         });
@@ -806,52 +843,52 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     );
   };
 
-  // Mở modal tung đồng xu
+  const triggerCoinFlip = () => {
+    const winner: 'A' | 'B' = Math.random() < 0.5 ? 'A' : 'B';
+    const face: 'SẤP' | 'NGỬA' = Math.random() < 0.5 ? 'SẤP' : 'NGỬA';
+    setCoinWinner(winner);
+    setCoinFace(face);
+    setCoinChoice('ball');
+    setIsSpinningCoin(true);
+    setCoinSpinKey((k) => k + 1);
+    window.setTimeout(() => setIsSpinningCoin(false), 860);
+  };
+
   const handleOpenCoinToss = () => {
     if (!activeMatch) return;
     requireStaffAction(
       'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để tung đồng xu bốc thăm.',
       () => {
-        const winner: 'A' | 'B' = Math.random() < 0.5 ? 'A' : 'B';
-        const coinFace: 'SẤP' | 'NGỬA' = Math.random() < 0.5 ? 'SẤP' : 'NGỬA';
-        setCoinWinner(winner);
-        setCoinResultLabel(coinFace);
-        setCoinChoice('ball');
+        triggerCoinFlip();
         setShowCoinTossModal(true);
       },
     );
   };
 
-  const handleFlipCoinAgain = () => {
-    const winner: 'A' | 'B' = Math.random() < 0.5 ? 'A' : 'B';
-    const coinFace: 'SẤP' | 'NGỬA' = Math.random() < 0.5 ? 'SẤP' : 'NGỬA';
-    setCoinWinner(winner);
-    setCoinResultLabel(coinFace);
-  };
-
-  const handleApplyCoinToss = (chosenSideForOtherTeam?: 'left' | 'right') => {
+  // Áp dụng lựa chọn từ luồng đồng xu:
+  // - Nếu đội thắng chọn 'side': đội thắng chọn Sân (Trái/Phải), đội kia bắt buộc chọn Bóng (phát bóng)
+  // - Nếu đội thắng chọn 'ball': đội thắng chọn Bóng (phát bóng), đội kia bắt buộc chọn Sân (Trái/Phải)
+  const handleFinalizeCoinToss = (
+    options: { sideChoice?: 'left' | 'right'; ballTeamChoice?: 'A' | 'B' },
+  ) => {
     if (!activeMatch) return;
-    const otherTeam: 'A' | 'B' = coinWinner === 'A' ? 'B' : 'A';
-    const otherSide: 'left' | 'right' = chosenSideForOtherTeam || 'left';
+    const winner = coinWinner;
+    const loser: 'A' | 'B' = winner === 'A' ? 'B' : 'A';
 
-    // Nếu đội thắng đồng xu chọn BÓNG -> chỉ phát bóng, đội kia chọn SÂN
-    // Nếu đội thắng đồng xu chọn SÂN -> đội thắng chọn sân, đội kia phát bóng
-    const servingTeam: 'A' | 'B' = coinChoice === 'ball' ? coinWinner : otherTeam;
+    const chosenSide: 'left' | 'right' = options.sideChoice || 'left';
+    // Nếu đội thắng chọn BÓNG -> đội thắng giao bóng.
+    // Nếu đội thắng chọn SÂN -> đội thua chọn BÓNG (mặc định đội thua giao bóng).
+    const servingTeam: 'A' | 'B' =
+      coinChoice === 'ball' ? winner : options.ballTeamChoice || loser;
+
+    // Nếu đội thắng chọn SÂN -> đội thắng đứng chosenSide
+    // Nếu đội thắng chọn BÓNG -> đội thua đứng chosenSide
+    const teamOnChosenSide: 'A' | 'B' = coinChoice === 'side' ? winner : loser;
     const courtSideA: 'left' | 'right' =
-      coinChoice === 'ball'
-        ? otherTeam === 'A'
-          ? otherSide
-          : otherSide === 'left'
-          ? 'right'
-          : 'left'
-        : coinWinner === 'A'
-        ? otherSide
-        : otherSide === 'left'
-        ? 'right'
-        : 'left';
+      teamOnChosenSide === 'A' ? chosenSide : chosenSide === 'left' ? 'right' : 'left';
 
     onUpdateMatch(activeMatch.id, {
-      status: activeMatch.status === 'scheduled' ? 'live' : activeMatch.status,
+      status: 'live',
       startedAtMs: activeMatch.startedAtMs || Date.now(),
       scoreA: 0,
       scoreB: 0,
@@ -860,17 +897,15 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       courtSideA,
     });
 
-    const winnerName = coinWinner === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
-    const otherName = otherTeam === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
+    const winnerName = winner === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
+    const loserName = loser === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
     const servingName = servingTeam === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
 
     setShowCoinTossModal(false);
     setNotice(
-      `Đồng xu ${coinResultLabel}: ${winnerName} thắng chọn ${
-        coinChoice === 'ball'
-          ? `Bóng (${servingName} phát) · ${otherName} chọn sân ${otherSide === 'left' ? 'Trái' : 'Phải'}`
-          : `Sân · ${servingName} phát bóng`
-      }.`,
+      coinChoice === 'side'
+        ? `${winnerName} chọn Sân ${chosenSide === 'left' ? 'Trái' : 'Phải'} · ${loserName} chọn Bóng (${servingName} phát).`
+        : `${winnerName} chọn Bóng (${servingName} phát) · ${loserName} chọn Sân ${chosenSide === 'left' ? 'Trái' : 'Phải'}.`,
     );
   };
 
@@ -883,7 +918,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         if (!targetSlot) return;
 
         onUpdateMatch(activeMatch.id, {
-          status: activeMatch.status === 'scheduled' ? 'live' : activeMatch.status,
+          status: 'live',
           startedAtMs: activeMatch.startedAtMs || Date.now(),
           activeSlotOrder: slotOrder,
           teamSubCategory: targetSlot.label,
@@ -902,7 +937,12 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     );
   };
 
-  const handleSaveLineup = (e: React.FormEvent) => {
+  const handleConfirmTeamAAndGoB = () => {
+    setLineupStep('B');
+    setNewRosterName('');
+  };
+
+  const handleConfirmTeamBAndStart = (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeMatch) return;
     requireStaffAction(
@@ -927,6 +967,8 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         );
 
         onUpdateMatch(activeMatch.id, {
+          status: 'live',
+          startedAtMs: activeMatch.startedAtMs || Date.now(),
           teamSubCategory: currentSubEventConfig.label,
           teamAPlayer1: cleanA1,
           teamAPlayer2: cleanA2,
@@ -935,8 +977,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           teamLineupSlots: updatedSlots,
         });
         setShowLineupModal(false);
+        setLineupStep('A');
         setNotice(
-          `Đã lưu VĐV ${currentSubEventConfig.label}: Đội A (${[cleanA1, cleanA2].filter(Boolean).join(' & ') || 'Chưa chọn'}) vs Đội B (${[cleanB1, cleanB2].filter(Boolean).join(' & ') || 'Chưa chọn'}).`,
+          `Đã vào trận ${currentSubEventConfig.label} · Đội A (${[cleanA1, cleanA2].filter(Boolean).join(' & ') || 'Chưa chọn'}) vs Đội B (${[cleanB1, cleanB2].filter(Boolean).join(' & ') || 'Chưa chọn'}).`,
         );
       },
     );
@@ -944,12 +987,12 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
   const handleQuickAddRoster = (side: 'A' | 'B') => {
     if (!activeMatch || !onAddRosterAthlete) return;
-    const rawInput = (side === 'A' ? newRosterNameA : newRosterNameB).trim();
+    const rawInput = newRosterName.trim();
     if (!rawInput) return;
     const targetReg = side === 'A' ? regTeamA : regTeamB;
     if (!targetReg) return;
 
-    const genderTag = (side === 'A' ? newRosterGenderA : newRosterGenderB) === 'female' ? '(Nữ)' : '(Nam)';
+    const genderTag = newRosterGender === 'female' ? '(Nữ)' : '(Nam)';
     const formattedLabel = `${cleanAthleteName(rawInput)} ${genderTag}`;
 
     requireAdminAction(
@@ -959,12 +1002,11 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         if (side === 'A') {
           if (!draftA1) setDraftA1(formattedLabel);
           else if (!draftA2 && currentSubEventConfig.sideARole2 !== 'none') setDraftA2(formattedLabel);
-          setNewRosterNameA('');
         } else {
           if (!draftB1) setDraftB1(formattedLabel);
           else if (!draftB2 && currentSubEventConfig.sideBRole2 !== 'none') setDraftB2(formattedLabel);
-          setNewRosterNameB('');
         }
+        setNewRosterName('');
       },
     );
   };
@@ -1047,10 +1089,11 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           });
           setNotice(
             isTiedAfterFour
-              ? `4 nội dung hòa ${winsA}-${winsB} · Mở thêm nội dung Đánh đơn quyết định!`
+              ? `4 nội dung hòa ${winsA}-${winsB} · Mở Đánh đơn quyết định!`
               : `Đã lưu ${currentSlot?.label || 'Nội dung'} (${activeMatch.scoreA}-${activeMatch.scoreB}). Chuyển sang ${nextUnfinished.label}.`,
           );
           if (isTiedAfterFour) {
+            setLineupStep('A');
             setShowLineupModal(true);
           }
           return;
@@ -1155,9 +1198,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const leftCanPlus = canScoreSide(leftSideIsA ? 'A' : 'B');
   const rightCanPlus = canScoreSide(leftSideIsA ? 'B' : 'A');
 
-  const otherTeamOfCoin: 'A' | 'B' = coinWinner === 'A' ? 'B' : 'A';
-  const otherTeamNameOfCoin =
-    otherTeamOfCoin === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
+  const coinWinnerName = coinWinner === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
+  const coinLoserSide: 'A' | 'B' = coinWinner === 'A' ? 'B' : 'A';
+  const coinLoserName = coinLoserSide === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
 
   return (
     <div className="w-full max-w-full overflow-x-hidden overscroll-none space-y-1.5 sm:space-y-2.5 landscape:space-y-1 pb-12 sm:pb-0 landscape:pb-9">
@@ -1227,7 +1270,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
             </div>
 
-            {/* Chọn nội dung (Đôi nữ, Đôi nam, Đôi nam nữ 1, Đôi nam nữ 2 + Đánh đơn khi hòa) */}
+            {/* Chọn nội dung + Chọn VĐV */}
             <div className="flex items-center gap-1.5 min-w-0">
               <button
                 type="button"
@@ -1255,7 +1298,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 onClick={() =>
                   requireStaffAction(
                     'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để chọn VĐV cho nội dung này.',
-                    () => setShowLineupModal(true),
+                    () => {
+                      setLineupStep('A');
+                      setShowLineupModal(true);
+                    },
                   )
                 }
                 className="min-h-[30px] sm:min-h-[36px] landscape:min-h-[24px] px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10px] sm:text-xs font-extrabold flex items-center gap-1 shrink-0 transition-colors"
@@ -1280,8 +1326,11 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 type="button"
                 onClick={() =>
                   requireStaffAction(
-                    'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để chọn/đổi VĐV đứng sân.',
-                    () => setShowLineupModal(true),
+                    'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để chọn VĐV đứng sân.',
+                    () => {
+                      setLineupStep('A');
+                      setShowLineupModal(true);
+                    },
                   )
                 }
                 className={`min-h-[30px] sm:min-h-[36px] landscape:min-h-[24px] px-1 sm:px-2 py-1 rounded-xl text-[10px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
@@ -1292,7 +1341,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
                 }`}
               >
-                <UserPlus className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 text-orange-500" />
+                <UserCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 text-orange-500" />
                 <span className="truncate">Đội hình</span>
               </button>
 
@@ -1596,7 +1645,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           <div className="flex items-center justify-between gap-2 text-[10px] sm:text-xs min-w-0">
             <div className="flex items-center gap-1.5 font-mono-num font-bold min-w-0">
               <span className="px-1.5 py-0.5 rounded-md bg-orange-500/15 text-orange-500 shrink-0">
-                #{activeMatch.matchNumber} · S{activeMatch.courtNumber}
+                #{activeMatch.matchNumber} · S{activeMatch.courtNumber} · LIVE
               </span>
               <span className={`truncate ${mutedText}`}>
                 {currentSubEventConfig.label} · {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]}
@@ -1830,80 +1879,23 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <span className="truncate">Hòa 2–2</span>
             </button>
           </div>
-
-          <div className="flex items-center justify-between gap-2 text-[10px] sm:text-xs">
-            <button
-              type="button"
-              onClick={() =>
-                requireStaffAction(
-                  'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đặt lại điểm trận đấu.',
-                  () => {
-                    onUpdateMatch(activeMatch.id, {
-                      status: 'live',
-                      winnerSide: '',
-                      scoreA: 0,
-                      scoreB: 0,
-                      servingTeam: 'A',
-                      serverNumber: 2,
-                      timeoutsA: 0,
-                      timeoutsB: 0,
-                      scoreHistory: [],
-                    });
-                    setNotice(null);
-                  },
-                )
-              }
-              className={`min-h-[24px] sm:min-h-[30px] px-2 py-0.5 rounded-lg font-semibold border inline-flex items-center gap-1 ${
-                isDark
-                  ? 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
-                  : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
-              }`}
-            >
-              <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              <span>Đặt lại 0–0</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                requireStaffAction(
-                  'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để chuyển trạng thái trận đấu.',
-                  () =>
-                    onUpdateMatch(activeMatch.id, {
-                      status: activeMatch.status === 'live' ? 'scheduled' : 'live',
-                      startedAtMs: activeMatch.startedAtMs || Date.now(),
-                    }),
-                )
-              }
-              className={`min-h-[24px] sm:min-h-[30px] px-2 py-0.5 rounded-lg font-semibold border inline-flex items-center gap-1 ${
-                activeMatch.status === 'live'
-                  ? 'bg-amber-500/15 text-amber-500 border-amber-500/30'
-                  : isDark
-                  ? 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
-                  : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
-              }`}
-            >
-              <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              <span>{activeMatch.status === 'live' ? 'Đang Live' : 'Bắt đầu Live'}</span>
-            </button>
-          </div>
         </div>
       </section>
 
-      {/* POPUP TUNG ĐỒNG XU: CHỌN BÓNG (CHỈ PHÁT BÓNG) HOẶC CHỌN SÂN */}
+      {/* POPUP ĐỒNG XU XOAY + CHỌN BÓNG / SÂN */}
       {showCoinTossModal && (
         <div
-          className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
           onClick={() => setShowCoinTossModal(false)}
         >
           <div
             className={`w-full max-w-md rounded-2xl border p-4 space-y-3.5 shadow-2xl ${surfaceCard}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5">
+            <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
               <div className="flex items-center gap-2 min-w-0">
                 <Coins className="w-4 h-4 text-amber-500 shrink-0" />
-                <h3 className="text-sm font-extrabold truncate">Bốc thăm tung đồng xu</h3>
+                <h3 className="text-sm font-extrabold truncate">Tung đồng xu bốc thăm</h3>
               </div>
               <button
                 type="button"
@@ -1921,29 +1913,25 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-amber-50/70 border-amber-200'
               }`}
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs">
-                <Coins className="w-3.5 h-3.5" />
-                <span>MẶT ĐỒNG XU: {coinResultLabel}</span>
+              <SpinningCoin3D face={coinFace} isSpinning={isSpinningCoin} spinKey={coinSpinKey} />
+              <div className="text-xs font-extrabold">
+                Mặt {coinFace} · Thắng đồng xu:{' '}
+                <span className="text-orange-500">{coinWinnerName}</span>
               </div>
-              <p className="text-xs font-bold">
-                Đội thắng đồng xu:{' '}
-                <span className="text-orange-500">
-                  {coinWinner === 'A' ? activeMatch.teamAName : activeMatch.teamBName}
-                </span>
-              </p>
               <button
                 type="button"
-                onClick={handleFlipCoinAgain}
+                onClick={triggerCoinFlip}
                 className="min-h-[28px] px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold inline-flex items-center gap-1"
               >
-                <RefreshCw className="w-3 h-3" />
+                <Shuffle className="w-3 h-3" />
                 <span>Tung lại đồng xu</span>
               </button>
             </div>
 
-            <div className="space-y-2">
-              <div className="text-[11px] font-bold">
-                1. Đội thắng đồng xu lựa chọn:
+            {/* PHẦN TRÊN: 1 HÀNG 2 NÚT CHO ĐỘI THẮNG CHỌN (BÓNG / SÂN) */}
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-bold text-orange-500 truncate">
+                {coinWinnerName} (Đội thắng) lựa chọn:
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -1957,7 +1945,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                       : 'bg-slate-100 text-slate-800 border-slate-200'
                   }`}
                 >
-                  Chọn Bóng (Chỉ phát bóng)
+                  Chọn Bóng
                 </button>
                 <button
                   type="button"
@@ -1970,53 +1958,60 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                       : 'bg-slate-100 text-slate-800 border-slate-200'
                   }`}
                 >
-                  Chọn Sân (Đội kia phát)
+                  Chọn Sân
                 </button>
               </div>
             </div>
 
+            {/* PHẦN DƯỚI: NẾU ĐỘI THẮNG ĐÃ CHỌN SÂN -> ĐỘI KIA CHỌN BÓNG; CHỌN BÓNG -> ĐỘI KIA CHỌN SÂN TRÁI / SÂN PHẢI */}
             {coinChoice === 'ball' ? (
-              <div className="space-y-2">
-                <div className="text-[11px] font-bold">
-                  2. {otherTeamNameOfCoin} chỉ còn lựa chọn sân:
+              <div className="space-y-1.5 pt-1 border-t border-slate-200 dark:border-slate-800">
+                <div className="text-[11px] font-bold text-emerald-500 truncate">
+                  {coinWinnerName} chọn Bóng → {coinLoserName} chọn Sân:
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => handleApplyCoinToss('left')}
+                    onClick={() => handleFinalizeCoinToss({ sideChoice: 'left' })}
                     className="min-h-[36px] px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
                   >
-                    Đứng Bên Trái
+                    Sân Trái
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleApplyCoinToss('right')}
+                    onClick={() => handleFinalizeCoinToss({ sideChoice: 'right' })}
                     className="min-h-[36px] px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
                   >
-                    Đứng Bên Phải
+                    Sân Phải
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="text-[11px] font-bold">
-                  2. Chọn sân cho đội thắng đồng xu (Đội {otherTeamNameOfCoin} sẽ phát bóng):
+              <div className="space-y-2 pt-1 border-t border-slate-200 dark:border-slate-800">
+                <div className="space-y-1">
+                  <div className="text-[11px] font-bold text-sky-500 truncate">
+                    {coinWinnerName} chọn Sân:
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleFinalizeCoinToss({ sideChoice: 'left' })}
+                      className="min-h-[34px] px-3 py-1 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold"
+                    >
+                      Sân Trái
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleFinalizeCoinToss({ sideChoice: 'right' })}
+                      className="min-h-[34px] px-3 py-1 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold"
+                    >
+                      Sân Phải
+                    </button>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleApplyCoinToss('left')}
-                    className="min-h-[36px] px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
-                  >
-                    Chọn Sân Trái
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleApplyCoinToss('right')}
-                    className="min-h-[36px] px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
-                  >
-                    Chọn Sân Phải
-                  </button>
+
+                <div className="text-[11px] font-bold text-amber-500 truncate">
+                  {coinLoserName} phải chọn Bóng → Bấm chọn Sân ở trên để vào trận ({coinLoserName} giao bóng).
                 </div>
               </div>
             )}
@@ -2024,52 +2019,52 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         </div>
       )}
 
-      {/* POPUP CHỌN VĐV THEO NỘI DUNG (LỌC NAM/NỮ, ẨN ĐÃ CHỌN, TỐI ĐA 02 TRẬN/VĐV) */}
+      {/* POPUP CHỌN VĐV TỪNG BƯỚC: ĐỘI A TRƯỚC -> XÁC NHẬN XONG MỚI QUA ĐỘI B */}
       {showLineupModal && (
         <div
-          className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
           onClick={() => setShowLineupModal(false)}
         >
-          <form
-            onSubmit={handleSaveLineup}
-            className={`w-full max-w-2xl rounded-2xl border p-4 space-y-3 shadow-2xl max-h-[88dvh] overflow-y-auto ${surfaceCard}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5">
-              <div className="min-w-0">
-                <h3 className="text-sm font-extrabold">
-                  Chọn VĐV thi đấu — {currentSubEventConfig.label}
-                </h3>
-                <p className={`text-[11px] truncate ${mutedText}`}>
-                  Lọc theo nội dung · Ẩn VĐV đã chọn trong trận · Tối đa {MAX_MATCHES_PER_PLAYER} trận/VĐV
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowLineupModal(false)}
-                className={`p-1 rounded-lg ${
-                  isDark ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'
-                }`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* ĐỘI A */}
-              <div className="space-y-2">
-                <div className="text-xs font-bold text-orange-500 truncate">
-                  Đội A: {activeMatch.teamAName}
+          {lineupStep === 'A' ? (
+            <div
+              className={`w-full max-w-md rounded-2xl border p-4 space-y-3 shadow-2xl max-h-[88dvh] overflow-y-auto ${surfaceCard}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-extrabold uppercase text-orange-500">
+                    Bước 1/2 · Đội A trước
+                  </div>
+                  <h3 className="text-sm font-extrabold truncate">
+                    {currentSubEventConfig.label} — {activeMatch.teamAName}
+                  </h3>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowLineupModal(false)}
+                  className={`p-1 rounded-lg ${
+                    isDark ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
+              <div className="space-y-2.5">
                 <div>
                   <label className="block text-[11px] font-semibold mb-1">
-                    VĐV A1 ({currentSubEventConfig.sideARole1 === 'female' ? 'Nữ' : currentSubEventConfig.sideARole1 === 'male' ? 'Nam' : 'Tự do'})
+                    VĐV A1 (
+                    {currentSubEventConfig.sideARole1 === 'female'
+                      ? 'Nữ'
+                      : currentSubEventConfig.sideARole1 === 'male'
+                      ? 'Nam'
+                      : 'Tự do'}
+                    )
                   </label>
                   <select
                     value={draftA1}
                     onChange={(e) => setDraftA1(e.target.value)}
-                    className={`w-full min-h-[34px] px-2.5 py-1 text-xs border rounded-xl ${
+                    className={`w-full min-h-[36px] px-2.5 py-1 text-xs border rounded-xl ${
                       isDark
                         ? 'bg-slate-950 border-slate-700 text-white'
                         : 'bg-white border-slate-300 text-slate-900'
@@ -2090,12 +2085,18 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 {currentSubEventConfig.sideARole2 !== 'none' && (
                   <div>
                     <label className="block text-[11px] font-semibold mb-1">
-                      VĐV A2 ({currentSubEventConfig.sideARole2 === 'female' ? 'Nữ' : currentSubEventConfig.sideARole2 === 'male' ? 'Nam' : 'Tự do'})
+                      VĐV A2 (
+                      {currentSubEventConfig.sideARole2 === 'female'
+                        ? 'Nữ'
+                        : currentSubEventConfig.sideARole2 === 'male'
+                        ? 'Nam'
+                        : 'Tự do'}
+                      )
                     </label>
                     <select
                       value={draftA2}
                       onChange={(e) => setDraftA2(e.target.value)}
-                      className={`w-full min-h-[34px] px-2.5 py-1 text-xs border rounded-xl ${
+                      className={`w-full min-h-[36px] px-2.5 py-1 text-xs border rounded-xl ${
                         isDark
                           ? 'bg-slate-950 border-slate-700 text-white'
                           : 'bg-white border-slate-300 text-slate-900'
@@ -2118,8 +2119,8 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   <div className="flex items-center gap-1 pt-1">
                     <input
                       type="text"
-                      value={newRosterNameA}
-                      onChange={(e) => setNewRosterNameA(e.target.value)}
+                      value={newRosterName}
+                      onChange={(e) => setNewRosterName(e.target.value)}
                       placeholder="Thêm VĐV Đội A..."
                       className={`flex-1 min-w-0 min-h-[30px] px-2 py-1 text-xs border rounded-lg ${
                         isDark
@@ -2128,8 +2129,8 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                       }`}
                     />
                     <select
-                      value={newRosterGenderA}
-                      onChange={(e) => setNewRosterGenderA(e.target.value as 'male' | 'female')}
+                      value={newRosterGender}
+                      onChange={(e) => setNewRosterGender(e.target.value as 'male' | 'female')}
                       className={`min-h-[30px] px-1.5 py-1 text-xs border rounded-lg ${
                         isDark
                           ? 'bg-slate-950 border-slate-700 text-white'
@@ -2150,20 +2151,67 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 )}
               </div>
 
-              {/* ĐỘI B */}
-              <div className="space-y-2">
-                <div className="text-xs font-bold text-sky-500 truncate">
-                  Đội B: {activeMatch.teamBName}
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowLineupModal(false)}
+                  className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold ${
+                    isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmTeamAAndGoB}
+                  className="min-h-[34px] px-4 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold inline-flex items-center gap-1"
+                >
+                  <span>Xác nhận Đội A</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleConfirmTeamBAndStart}
+              className={`w-full max-w-md rounded-2xl border p-4 space-y-3 shadow-2xl max-h-[88dvh] overflow-y-auto ${surfaceCard}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-extrabold uppercase text-sky-500">
+                    Bước 2/2 · Đội B
+                  </div>
+                  <h3 className="text-sm font-extrabold truncate">
+                    {currentSubEventConfig.label} — {activeMatch.teamBName}
+                  </h3>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowLineupModal(false)}
+                  className={`p-1 rounded-lg ${
+                    isDark ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
+              <div className="space-y-2.5">
                 <div>
                   <label className="block text-[11px] font-semibold mb-1">
-                    VĐV B1 ({currentSubEventConfig.sideBRole1 === 'female' ? 'Nữ' : currentSubEventConfig.sideBRole1 === 'male' ? 'Nam' : 'Tự do'})
+                    VĐV B1 (
+                    {currentSubEventConfig.sideBRole1 === 'female'
+                      ? 'Nữ'
+                      : currentSubEventConfig.sideBRole1 === 'male'
+                      ? 'Nam'
+                      : 'Tự do'}
+                    )
                   </label>
                   <select
                     value={draftB1}
                     onChange={(e) => setDraftB1(e.target.value)}
-                    className={`w-full min-h-[34px] px-2.5 py-1 text-xs border rounded-xl ${
+                    className={`w-full min-h-[36px] px-2.5 py-1 text-xs border rounded-xl ${
                       isDark
                         ? 'bg-slate-950 border-slate-700 text-white'
                         : 'bg-white border-slate-300 text-slate-900'
@@ -2184,12 +2232,18 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 {currentSubEventConfig.sideBRole2 !== 'none' && (
                   <div>
                     <label className="block text-[11px] font-semibold mb-1">
-                      VĐV B2 ({currentSubEventConfig.sideBRole2 === 'female' ? 'Nữ' : currentSubEventConfig.sideBRole2 === 'male' ? 'Nam' : 'Tự do'})
+                      VĐV B2 (
+                      {currentSubEventConfig.sideBRole2 === 'female'
+                        ? 'Nữ'
+                        : currentSubEventConfig.sideBRole2 === 'male'
+                        ? 'Nam'
+                        : 'Tự do'}
+                      )
                     </label>
                     <select
                       value={draftB2}
                       onChange={(e) => setDraftB2(e.target.value)}
-                      className={`w-full min-h-[34px] px-2.5 py-1 text-xs border rounded-xl ${
+                      className={`w-full min-h-[36px] px-2.5 py-1 text-xs border rounded-xl ${
                         isDark
                           ? 'bg-slate-950 border-slate-700 text-white'
                           : 'bg-white border-slate-300 text-slate-900'
@@ -2212,8 +2266,8 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   <div className="flex items-center gap-1 pt-1">
                     <input
                       type="text"
-                      value={newRosterNameB}
-                      onChange={(e) => setNewRosterNameB(e.target.value)}
+                      value={newRosterName}
+                      onChange={(e) => setNewRosterName(e.target.value)}
                       placeholder="Thêm VĐV Đội B..."
                       className={`flex-1 min-w-0 min-h-[30px] px-2 py-1 text-xs border rounded-lg ${
                         isDark
@@ -2222,8 +2276,8 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                       }`}
                     />
                     <select
-                      value={newRosterGenderB}
-                      onChange={(e) => setNewRosterGenderB(e.target.value as 'male' | 'female')}
+                      value={newRosterGender}
+                      onChange={(e) => setNewRosterGender(e.target.value as 'male' | 'female')}
                       className={`min-h-[30px] px-1.5 py-1 text-xs border rounded-lg ${
                         isDark
                           ? 'bg-slate-950 border-slate-700 text-white'
@@ -2243,30 +2297,30 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                   </div>
                 )}
               </div>
-            </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setShowLineupModal(false)}
-                className={`min-h-[32px] px-3 py-1 rounded-xl text-xs font-semibold ${
-                  isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
-                }`}
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                className="min-h-[32px] px-4 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold"
-              >
-                Xác nhận VĐV ra sân
-              </button>
-            </div>
-          </form>
+              <div className="flex justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setLineupStep('A')}
+                  className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold ${
+                    isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  ← Quay lại Đội A
+                </button>
+                <button
+                  type="submit"
+                  className="min-h-[34px] px-4 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+                >
+                  Xác nhận &amp; Vào trận
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       )}
 
-      {/* POPUP CHỌN NỘI DUNG (4 NỘI DUNG VÒNG BẢNG + ĐÁNH ĐƠN KHI HÒA) */}
+      {/* POPUP CHỌN NỘI DUNG */}
       {showSubmatchModal && (
         <div
           className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
