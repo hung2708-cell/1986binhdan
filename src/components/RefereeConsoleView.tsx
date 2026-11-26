@@ -1,10 +1,9 @@
 /**
- * /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
   CheckCircle2,
@@ -117,6 +116,13 @@ interface RefereeConsoleViewProps {
   onAnnounceCourtCall: (match: Match) => void;
   onAnnounceCourtAvailable?: (finishedMatch: Match) => void;
   onAddRosterAthlete?: (registrationId: string, athleteLabel: string) => void;
+}
+
+function getSideSwitchThreshold(pointsToWin: number): number | null {
+  if (pointsToWin === 11) return 6;
+  if (pointsToWin === 15) return 8;
+  if (pointsToWin === 21) return 11;
+  return null;
 }
 
 function inferGender(rawName: string, explicitGender?: string): GenderType {
@@ -345,6 +351,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const [selectedCourt, setSelectedCourt] = useState<number>(1);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const [showSideSwitchModal, setShowSideSwitchModal] = useState(false);
+  const [sideSwitchThresholdLabel, setSideSwitchThresholdLabel] = useState<string>('');
+  const triggeredSwitchKeysRef = useRef<Set<string>>(new Set());
+
   const [showCoinTossModal, setShowCoinTossModal] = useState(false);
   const [coinWinner, setCoinWinner] = useState<'A' | 'B'>('A');
   const [coinChoice, setCoinChoice] = useState<'ball' | 'side'>('ball');
@@ -363,7 +373,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const [newRosterName, setNewRosterName] = useState('');
   const [newRosterGender, setNewRosterGender] = useState<'male' | 'female'>('male');
 
-  // Tự động ẩn thông báo nổi sau 2.5s
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(null), 2500);
@@ -668,6 +677,25 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     return true;
   };
 
+  const checkAndTriggerSideSwitchPopup = (
+    matchId: string,
+    slotOrder: number,
+    nextA: number,
+    nextB: number,
+    pointsToWin: number,
+  ) => {
+    const threshold = getSideSwitchThreshold(pointsToWin);
+    if (!threshold) return;
+    if (nextA === threshold || nextB === threshold) {
+      const triggerKey = `${matchId}_${slotOrder}_${threshold}`;
+      if (!triggeredSwitchKeysRef.current.has(triggerKey)) {
+        triggeredSwitchKeysRef.current.add(triggerKey);
+        setSideSwitchThresholdLabel(`Mốc ${pointsToWin} điểm · Đổi sân ở ${threshold} điểm`);
+        setShowSideSwitchModal(true);
+      }
+    }
+  };
+
   const adjustScore = (side: 'A' | 'B', delta: number) => {
     if (!activeMatch) return;
     requireStaffAction(
@@ -687,8 +715,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         const nextA = side === 'A' ? Math.max(0, activeMatch.scoreA + delta) : activeMatch.scoreA;
         const nextB = side === 'B' ? Math.max(0, activeMatch.scoreB + delta) : activeMatch.scoreB;
 
+        const currentServer = activeMatch.serverNumber || 2;
         const isScoringTeamServing = activeMatch.servingTeam === side;
-        const shouldSwapServingTeamPlayers = delta > 0 && isScoringTeamServing;
+        const shouldSwapServingTeamPlayers =
+          delta > 0 && isScoringTeamServing && currentServer === 1;
 
         let nextA1 = activeMatch.teamAPlayer1 || '';
         let nextA2 = activeMatch.teamAPlayer2 || '';
@@ -765,10 +795,20 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           scoreHistory: nextHistory,
         });
 
+        if (delta > 0) {
+          checkAndTriggerSideSwitchPopup(
+            activeMatch.id,
+            activeSlotOrder,
+            nextA,
+            nextB,
+            activeMatch.pointsToWin,
+          );
+        }
+
         if (delta > 0 && hitTarget) {
           setNotice(`Đã chạm mốc ${activeMatch.pointsToWin} điểm.`);
         } else if (shouldSwapServingTeamPlayers) {
-          setNotice(`Ghi điểm (${nextA}-${nextB}) · Đổi vị trí 2 VĐV đội ${side}.`);
+          setNotice(`Tay 1 ghi điểm (${nextA}-${nextB}) · Đổi chỗ 2 VĐV đội ${side}.`);
         }
       },
     );
@@ -833,21 +873,6 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     );
   };
 
-  const handleSwapHandNumber = () => {
-    if (!activeMatch) return;
-    requireStaffAction(
-      'Vui lòng đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để đổi Tay 1 / Tay 2.',
-      () => {
-        const nextServer: 1 | 2 = activeMatch.serverNumber === 1 ? 2 : 1;
-        onUpdateMatch(activeMatch.id, {
-          status: 'live',
-          serverNumber: nextServer,
-        });
-        setNotice(`Đã đổi sang Tay ${nextServer} (Đội ${activeMatch.servingTeam}).`);
-      },
-    );
-  };
-
   const handleSwitchCourtEnds = () => {
     if (!activeMatch) return;
     requireStaffAction(
@@ -859,6 +884,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           courtSideA: nextSideA,
           sideSwitched: !activeMatch.sideSwitched,
         });
+        setShowSideSwitchModal(false);
         setNotice(`Đã đổi sân (Đội A sang bên ${nextSideA === 'left' ? 'Trái' : 'Phải'}).`);
       },
     );
@@ -1591,7 +1617,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
           </div>
         </div>
 
-        {/* CỘT PHẢI: BẢNG ĐIỂM LIVE + ĐỔI GIAO / ĐỔI TAY / ĐỔI SÂN */}
+        {/* CỘT PHẢI: BẢNG ĐIỂM LIVE + ĐỔI GIAO / ĐỔI SÂN */}
         <div
           className={`lg:col-span-6 landscape:col-span-6 w-full min-w-0 max-w-full overflow-hidden border rounded-2xl p-2.5 sm:p-4 landscape:p-2 space-y-2.5 sm:space-y-3.5 landscape:space-y-1.5 ${surfaceCard}`}
         >
@@ -1772,47 +1798,96 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 min-w-0">
+          <div className="grid grid-cols-2 gap-2 min-w-0">
             <button
               type="button"
               onClick={handleToggleServe}
-              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[28px] px-2 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
+              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[28px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors min-w-0 ${
                 isDark
                   ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
               }`}
             >
-              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 shrink-0" />
+              <Clock className="w-4 h-4 text-orange-500 shrink-0" />
               <span className="truncate">Đổi giao</span>
             </button>
 
             <button
               type="button"
-              onClick={handleSwapHandNumber}
-              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[28px] px-2 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
-                isDark
-                  ? 'bg-sky-950/50 hover:bg-sky-900/60 text-sky-300 border-sky-800/70'
-                  : 'bg-sky-50 hover:bg-sky-100 text-sky-700 border-sky-200'
-              }`}
-            >
-              <span className="truncate">Đổi tay ({serverNum === 1 ? 'T1→T2' : 'T2→T1'})</span>
-            </button>
-
-            <button
-              type="button"
               onClick={handleSwitchCourtEnds}
-              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[28px] px-2 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
+              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[28px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors min-w-0 ${
                 isDark
                   ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
               }`}
             >
-              <ArrowLeftRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
+              <ArrowLeftRight className="w-4 h-4 text-emerald-500 shrink-0" />
               <span className="truncate">Đổi sân</span>
             </button>
           </div>
         </div>
       </section>
+
+      {/* POPUP NHẮC ĐỔI SÂN KHI ĐẾN MỐC ĐIỂM (11 -> 6, 15 -> 8, 21 -> 11) */}
+      {showSideSwitchModal && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+          onClick={() => setShowSideSwitchModal(false)}
+        >
+          <div
+            className={`w-full max-w-sm rounded-2xl border p-4 space-y-3.5 shadow-2xl ${surfaceCard}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <ArrowLeftRight className="w-4 h-4 text-emerald-500 shrink-0" />
+                <h3 className="text-sm font-extrabold truncate">Yêu cầu 2 đội đổi sân</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSideSwitchModal(false)}
+                aria-label="Đóng popup đổi sân"
+                className={`p-1 rounded-lg ${
+                  isDark ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'
+                }`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="text-xs font-extrabold text-emerald-500">{sideSwitchThresholdLabel}</div>
+              <p className={`text-xs leading-relaxed ${mutedText}`}>
+                Tỷ số hiện tại: <strong className="text-orange-500">{activeMatch.teamAName} ({activeMatch.scoreA})</strong>{' '}
+                — <strong className="text-sky-500">{activeMatch.teamBName} ({activeMatch.scoreB})</strong>.
+                Vui lòng yêu cầu 2 đội đổi sân trước khi tiếp tục thi đấu.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowSideSwitchModal(false)}
+                className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold border ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                }`}
+              >
+                Để sau
+              </button>
+              <button
+                type="button"
+                onClick={handleSwitchCourtEnds}
+                className="min-h-[36px] px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5"
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5" />
+                <span>Đổi sân ngay</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* THÔNG BÁO NỔI CỐ ĐỊNH — KHÔNG ĐẨY BỐ CỤC */}
       {notice && (
@@ -2363,96 +2438,3 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
     </div>
   );
 };
-edCourt, setSelectedCourt] = useState<number>(1);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  const [showCoinTossModal, setShowCoinTossModal] = useState(false);
-  const [coinWinner, setCoinWinner] = useState<'A' | 'B'>('A');
-  const [coinChoice, setCoinChoice] = useState<'ball' | 'side'>('ball');
-  const [coinFace, setCoinFace] = useState<'SẤP' | 'NGỬA'>('NGỬA');
-  const [isSpinningCoin, setIsSpinningCoin] = useState(false);
-  const [coinSpinKey, setCoinSpinKey] = useState(0);
-
-  const [showLineupModal, setShowLineupModal] = useState(false);
-  const [lineupStep, setLineupStep] = useState<'A' | 'B'>('A');
-  const [showSubmatchModal, setShowSubmatchModal] = useState(false);
-
-  const [draftA1, setDraftA1] = useState('');
-  const [draftA2, setDraftA2] = useState('');
-  const [draftB1, setDraftB1] = useState('');
-  const [draftB2, setDraftB2] = useState('');
-  const [newRosterName, setNewRosterName] = useState('');
-  const [newRosterGender, setNewRosterGender] = useState<'male' | 'female'>('male');
-
-  useEffect(() => {
-    if (!notice) return;
-    const timer = window.setTimeout(() => setNotice(null), 2500);
-    return () => window.clearTimeout(timer);
-  }, [notice]);
-
-  const courtMatches = useMemo(
-    () =>
-      matches
-        .filter((m) => m.courtNumber === selectedCourt)
-        .sort((a, b) => {
-          const rank = (s: Match['status']) => (s === 'live' ? 0 : s === 'scheduled' ? 1 : 2);
-          return rank(a.status) !== rank(b.status)
-            ? rank(a.status) - rank(b.status)
-            : a.matchNumber - b.matchNumber;
-        }),
-    [matches, selectedCourt],
-  );
-
-  const activeMatch = useMemo(() => {
-    if (selectedMatchId) {
-      const explicit = matches.find((m) => m.id === selectedMatchId);
-      if (explicit) return explicit;
-    }
-    return (
-      courtMatches.find((m) => m.status === 'live') ||
-      courtMatches.find((m) => m.status === 'scheduled') ||
-      courtMatches[0] ||
-      matches.find((m) => m.status === 'live') ||
-      matches[0] ||
-      null
-    );
-  }, [selectedMatchId, matches, courtMatches]);
-
-  useEffect(() => {
-    if (activeMatch && activeMatch.courtNumber !== selectedCourt) {
-      setSelectedCourt(activeMatch.courtNumber);
-    }
-  }, [activeMatch?.id, activeMatch?.courtNumber, selectedCourt]);
-
-  const hasGroupStageTie = useMemo(() => {
-    if (!activeMatch) return false;
-    const slots = buildInitialSlots(activeMatch, false);
-    const completedGroupSlots = slots.slice(0, 4).filter((s) => s.completed);
-    if (completedGroupSlots.length < 4) return false;
-    const winsA = completedGroupSlots.filter((s) => s.winnerSide === 'A').length;
-    const winsB = completedGroupSlots.filter((s) => s.winnerSide === 'B').length;
-    return winsA === winsB;
-  }, [activeMatch]);
-
-  const lineupSlots = useMemo(
-    () => (activeMatch ? buildInitialSlots(activeMatch, hasGroupStageTie) : []),
-    [activeMatch, hasGroupStageTie],
-  );
-
-  const activeSlotOrder = activeMatch?.activeSlotOrder || 1;
-  const currentSlot =
-    lineupSlots.find((s) => s.order === activeSlotOrder) || lineupSlots[0] || null;
-
-  const currentSubEventConfig: MatchSubEventConfig = useMemo(() => {
-    const allConfigs = hasGroupStageTie
-      ? [...GROUP_STAGE_SUBEVENTS, TIEBREAKER_SINGLES_EVENT]
-      : GROUP_STAGE_SUBEVENTS;
-    return (
-      allConfigs.find((c) => c.order === activeSlotOrder) ||
-      allConfigs.find((c) => c.label === (activeMatch?.teamSubCategory || currentSlot?.label)) ||
-      GROUP_STAGE_SUBEVENTS[0]
-    );
-  }, [hasGroupStageTie, activeSlotOrder, activeMatch?.teamSubCategory, currentSlot?.label]);
-
-  useEffect(() => {
-    if
