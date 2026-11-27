@@ -133,10 +133,10 @@ function inferGender(rawName: string, explicitGender?: string): GenderType {
     return 'male';
   }
   const lower = rawName.toLowerCase();
-  if (lower.includes('(nữ') || lower.includes('· nữ') || lower.includes('- nữ')) {
+  if (lower.includes('(nữ)') || lower.includes('- nữ') || lower.includes('nu')) {
     return 'female';
   }
-  if (lower.includes('(nam') || lower.includes('· nam') || lower.includes('- nam')) {
+  if (lower.includes('(nam)') || lower.includes('- nam') || lower.includes('nam')) {
     return 'male';
   }
   return 'unknown';
@@ -144,26 +144,15 @@ function inferGender(rawName: string, explicitGender?: string): GenderType {
 
 function cleanAthleteName(rawName: string): string {
   return rawName
-    .replace(/\([^)]*(nam|nữ|nu|trình|hang|hạng)[^)]*\)/gi, '')
-    .replace(/\([^)]*\)/g, '')
-    .replace(/\s*[-–·|]\s*(nam|nữ|nu|trình\s*[a-z0-9]+)$/gi, '')
-    .replace(/\s+/g, ' ')
+    .replace(/\((nam|nữ|nu|trình\s*[a-z0-9]+)\)/gi, '')
+    .replace(/\s*-\s*(nam|nữ|nu)$/i, '')
     .trim();
-}
-
-function formatTeamDisplayName(rawTeamName: string): string {
-  const parts = rawTeamName
-    .split('/')
-    .map((p) => cleanAthleteName(p))
-    .filter(Boolean);
-  if (parts.length === 0) return cleanAthleteName(rawTeamName) || rawTeamName;
-  return parts.join(' / ');
 }
 
 function shortenPlayerName(rawName: string): string {
   const cleaned = cleanAthleteName(rawName);
   const parts = cleaned.split(/\s+/).filter(Boolean);
-  if (parts.length <= 2) return cleaned || rawName.trim();
+  if (parts.length <= 2) return cleaned;
   return parts.slice(-2).join(' ');
 }
 
@@ -287,7 +276,7 @@ const Player3DToken: React.FC<Player3DTokenProps> = ({
 
   return (
     <div
-      title={cleanAthleteName(name) || 'Chưa chọn VĐV'}
+      title={name || 'Chưa chọn VĐV'}
       className={`inline-flex items-center gap-1 max-w-full min-w-0 ${
         align === 'right' ? 'flex-row-reverse text-right' : 'flex-row text-left'
       }`}
@@ -316,7 +305,7 @@ const Player3DToken: React.FC<Player3DTokenProps> = ({
       </svg>
 
       <span
-        className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] landscape:text-[8.5px] font-bold truncate max-w-[82px] sm:max-w-[132px] landscape:max-w-[84px] ${pillStyle}`}
+        className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] landscape:text-[8px] font-bold truncate max-w-[78px] sm:max-w-[128px] landscape:max-w-[76px] ${pillStyle}`}
       >
         <span className="truncate">{shortName}</span>
         {isServing && (
@@ -967,15 +956,9 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
       scoreHistory: [],
     });
 
-    const winnerName = formatTeamDisplayName(
-      winner === 'A' ? activeMatch.teamAName : activeMatch.teamBName,
-    );
-    const loserName = formatTeamDisplayName(
-      loser === 'A' ? activeMatch.teamAName : activeMatch.teamBName,
-    );
-    const servingName = formatTeamDisplayName(
-      servingTeam === 'A' ? activeMatch.teamAName : activeMatch.teamBName,
-    );
+    const winnerName = winner === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
+    const loserName = loser === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
+    const servingName = servingTeam === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
 
     setShowCoinTossModal(false);
     setNotice(
@@ -1055,13 +1038,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
         setShowLineupModal(false);
         setLineupStep('A');
         setNotice(
-          `Đã vào trận ${currentSubEventConfig.label} · Đội A (${[cleanA1, cleanA2]
-            .filter(Boolean)
-            .map(cleanAthleteName)
-            .join(' & ') || 'Chưa chọn'}) vs Đội B (${[cleanB1, cleanB2]
-            .filter(Boolean)
-            .map(cleanAthleteName)
-            .join(' & ') || 'Chưa chọn'}).`,
+          `Đã vào trận ${currentSubEventConfig.label} · Đội A (${[cleanA1, cleanA2].filter(Boolean).join(' & ') || 'Chưa chọn'}) vs Đội B (${[cleanB1, cleanB2].filter(Boolean).join(' & ') || 'Chưa chọn'}).`,
         );
       },
     );
@@ -1141,28 +1118,26 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const leftTeamLabel = leftSideIsA ? 'ĐỘI A · TRÁI' : 'ĐỘI B · TRÁI';
   const rightTeamLabel = leftSideIsA ? 'ĐỘI B · PHẢI' : 'ĐỘI A · PHẢI';
 
-  const rawLeftTeamName = leftSideIsA ? activeMatch.teamAName : activeMatch.teamBName;
-  const rawRightTeamName = leftSideIsA ? activeMatch.teamBName : activeMatch.teamAName;
-  const leftTeamName = formatTeamDisplayName(rawLeftTeamName);
-  const rightTeamName = formatTeamDisplayName(rawRightTeamName);
+  const leftTeamName = leftSideIsA ? activeMatch.teamAName : activeMatch.teamBName;
+  const rightTeamName = leftSideIsA ? activeMatch.teamBName : activeMatch.teamAName;
 
   const isSinglesEvent =
     currentSubEventConfig.sideARole2 === 'none' || currentSubEventConfig.sideBRole2 === 'none';
 
   const leftPlayers = leftSideIsA
     ? isSinglesEvent
-      ? [activeMatch.teamAPlayer1 || formatTeamDisplayName(activeMatch.teamAName)]
+      ? [activeMatch.teamAPlayer1 || activeMatch.teamAName]
       : [activeMatch.teamAPlayer1, activeMatch.teamAPlayer2].filter(Boolean)
     : isSinglesEvent
-    ? [activeMatch.teamBPlayer1 || formatTeamDisplayName(activeMatch.teamBName)]
+    ? [activeMatch.teamBPlayer1 || activeMatch.teamBName]
     : [activeMatch.teamBPlayer1, activeMatch.teamBPlayer2].filter(Boolean);
 
   const rightPlayers = leftSideIsA
     ? isSinglesEvent
-      ? [activeMatch.teamBPlayer1 || formatTeamDisplayName(activeMatch.teamBName)]
+      ? [activeMatch.teamBPlayer1 || activeMatch.teamBName]
       : [activeMatch.teamBPlayer1, activeMatch.teamBPlayer2].filter(Boolean)
     : isSinglesEvent
-    ? [activeMatch.teamAPlayer1 || formatTeamDisplayName(activeMatch.teamAName)]
+    ? [activeMatch.teamAPlayer1 || activeMatch.teamAName]
     : [activeMatch.teamAPlayer1, activeMatch.teamAPlayer2].filter(Boolean);
 
   const pLeftTop = leftPlayers[0] || (leftSideIsA ? 'VĐV A1' : 'VĐV B1');
@@ -1219,25 +1194,21 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
   const leftCanPlus = canScoreSide(leftSideIsA ? 'A' : 'B');
   const rightCanPlus = canScoreSide(leftSideIsA ? 'B' : 'A');
 
-  const coinWinnerName = formatTeamDisplayName(
-    coinWinner === 'A' ? activeMatch.teamAName : activeMatch.teamBName,
-  );
+  const coinWinnerName = coinWinner === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
   const coinLoserSide: 'A' | 'B' = coinWinner === 'A' ? 'B' : 'A';
-  const coinLoserName = formatTeamDisplayName(
-    coinLoserSide === 'A' ? activeMatch.teamAName : activeMatch.teamBName,
-  );
+  const coinLoserName = coinLoserSide === 'A' ? activeMatch.teamAName : activeMatch.teamBName;
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden overscroll-none pt-1.5 sm:pt-3 landscape:pt-0 pb-4 sm:pb-6 landscape:pb-1 px-0.5 sm:px-0">
-      <section className="w-full max-w-full grid grid-cols-1 lg:grid-cols-12 landscape:grid-cols-12 gap-2.5 sm:gap-4 landscape:gap-1.5 items-start">
+    <div className="w-full max-w-full overflow-x-hidden overscroll-none pt-1.5 sm:pt-3 landscape:pt-0.5 pb-4 sm:pb-6 landscape:pb-1.5 px-0.5 sm:px-0">
+      <section className="w-full max-w-full grid grid-cols-1 lg:grid-cols-12 landscape:grid-cols-12 gap-2.5 sm:gap-4 landscape:gap-2 items-start">
         {/* CỘT TRÁI: CHỌN SÂN + NỘI DUNG + 4 NÚT + SÂN 3D */}
-        <div className="lg:col-span-6 landscape:col-span-6 w-full min-w-0 max-w-full overflow-hidden space-y-2.5 sm:space-y-3.5 landscape:space-y-1">
+        <div className="lg:col-span-6 landscape:col-span-6 w-full min-w-0 max-w-full overflow-hidden space-y-2.5 sm:space-y-3.5 landscape:space-y-1.5">
           <div
-            className={`w-full max-w-full overflow-hidden border rounded-2xl landscape:rounded-xl p-2.5 sm:p-4 landscape:p-1.5 space-y-2 sm:space-y-3 landscape:space-y-1 ${surfaceCard}`}
+            className={`w-full max-w-full overflow-hidden border rounded-2xl p-2.5 sm:p-4 landscape:p-1.5 space-y-2 sm:space-y-3 landscape:space-y-1 ${surfaceCard}`}
           >
             {/* Chọn sân */}
             <div className="flex items-center justify-between gap-1.5 min-w-0">
-              <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto min-w-0 flex-1 py-0.5 landscape:py-0">
+              <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto min-w-0 flex-1 py-0.5">
                 {courtNumbers.map((cNum) => {
                   const isSelected = cNum === activeMatch.courtNumber;
                   const courtLive = matches.some(
@@ -1254,7 +1225,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                           matches.find((m) => m.courtNumber === cNum);
                         if (firstOnCourt) onSelectMatch(firstOnCourt.id);
                       }}
-                      className={`min-h-[30px] sm:min-h-[34px] landscape:min-h-[22px] px-2 sm:px-3 landscape:px-2 py-0.5 sm:py-1 rounded-xl landscape:rounded-lg text-[11px] sm:text-xs landscape:text-[9.5px] font-bold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1 ${
+                      className={`min-h-[30px] sm:min-h-[34px] landscape:min-h-[24px] px-2 sm:px-3 py-0.5 sm:py-1 rounded-xl text-[11px] sm:text-xs landscape:text-[10px] font-bold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1 ${
                         isSelected
                           ? 'bg-orange-600 text-white'
                           : isDark
@@ -1275,7 +1246,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                 })}
               </div>
 
-              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs landscape:text-[9.5px] shrink-0">
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs landscape:text-[10px] shrink-0">
                 <span className={`font-mono-num truncate max-w-[84px] sm:max-w-none ${mutedText}`}>
                   {activeMatch.groupName || MATCH_STAGE_LABELS[activeMatch.stage]}
                 </span>
@@ -1287,7 +1258,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                         'Đăng nhập tài khoản Trọng tài hoặc Ban Tổ Chức để điều khiển tỷ số và gọi sân.',
                       )
                     }
-                    className="min-h-[26px] landscape:min-h-[21px] px-2 py-0.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] sm:text-[11px] landscape:text-[9px] shrink-0"
+                    className="min-h-[26px] landscape:min-h-[22px] px-2 py-0.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] sm:text-[11px] shrink-0"
                   >
                     Đăng nhập
                   </button>
@@ -1296,17 +1267,17 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             </div>
 
             {/* Chọn nội dung + Chọn VĐV */}
-            <div className="flex items-center gap-1.5 sm:gap-2 landscape:gap-1 min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <button
                 type="button"
                 onClick={() => setShowSubmatchModal(true)}
-                className={`flex-1 min-w-0 min-h-[34px] sm:min-h-[40px] landscape:min-h-[24px] px-2 sm:px-3 landscape:px-2 py-0.5 sm:py-1 rounded-xl landscape:rounded-lg border text-left flex items-center justify-between gap-1 transition-colors ${
+                className={`flex-1 min-w-0 min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-2 sm:px-3 py-0.5 sm:py-1 rounded-xl border text-left flex items-center justify-between gap-1 transition-colors ${
                   isDark
                     ? 'bg-slate-950/80 hover:bg-slate-800 border-slate-700 text-slate-100'
                     : 'bg-slate-50 hover:bg-orange-50/60 border-slate-200 text-slate-900'
                 }`}
               >
-                <span className="inline-flex items-center gap-1 min-w-0 text-[11px] sm:text-xs landscape:text-[9.5px] font-bold">
+                <span className="inline-flex items-center gap-1 min-w-0 text-[11px] sm:text-xs landscape:text-[10px] font-bold">
                   <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 landscape:w-3 landscape:h-3 text-orange-500 shrink-0" />
                   <span className="truncate">
                     {currentSubEventConfig.label} ({activeMatch.scoreA}-{activeMatch.scoreB})
@@ -1329,7 +1300,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     },
                   )
                 }
-                className="min-h-[34px] sm:min-h-[40px] landscape:min-h-[24px] px-2 sm:px-3 landscape:px-2 py-0.5 sm:py-1 rounded-xl landscape:rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-[11px] sm:text-xs landscape:text-[9.5px] font-extrabold flex items-center gap-1 shrink-0 transition-colors"
+                className="min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-2 sm:px-3 py-0.5 sm:py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-[11px] sm:text-xs landscape:text-[10px] font-extrabold flex items-center gap-1 shrink-0 transition-colors"
               >
                 <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 landscape:w-3 landscape:h-3 shrink-0" />
                 <span>Chọn VĐV</span>
@@ -1341,7 +1312,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <button
                 type="button"
                 onClick={handleOpenCoinToss}
-                className="min-h-[34px] sm:min-h-[40px] landscape:min-h-[24px] px-1 sm:px-2 py-0.5 sm:py-1 rounded-xl landscape:rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs landscape:text-[9px] font-bold flex items-center justify-center gap-1 transition-colors min-w-0"
+                className="min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-1 sm:px-2 py-0.5 sm:py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs landscape:text-[9px] font-bold flex items-center justify-center gap-1 transition-colors min-w-0"
               >
                 <Shuffle className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                 <span className="truncate">Bốc thăm</span>
@@ -1358,7 +1329,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     },
                   )
                 }
-                className={`min-h-[34px] sm:min-h-[40px] landscape:min-h-[24px] px-1 sm:px-2 py-0.5 sm:py-1 rounded-xl landscape:rounded-lg text-[10px] sm:text-xs landscape:text-[9px] font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
+                className={`min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-1 sm:px-2 py-0.5 sm:py-1 rounded-xl text-[10px] sm:text-xs landscape:text-[9px] font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
                   showLineupModal
                     ? 'bg-orange-600 text-white border-orange-600'
                     : isDark
@@ -1373,7 +1344,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <button
                 type="button"
                 onClick={handleTriggerCourtCall}
-                className="min-h-[34px] sm:min-h-[40px] landscape:min-h-[24px] px-1 sm:px-2 py-0.5 sm:py-1 rounded-xl landscape:rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs landscape:text-[9px] font-bold flex items-center justify-center gap-1 transition-colors min-w-0"
+                className="min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-1 sm:px-2 py-0.5 sm:py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs landscape:text-[9px] font-bold flex items-center justify-center gap-1 transition-colors min-w-0"
               >
                 <Megaphone className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                 <span className="truncate">Gọi sân</span>
@@ -1382,7 +1353,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <button
                 type="button"
                 onClick={handleTriggerCourtAvailable}
-                className={`min-h-[34px] sm:min-h-[40px] landscape:min-h-[24px] px-1 sm:px-2 py-0.5 sm:py-1 rounded-xl landscape:rounded-lg text-[10px] sm:text-xs landscape:text-[9px] font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
+                className={`min-h-[34px] sm:min-h-[40px] landscape:min-h-[26px] px-1 sm:px-2 py-0.5 sm:py-1 rounded-xl text-[10px] sm:text-xs landscape:text-[9px] font-bold border flex items-center justify-center gap-1 transition-colors min-w-0 ${
                   isDark
                     ? 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border-emerald-700/70'
                     : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -1396,7 +1367,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
           {/* SÂN THI ĐẤU 3D */}
           <div
-            className={`w-full max-w-full overflow-hidden border rounded-2xl landscape:rounded-xl p-2.5 sm:p-4 landscape:p-1.5 space-y-2 landscape:space-y-1 ${surfaceCard}`}
+            className={`w-full max-w-full overflow-hidden border rounded-2xl p-2.5 sm:p-4 landscape:p-1.5 space-y-2 landscape:space-y-1 ${surfaceCard}`}
           >
             <div className="flex items-center justify-between gap-1.5 text-[10px] sm:text-xs landscape:text-[8.5px] min-w-0">
               <div className="flex items-center gap-1 min-w-0">
@@ -1413,10 +1384,10 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               </div>
 
               <div className="flex items-center gap-1 font-semibold shrink-0">
-                <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 truncate max-w-[68px] sm:max-w-[120px] landscape:max-w-[68px]">
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 truncate max-w-[68px] sm:max-w-[120px] landscape:max-w-[64px]">
                   P: {serverDisplayName}
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-500 truncate max-w-[68px] sm:max-w-[120px] landscape:max-w-[68px]">
+                <span className="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-500 truncate max-w-[68px] sm:max-w-[120px] landscape:max-w-[64px]">
                   Đ: {receiverDisplayName}
                 </span>
               </div>
@@ -1428,7 +1399,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             >
               <div
                 style={{ transform: 'rotateX(15deg) scale(0.99)', transformOrigin: 'center center' }}
-                className="relative w-full h-[176px] sm:h-[235px] landscape:h-[104px] shrink-0 mx-auto rounded-xl bg-gradient-to-b from-[#22c55e] via-[#16a34a] to-[#15803d] border-[2px] sm:border-[3px] border-white shadow-[0_8px_0_#052e16,0_14px_24px_rgba(0,0,0,0.75)] overflow-hidden select-none"
+                className="relative w-full h-[176px] sm:h-[235px] landscape:h-[112px] shrink-0 mx-auto rounded-xl bg-gradient-to-b from-[#22c55e] via-[#16a34a] to-[#15803d] border-[2px] sm:border-[3px] border-white shadow-[0_8px_0_#052e16,0_14px_24px_rgba(0,0,0,0.75)] overflow-hidden select-none"
               >
                 <div
                   className="pointer-events-none absolute inset-0"
@@ -1648,7 +1619,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
 
         {/* CỘT PHẢI: BẢNG ĐIỂM LIVE + ĐỔI GIAO / ĐỔI SÂN */}
         <div
-          className={`lg:col-span-6 landscape:col-span-6 w-full min-w-0 max-w-full overflow-hidden border rounded-2xl landscape:rounded-xl p-2.5 sm:p-4 landscape:p-1.5 space-y-2.5 sm:space-y-3.5 landscape:space-y-1 ${surfaceCard}`}
+          className={`lg:col-span-6 landscape:col-span-6 w-full min-w-0 max-w-full overflow-hidden border rounded-2xl p-2.5 sm:p-4 landscape:p-1.5 space-y-2.5 sm:space-y-3.5 landscape:space-y-1.5 ${surfaceCard}`}
         >
           <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs landscape:text-[9.5px] min-w-0">
             <div className="flex items-center gap-1.5 font-mono-num font-bold min-w-0">
@@ -1837,7 +1808,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             <button
               type="button"
               onClick={handleToggleServe}
-              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[25px] px-3 landscape:px-2 py-1.5 landscape:py-0.5 rounded-xl landscape:rounded-lg text-xs landscape:text-[9.5px] font-bold border flex items-center justify-center gap-1.5 transition-colors min-w-0 ${
+              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[26px] px-3 landscape:px-2 py-1.5 landscape:py-1 rounded-xl text-xs landscape:text-[10px] font-bold border flex items-center justify-center gap-1.5 transition-colors min-w-0 ${
                 isDark
                   ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
@@ -1850,7 +1821,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
             <button
               type="button"
               onClick={handleSwitchCourtEnds}
-              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[25px] px-3 landscape:px-2 py-1.5 landscape:py-0.5 rounded-xl landscape:rounded-lg text-xs landscape:text-[9.5px] font-bold border flex items-center justify-center gap-1.5 transition-colors min-w-0 ${
+              className={`min-h-[36px] sm:min-h-[42px] landscape:min-h-[26px] px-3 landscape:px-2 py-1.5 landscape:py-1 rounded-xl text-xs landscape:text-[10px] font-bold border flex items-center justify-center gap-1.5 transition-colors min-w-0 ${
                 isDark
                   ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
@@ -1895,11 +1866,11 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
               <p className={`text-xs leading-relaxed ${mutedText}`}>
                 Tỷ số hiện tại:{' '}
                 <strong className="text-orange-500">
-                  {formatTeamDisplayName(activeMatch.teamAName)} ({activeMatch.scoreA})
+                  {activeMatch.teamAName} ({activeMatch.scoreA})
                 </strong>{' '}
                 —{' '}
                 <strong className="text-sky-500">
-                  {formatTeamDisplayName(activeMatch.teamBName)} ({activeMatch.scoreB})
+                  {activeMatch.teamBName} ({activeMatch.scoreB})
                 </strong>
                 . Vui lòng yêu cầu 2 đội đổi sân trước khi tiếp tục thi đấu.
               </p>
@@ -2105,7 +2076,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     Bước 1/2 · Đội A trước
                   </div>
                   <h3 className="text-sm font-extrabold truncate">
-                    {currentSubEventConfig.label} — {formatTeamDisplayName(activeMatch.teamAName)}
+                    {currentSubEventConfig.label} — {activeMatch.teamAName}
                   </h3>
                 </div>
                 <button
@@ -2252,7 +2223,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     Bước 2/2 · Đội B
                   </div>
                   <h3 className="text-sm font-extrabold truncate">
-                    {currentSubEventConfig.label} — {formatTeamDisplayName(activeMatch.teamBName)}
+                    {currentSubEventConfig.label} — {activeMatch.teamBName}
                   </h3>
                 </div>
                 <button
@@ -2407,8 +2378,7 @@ export const RefereeConsoleView: React.FC<RefereeConsoleViewProps> = ({
                     : 'Vòng bảng · 4 nội dung'}
                 </h3>
                 <p className={`text-[11px] truncate ${mutedText}`}>
-                  {formatTeamDisplayName(activeMatch.teamAName)} vs{' '}
-                  {formatTeamDisplayName(activeMatch.teamBName)}
+                  {activeMatch.teamAName} vs {activeMatch.teamBName}
                 </p>
               </div>
               <button
